@@ -1,0 +1,7 @@
+[server]
+port = 7334
+enableStaticServing = true
+
+[theme]
+base = "light"
+primaryColor = "#002676"
