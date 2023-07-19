@@ -259,24 +259,10 @@ def record_location(user, team):
 
 
 def show_team_info(user, team):
-    username = user["username"]
     team_name = team["team_name"] if team else ""
 
     # all users not part of any team and not the current user
-    available_paxes = db.get_available_participants(username, team)
-
-    # prepend the "nobody" option
-    available_paxes = pd.concat(
-        [
-            pd.DataFrame(
-                {
-                    "id": ["-1"],
-                    "name": ["(bez parťáka)"],
-                }
-            ),
-            available_paxes,
-        ]
-    )
+    available_paxes = db.get_available_participants(user["pax_id"], team)
 
     with st.form("team_info"):
         # team name
