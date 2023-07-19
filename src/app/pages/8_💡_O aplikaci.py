@@ -38,7 +38,7 @@ def main():
             """
 Za **[appkou](https://github.com/kasnerz/xc-app)** stojí **[Zdeněk Kasner](https://facebook.com/zdenek.kasner/)**, účastník řady X-Challenge akcí. Appku napsal ve volném čase, protože mu přišlo, že je to dobrý nápad. Snad se ti bude appka líbit :-)
 
-Pokud narazíš na nějakou chybu (a že jich ze začátku může být!), dej mi prosím vědět na **info@x-challenge.cz**, případně nám napiš na **[Facebook](https://facebook.com/xchallengecz)** nebo **[Instagram](instagram.com/xchallengecz/)**.
+Pokud narazíš na nějakou chybu (a že jich ze začátku může být!), dej mi prosím vědět na **info@x-challenge.cz**, případně nám napiš na **[Facebook](https://facebook.com/xchallengecz)** nebo **[Instagram](https://instagram.com/xchallengecz/)**.
 """
         )
 
