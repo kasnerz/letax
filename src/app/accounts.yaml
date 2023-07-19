@@ -4,33 +4,13 @@ cookie:
   name: xcapp-login-cookie
 credentials:
   usernames:
-    pax2:
-      email: participant2@test.com
-      name: Pax 2
-      password: $2b$12$QYDxNAkhnv31ovO5Oc439uyLMLS5nWdy/CvXO3rJUPcahIm8qAG9e
-      registered: '2023-07-19 10:50:58'
-      role: user
-    pax3:
-      email: participant3@test.com
-      name: Pax 3
-      password: $2b$12$epSQZE9k9KeRFVA7MUvAee1cnamrHMaQWHb1tfb7cQ.1S6aViFEFq
-      registered: '2023-07-19 10:46:36'
-      role: user
     zdenek.kasner:
       email: zdenek.kasner@gmail.com
       name: "Zden\u011Bk Kasner"
-      password: $2b$12$V2gvnB5q0cG6ATL.U6nyHOlwHj5gZTbHn1NsaDMM9pZdJQV79r36a
+      password: dummy_hash
       registered: '2023-07-03 10:07:24'
       role: admin
       username: zdenek.kasner
 preauthorized_emails:
-  participant1@test.com:
-    role: user
-  participant2@test.com:
-    role: user
-  participant3@test.com:
-    role: user
-  test@test.com:
-    role: user
   zdenek.kasner@gmail.com:
     role: admin
