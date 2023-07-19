@@ -74,7 +74,7 @@ def reset_password_form(authenticator):
                 content_html=content_html,
             )
             if ret:
-                accounts.set_password(username_forgot_pw, random_password)
+                db.am.set_password(username_forgot_pw, random_password)
                 st.success("Nové heslo odesláno na email. Pokud nepřišel do pár minut, zkontroluj spam.")
             else:
                 st.error("Omlouváme se, e-mail se nepodařilo odeslat. Zkus to prosím znovu.")
