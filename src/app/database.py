@@ -566,6 +566,19 @@ class Database:
         # no team or teammate
         available_paxes = all_paxes[all_paxes["team_id"].isnull()]
 
+        # prepend the "nobody option"
+        available_paxes = pd.concat(
+            [
+                pd.DataFrame(
+                    {
+                        "id": ["-1"],
+                        "name": ["(bez parťáka)"],
+                    }
+                ),
+                available_paxes,
+            ]
+        )
+
         if teammate:
             # teammate is not in the list because they are already in a team, but we want to show them as available
             teammate_row = all_paxes[all_paxes["username"] == teammate]
@@ -679,7 +692,9 @@ class Database:
             );"""
         )
 
-    def save_location(self, user, comment, longitude, latitude, accuracy, altitude, altitude_accuracy, heading, speed, date):
+    def save_location(
+        self, user, comment, longitude, latitude, accuracy, altitude, altitude_accuracy, heading, speed, date
+    ):
         team = self.get_team_for_user(user["pax_id"])
         username = user["username"]
         team_id = team["team_id"]
