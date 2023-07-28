@@ -631,7 +631,7 @@ def main():
                 res = authenticator.login("Přihlásit se", "main")
             with tabs[1]:
                 st.info(
-                    """- **Email** použij stejný, jako jsi použil(a) pro registraci na akci. 
+                    """- **Email** použij stejný, jako jsi použil(a) pro registraci na akci (malými písmeny). 
 - **Username** je libovolný identifikátor, které budeš používat na přihlášení do systému.
 - **Name** je tvoje celé jméno a příjmení.
 - **Heslo** použij takové, které se ti bude dobře pamatovat, dobře psát na mobilu, a zároveň ho nenajdeš [tady](https://en.wikipedia.org/wiki/Wikipedia:10,000_most_common_passwords).

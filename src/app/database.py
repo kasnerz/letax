@@ -248,7 +248,7 @@ class Database:
             emails = list(participants.email)
 
         extra_allowed_emails = list(self.am.get_extra_accounts().keys())
-        preauthorized = {"emails": emails + extra_allowed_emails}
+        preauthorized = {"emails": [e.lower() for e in emails + extra_allowed_emails]}
 
         return preauthorized
 
