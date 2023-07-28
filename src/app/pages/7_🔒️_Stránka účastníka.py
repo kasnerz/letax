@@ -249,7 +249,9 @@ def record_location(user, team):
             speed = coords["speed"]
             date = datetime.fromtimestamp(location["timestamp"] / 1000.0)
 
-            db.save_location(user, comment, longitude, latitude, accuracy, altitude, altitude_accuracy, heading, speed, date)
+            db.save_location(
+                user, comment, longitude, latitude, accuracy, altitude, altitude_accuracy, heading, speed, date
+            )
             container.success("Poloha nasdílena!")
         else:
             st.warning(
@@ -264,7 +266,6 @@ def show_team_info(user, team):
 
     # all users not part of any team and not the current user
     available_paxes = db.get_available_participants(username, team)
-
 
     with st.form("team_info"):
         # team name
@@ -382,7 +383,7 @@ def show_users_editor():
         st.session_state[f"users_data"],
         hide_index=True,
         use_container_width=True,
-        # num_rows="dynamic",
+        num_rows="dynamic",
         key=f"users_data_editor",
         column_config={
             "role": st.column_config.SelectboxColumn(options=["user", "admin"]),
@@ -403,7 +404,7 @@ def show_preauthorized_editor():
         st.session_state[f"preauthorized_data"],
         hide_index=True,
         use_container_width=True,
-        # num_rows="dynamic",
+        num_rows="dynamic",
         key=f"preauthorized_data_editor",
         column_config={
             "role": st.column_config.SelectboxColumn(options=["user", "admin"]),
@@ -466,8 +467,28 @@ def show_actions():
 def show_admin_page():
     st.title("Administrace")
 
-    tab_notifications, tab_users, tab_paxes, tab_teams, tab_challenges, tab_checkpoints, tab_posts, tab_settings, tab_actions = st.tabs(
-        ["🍍 Oznámení", "👤 Uživatelé", "🧒 Účastníci", "🧑‍🤝‍🧑 Týmy", "🏆 Výzvy", "📍 Checkpointy", "📝 Příspěvky", "⚙️ Nastavení", "🪛 Akce"]
+    (
+        tab_notifications,
+        tab_users,
+        tab_paxes,
+        tab_teams,
+        tab_challenges,
+        tab_checkpoints,
+        tab_posts,
+        tab_settings,
+        tab_actions,
+    ) = st.tabs(
+        [
+            "🍍 Oznámení",
+            "👤 Uživatelé",
+            "🧒 Účastníci",
+            "🧑‍🤝‍🧑 Týmy",
+            "🏆 Výzvy",
+            "📍 Checkpointy",
+            "📝 Příspěvky",
+            "⚙️ Nastavení",
+            "🪛 Akce",
+        ]
     )
 
     with tab_notifications:
@@ -510,7 +531,7 @@ def show_admin_page():
             column_config={
                 "points": st.column_config.NumberColumn(min_value=0),
                 # "category": st.column_config.SelectboxColumn(
-                    # options=db.get_settings_value("checkpoint_categories").split(","),
+                # options=db.get_settings_value("checkpoint_categories").split(","),
                 # ),
             },
         )

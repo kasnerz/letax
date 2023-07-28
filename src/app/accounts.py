@@ -85,12 +85,19 @@ class AccountManager:
         users = [{"username": username, **user} for username, user in users.items()]
 
         df = pd.DataFrame(users)
-        df = df.drop(columns=["password"])
+        df = df.drop(columns=["password", "pax_id"])
+
         return df
 
     def save_accounts_from_df(self, df):
+        # TODO this does not delete e-mails
         for _, row in df.iterrows():
             row_dict = row.to_dict()
+
+            # if there are any empty fields, skip
+            if any([value is None for value in row_dict.values()]):
+                continue
+
             username = row_dict["username"]
             del row_dict["username"]
 
@@ -110,18 +117,19 @@ class AccountManager:
         return df
 
     def save_preauthorized_emails_from_df(self, df):
+        self.accounts["preauthorized_emails"] = {}
+
         for _, row in df.iterrows():
             row_dict = row.to_dict()
-            email = row_dict["email"]
 
-            if email is None:
+            # if there are any empty fields, skip
+            if any([value is None for value in row_dict.values()]):
                 continue
 
+            email = row_dict["email"]
             del row_dict["email"]
 
             self.accounts["preauthorized_emails"][email] = row_dict
-
-        print(self.accounts["preauthorized_emails"])
 
         self.save_accounts()
 
