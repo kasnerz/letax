@@ -441,7 +441,7 @@ def show_db_data_editor(table, column_config=None):
 
 
 def show_actions():
-    action = st.selectbox("Akce:", ["➕ Přidat extra účastníka", "👥 Načíst letošní účastníky", "🧹 Vyčistit cache", "📅 Změnit aktuální ročník"], label_visibility="hidden")
+    action = st.selectbox("Akce:", ["➕ Přidat extra účastníka", "👥 Načíst letošní účastníky", "🧹 Vyčistit cache", "📅 Změnit aktuální ročník", "📁 Obnovit zálohu databáze"], label_visibility="hidden")
 
     if action == "👥 Načíst letošní účastníky":
         st.caption("Načte seznam účastníků z WooCommerce")
@@ -499,6 +499,33 @@ def show_actions():
             db.set_settings_value("xchallenge_year", year)
             utils.clear_cache()
             st.balloons()
+
+    elif action == "📁 Obnovit zálohu databáze":
+        # list all the files in the "backups" folder
+        backup_files = [f for f in os.listdir("backups") if os.path.isfile(os.path.join("backups", f))]
+
+        if not backup_files:
+            st.warning("Nejsou k dispozici žádné zálohy")
+            st.stop()
+
+        # sort by date
+        backup_files.sort(reverse=True)
+
+        # filename in format db_20230728163001.zip: make it more readable
+        backup_files_names = [f"📁 {f[3:7]}-{f[7:9]}-{f[9:11]} {f[11:13]}:{f[13:15]}:{f[15:17]} GMT" for f in backup_files]
+
+        # selectbox
+        with st.form("restore_backup"):
+            backup_file = st.selectbox("Záloha", backup_files, format_func=lambda x: backup_files_names[backup_files.index(x)])
+            restore_backup_submit_button = st.form_submit_button(label="Obnovit databázi")
+
+        if restore_backup_submit_button:
+            with st.spinner("Obnovuji databázi"):
+                db.restore_backup(backup_file)
+
+            st.success("Databáze obnovena ze zálohy.")
+            st.balloons()
+            
 
     
 

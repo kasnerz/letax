@@ -24,7 +24,7 @@ import time
 import traceback
 import utils
 import yaml
-
+import zipfile
 
 # logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -106,6 +106,21 @@ class Database:
             self.settings[key] = value
 
         self.save_settings()
+
+    def restore_backup(self, backup_file):
+        zip_path = os.path.join("backups", backup_file)
+
+        if not os.path.exists(zip_path):
+            raise ValueError(f"Backup file {zip_path} does not exist.")
+
+        # overwrite the database in db folder by unzipping the backup
+        # the zip file contains the innards of the db folder
+        with zipfile.ZipFile(zip_path, "r") as zip_ref:
+            zip_ref.extractall("db")
+
+        # reload the database
+        self.__init__()
+        utils.clear_cache()
 
     @st.cache_resource(ttl=TTL)
     def get_boto3_object(_self, filepath):
@@ -315,12 +330,13 @@ class Database:
             # considering unicode characters in Czech alphabet
             participants = participants.sort_values(by="name", key=lambda x: [unidecode(a) for a in x])
 
-        if fetch_teams:
+        if fetch_teams and not participants.empty:
             teams = self.get_table_as_df("teams")
             # participant is either member1 or member2, if not - no team
             pax_id_to_team = {str(row["member1"]): row for _, row in teams.iterrows() if row["member1"]}
             pax_id_to_team.update({str(row["member2"]): row for _, row in teams.iterrows() if row["member2"]})
 
+            breakpoint()
             participants["team_name"] = participants.apply(
                 lambda x: pax_id_to_team.get(str(x["id"]), {}).get("team_name"), axis=1
             )
