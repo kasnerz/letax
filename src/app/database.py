@@ -336,7 +336,6 @@ class Database:
             pax_id_to_team = {str(row["member1"]): row for _, row in teams.iterrows() if row["member1"]}
             pax_id_to_team.update({str(row["member2"]): row for _, row in teams.iterrows() if row["member2"]})
 
-            breakpoint()
             participants["team_name"] = participants.apply(
                 lambda x: pax_id_to_team.get(str(x["id"]), {}).get("team_name"), axis=1
             )
