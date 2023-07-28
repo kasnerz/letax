@@ -265,18 +265,6 @@ def show_team_info(user, team):
     # all users not part of any team and not the current user
     available_paxes = db.get_available_participants(username, team)
 
-    # prepend the "nobody" option
-    available_paxes = pd.concat(
-        [
-            pd.DataFrame(
-                {
-                    "id": ["-1"],
-                    "name": ["(bez parťáka)"],
-                }
-            ),
-            available_paxes,
-        ]
-    )
 
     with st.form("team_info"):
         # team name
