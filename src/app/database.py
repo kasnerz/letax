@@ -548,18 +548,18 @@ class Database:
         # retrieve all teams from the database, return as pandas df
         return pd.read_sql_query("SELECT * FROM teams", self.conn)
 
-    def get_available_participants(self, username, team):
+    def get_available_participants(self, pax_id, team):
         all_paxes = self.get_participants(fetch_teams=True, sort_by_name=True, include_non_registered=True)
 
         if all_paxes.empty:
             return []
 
         # remove the current user (they are not available for themselves)
-        all_paxes = all_paxes[all_paxes["username"] != username]
+        all_paxes = all_paxes[all_paxes["id"] != pax_id]
 
         if team:
             # find a teammate for the current user
-            teammate = team["member1"] if team["member1"] != username else team["member2"]
+            teammate = team["member1"] if team["member1"] != pax_id else team["member2"]
         else:
             teammate = None
 
@@ -576,12 +576,12 @@ class Database:
                     }
                 ),
                 available_paxes,
-            ]
+            ], ignore_index=True
         )
 
         if teammate:
             # teammate is not in the list because they are already in a team, but we want to show them as available
-            teammate_row = all_paxes[all_paxes["username"] == teammate]
+            teammate_row = all_paxes[all_paxes["id"] == teammate]
             available_paxes = pd.concat([teammate_row, available_paxes], ignore_index=True)
 
         return available_paxes

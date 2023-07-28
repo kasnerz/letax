@@ -261,11 +261,10 @@ def record_location(user, team):
 
 
 def show_team_info(user, team):
-    username = user["username"]
     team_name = team["team_name"] if team else ""
 
     # all users not part of any team and not the current user
-    available_paxes = db.get_available_participants(username, team)
+    available_paxes = db.get_available_participants(user["pax_id"], team)
 
     with st.form("team_info"):
         # team name
