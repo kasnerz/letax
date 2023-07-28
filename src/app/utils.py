@@ -104,7 +104,7 @@ def resize_image(img, max_width=None, crop_ratio=None, circle=False):
 
 
 def style_sidebar():
-    st.sidebar.warning("Aplikace běží v testovacím režimu!")
+    # st.sidebar.warning("Aplikace běží v testovacím režimu!")
 
     st.markdown(
         """
@@ -115,3 +115,8 @@ def style_sidebar():
     )
 
     app_logo.add_logo("static/logo_small.png", height=60)
+
+
+def clear_cache():
+    st.cache_resource.clear()
+    st.cache_data.clear()

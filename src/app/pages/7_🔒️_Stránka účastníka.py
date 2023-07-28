@@ -360,6 +360,9 @@ def get_logged_info():
 
 
 def show_settings_editor():
+
+    st.warning("Pozor: údaje upravuj pouze pokud víš, co děláš!")
+
     if st.session_state.get(f"settings_data") is None:
         st.session_state[f"settings_data"] = db.get_settings_as_df()
 
@@ -438,67 +441,75 @@ def show_db_data_editor(table, column_config=None):
 
 
 def show_actions():
-    st.markdown("#### Aktualizovat účastníky")
+    action = st.selectbox("Akce:", ["➕ Přidat extra účastníka", "👥 Načíst letošní účastníky", "🧹 Vyčistit cache", "📅 Změnit aktuální ročník"], label_visibility="hidden")
 
-    st.caption("Načte seznam účastníků z WooCommerce")
+    if action == "👥 Načíst letošní účastníky":
+        st.caption("Načte seznam účastníků z WooCommerce")
 
-    with st.form("fetch_wc_users"):
-        product_id = st.text_input(
-            "product_id", help="Číslo produktu Letní X-Challenge na webu", value=db.get_settings_value("product_id")
-        )
+        with st.form("fetch_wc_users"):
+            product_id = st.text_input(
+                "product_id", help="Číslo produktu Letní X-Challenge na webu", value=db.get_settings_value("product_id")
+            )
+            limit = st.number_input("limit (0 = bez omezení)", help="Maximální počet účastníků (0 = bez omezení)", value=0)
 
-        submit_button = st.form_submit_button(label="Aktualizovat účastníky")
+            update_submit_button = st.form_submit_button(label="Aktualizovat účastníky")
 
-    if submit_button:
-        with st.spinner("Aktualizuji účastníky"):
-            container = st.container()
-            db.wc_fetch_participants(product_id=int(product_id), log_area=container)
+        if update_submit_button:
+            if limit == 0:
+                limit = None
 
-        st.balloons()
+            with st.spinner("Aktualizuji účastníky"):
+                container = st.container()
+                db.wc_fetch_participants(product_id=int(product_id), log_area=container, limit=limit)
 
-    st.markdown("#### Cache")
-    cache_btn = st.button("Vymazat cache", on_click=st.cache_resource.clear)
+            st.balloons()
 
-    if cache_btn:
-        st.balloons()
+    elif action == "🧹 Vyčistit cache":
+        cache_btn = st.button("Vyčistit cache", on_click=utils.clear_cache)
+
+        if cache_btn:
+            st.balloons()
+
+    elif action == "➕ Přidat extra účastníka":
+        with st.form("add_extra_participant"):
+            name = st.text_input("Jméno a příjmení", help="Celé jméno účastníka")
+            email = st.text_input("email", help="Email účastníka")
+            add_pax_submit_button = st.form_submit_button(label="Přidat účastníka")
+
+        if add_pax_submit_button:
+            if not email or not name:
+                st.error("Musíš vyplnit email i jméno")
+                st.stop()
+            
+            with st.spinner("Přidávám účastníka"):
+                db.add_extra_participant(email=email, name=name)
+                utils.clear_cache()
+
+            st.success("Účastník přidán")
+            st.balloons()
+
+    elif action == "📅 Změnit aktuální ročník":
+        st.caption("Změna roku založí novou databázi a skryje současné účastníky, týmy a příspěvky. Databáze ze současného roku zůstane zachována a lze se k ní vrátit.")
+
+        with st.form("change_year"):
+            year = st.number_input("Rok", value=int(db.get_settings_value("xchallenge_year")))
+            change_year_submit_button = st.form_submit_button(label="Změnit rok")
+
+        if change_year_submit_button:
+            db.set_settings_value("xchallenge_year", year)
+            utils.clear_cache()
+            st.balloons()
+
+    
 
 
-def show_admin_page():
-    st.title("Administrace")
-
-    (
-        tab_notifications,
-        tab_users,
-        tab_paxes,
-        tab_teams,
-        tab_challenges,
-        tab_checkpoints,
-        tab_posts,
-        tab_settings,
-        tab_actions,
-    ) = st.tabs(
-        [
-            "🍍 Oznámení",
-            "👤 Uživatelé",
-            "🧒 Účastníci",
-            "🧑‍🤝‍🧑 Týmy",
-            "🏆 Výzvy",
-            "📍 Checkpointy",
-            "📝 Příspěvky",
-            "⚙️ Nastavení",
-            "🪛 Akce",
-        ]
+def show_db():
+    # selectbox
+    table = st.selectbox(
+        "Tabulka", ["🧒 Účastníci", "🧑‍🤝‍🧑 Týmy", "🏆 Výzvy", "📍 Checkpointy", "📝 Příspěvky", "🗺️ Lokace", "🍍 Oznámení"]
     )
 
-    with tab_notifications:
-        show_db_data_editor(
-            table="notifications",
-            column_config={
-                "type": st.column_config.SelectboxColumn(options=["info", "varování", "důležité", "skryté"]),
-            },
-        )
-
-    with tab_paxes:
+    if table == "🧒 Účastníci":
         show_db_data_editor(
             table="participants",
             column_config={
@@ -506,14 +517,10 @@ def show_admin_page():
                 "email": st.column_config.Column(width="large"),
             },
         )
+    elif table == "🧑‍🤝‍🧑 Týmy":
+        show_db_data_editor(table="teams")
 
-    with tab_users:
-        st.markdown("#### Uživatelé")
-        show_users_editor()
-        st.markdown("#### Preautorizované e-maily")
-        show_preauthorized_editor()
-
-    with tab_challenges:
+    elif table == "🏆 Výzvy":
         show_db_data_editor(
             table="challenges",
             column_config={
@@ -524,7 +531,7 @@ def show_admin_page():
             },
         )
 
-    with tab_checkpoints:
+    elif table == "📍 Checkpointy":
         show_db_data_editor(
             table="checkpoints",
             column_config={
@@ -535,16 +542,72 @@ def show_admin_page():
             },
         )
 
-    with tab_teams:
-        show_db_data_editor(table="teams")
-
-    with tab_posts:
+    elif table == "📝 Příspěvky":
         show_db_data_editor(
             table="posts",
             column_config={
                 "action_type": st.column_config.SelectboxColumn(options=["challenge", "checkpoint", "note"]),
             },
         )
+
+    elif table == "🗺️ Lokace":
+        show_db_data_editor(table="locations")
+
+    # elif table == "🍍 Oznámení":
+    #     show_db_data_editor(
+    #         table="notifications",
+    #         column_config={
+    #             "type": st.column_config.SelectboxColumn(options=["info", "varování", "důležité", "skryté"]),
+    #         },
+    #     )
+
+
+def show_notification_manager():
+    # TODO more user friendly
+    st.markdown("#### Oznámení")
+
+    st.caption("Tato oznámení se zobrazí účastníkům na jejich stránce účastníka. Typy oznámení: info, varování, důležité, skryté.")
+
+    show_db_data_editor(
+        table="notifications",
+        column_config={
+            "type": st.column_config.SelectboxColumn(options=["info", "varování", "důležité", "skryté"]),
+        },
+    )
+
+
+def show_admin_page():
+    st.title("Administrace")
+
+    (
+        tab_notifications,
+        tab_users,
+        tab_db,
+        tab_actions,
+        tab_settings,
+    ) = st.tabs(
+        [
+            "🍍 Oznámení",
+            "👤 Uživatelé",
+            "✏️ Databáze",
+            "🛠️ Akce",
+            "⚙️ Nastavení",
+        ]
+    )
+
+    with tab_notifications:
+        show_notification_manager()
+
+    with tab_users:
+        st.markdown("#### Uživatelé")
+        show_users_editor()
+        st.markdown("#### Preautorizované e-maily")
+        show_preauthorized_editor()
+
+    with tab_db:
+        st.markdown("#### Databáze")
+        st.caption("Databáze aktuálního ročníku X-Challenge.")
+        show_db()
 
     with tab_settings:
         show_settings_editor()
@@ -575,7 +638,7 @@ def show_user_page(user, team):
         st.stop()
 
     if not team:
-        st.info("Příspěvky budeš moct přidávat po tom, co se připojíš do týmu. Informace můžeš později změnit.")
+        st.info("Příspěvky budeš moct přidávat po tom, co se připojíš do týmu. Všechny informace můžeš později změnit.")
         st.markdown("### Vytvořit tým")
 
         show_team_info(user=user, team=team)
@@ -635,6 +698,8 @@ def main():
 - **Username** je libovolný identifikátor, které budeš používat na přihlášení do systému.
 - **Name** je tvoje celé jméno a příjmení.
 - **Heslo** použij takové, které se ti bude dobře pamatovat, dobře psát na mobilu, a zároveň ho nenajdeš [tady](https://en.wikipedia.org/wiki/Wikipedia:10,000_most_common_passwords).
+
+Pokud se ti nedaří přihlásit, napiš nám e-mail na letni@x-challenge.cz.
                     """
                 )
                 register_form(authenticator, config)

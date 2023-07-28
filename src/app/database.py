@@ -200,7 +200,7 @@ class Database:
 
         return orders
 
-    def wc_fetch_participants(self, product_id, log_area=None):
+    def wc_fetch_participants(self, product_id, log_area=None, limit=None):
         new_participants = []
         logger.info("Fetching participants from WooCommerce...")
 
@@ -216,11 +216,7 @@ class Database:
             st.write(f"Nalezeno {len(orders)} objednávek")
             pb = st.progress(value=0, text="Načítám info o účastnících")
 
-        # print("DEBUG: only first two users")
-        # user_ids = [user["customer_id"] for user in orders][:2]
-        user_ids = [user["customer_id"] for user in orders]
-
-        print(user_ids)
+        user_ids = [user["customer_id"] for user in orders][:limit]
 
         for i, user_id in enumerate(user_ids):
             logger.info(f"Fetching user {user_id}")
@@ -229,13 +225,19 @@ class Database:
             new_participants.append(response)
 
             if log_area:
-                pb.progress(i / float(len(user_ids)), f"Načítám info o účastnících ({i}/{len(user_ids)})")
+                total_paxes = len(user_ids)
+                if limit:
+                    total_paxes = min(limit, total_paxes)
+
+                pb.progress(i / float(len(user_ids)), f"Načítám info o účastnících ({i}/{total_paxes})")
 
         with open("wc_participants.json", "w") as f:
             json.dump(new_participants, f)
 
         self.add_participants(new_participants)
         self.load_preauthorized_emails()
+
+        utils.clear_cache()
 
         pb.progress(1.0, "Hotovo!")
 
@@ -254,6 +256,17 @@ class Database:
 
     def get_preauthorized_emails(self):
         return self.preauthorized_emails
+
+    def add_extra_participant(self, email, name):
+        # generate a random integer id
+        user_id = utils.generate_uuid()
+        email = email.lower()
+
+        self.conn.execute(
+            "INSERT OR IGNORE INTO participants (id, email, name_web) VALUES (?, ?, ?)",
+            (user_id, email, name),
+        )
+        self.conn.commit()
 
     def add_participants(self, new_participants):
         for user in new_participants:
@@ -576,7 +589,8 @@ class Database:
                     }
                 ),
                 available_paxes,
-            ], ignore_index=True
+            ],
+            ignore_index=True,
         )
 
         if teammate:
