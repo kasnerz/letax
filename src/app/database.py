@@ -122,13 +122,13 @@ class Database:
         self.__init__()
         utils.clear_cache()
 
-    @st.cache_resource(ttl=TTL)
+    @st.cache_resource(ttl=TTL, show_spinner=False)
     def get_boto3_object(_self, filepath):
         print("get_boto3_object")
         obj = _self.boto3.Object(_self.fs_bucket, filepath)
         return obj
 
-    @st.cache_resource(ttl=TTL, max_entries=250)
+    @st.cache_resource(ttl=TTL, max_entries=250, show_spinner=False)
     def read_file(_self, filepath, mode="b"):
         fs = _self.get_settings_value("file_system")
         if fs == "s3" and not filepath.startswith("static/"):
@@ -154,7 +154,7 @@ class Database:
         else:
             raise ValueError(f"Unknown file system: {fs}, use s3 or local.")
 
-    @st.cache_resource(ttl=TTL, max_entries=250)
+    @st.cache_resource(ttl=TTL, max_entries=250, show_spinner=False)
     def read_image(_self, filepath):
         img = _self.read_file(filepath, mode="b")
 

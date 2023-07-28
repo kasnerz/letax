@@ -90,7 +90,8 @@ class AccountManager:
         return df
 
     def save_accounts_from_df(self, df):
-        # TODO this does not delete e-mails
+        # we have to be careful: only update the fields that are present in the dataframe, not to mess with the passwords
+
         for _, row in df.iterrows():
             row_dict = row.to_dict()
 
@@ -99,6 +100,7 @@ class AccountManager:
                 continue
 
             username = row_dict["username"]
+            # in YAML, username is the key - we don't need it as a value
             del row_dict["username"]
 
             if row_dict.get("pax_id"):
@@ -106,6 +108,13 @@ class AccountManager:
 
             for key, value in row_dict.items():
                 self.accounts["credentials"]["usernames"][username][key] = value
+
+        # remove users that are not in the dataframe
+        df_username_set = set(df["username"].values)
+        yaml_username_set = set(self.accounts["credentials"]["usernames"].keys())
+
+        for username in yaml_username_set - df_username_set:
+            del self.accounts["credentials"]["usernames"][username]
 
         self.save_accounts()
 

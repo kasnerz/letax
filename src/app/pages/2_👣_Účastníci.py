@@ -82,9 +82,8 @@ def get_participant_name_view(pax):
     return link
 
 
-@st.cache_data
+@st.cache_data(show_spinner=False)
 def get_participants_view():
-    # timeit
     participants = db.get_participants(include_non_registered=True, fetch_teams=True)
 
     if participants.empty:
@@ -96,7 +95,7 @@ def get_participants_view():
 
     return participants
 
-
+@st.cache_data(show_spinner=False)
 def show_participants():
     participants = get_participants_view()
     if participants is None:

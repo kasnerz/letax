@@ -37,6 +37,7 @@ def register_new_user(config):
         registered=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         role=role,
     )
+    utils.clear_cache()
 
 
 def reset_password_form(authenticator):
@@ -85,6 +86,7 @@ def register_form(authenticator, config):
         if authenticator.register_user("Zaregistrovat se"):
             register_new_user(config)
 
+            utils.clear_cache()
             st.success("Uživatel úspěšně zaregistrován. Nyní se můžeš přihlásit.")
             st.balloons()
             # time.sleep(5)
@@ -303,7 +305,7 @@ def show_team_info(user, team):
             second_member=second_member,
             current_team=team,
         )
-        st.cache_resource.clear()
+        st.cache_data.clear()
         st.success(f"Tým **{team_name}** uložen.")
         st.balloons()
         time.sleep(3)
@@ -334,7 +336,7 @@ def show_user_info(user):
         db.update_participant(
             username=user["username"], email=user["email"], bio=bio, emergency_contact=emergency_contact, photo=photo
         )
-        st.cache_resource.clear()
+        st.cache_data.clear()
         st.success(f"Informace uloženy.")
         st.balloons()
         time.sleep(3)
