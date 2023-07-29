@@ -114,7 +114,7 @@ def style_sidebar():
         unsafe_allow_html=True,
     )
 
-    app_logo.add_logo("static/logo_small.png", height=60)
+    app_logo.add_logo("static/letax.png", height=40)
 
 
 def clear_cache():
