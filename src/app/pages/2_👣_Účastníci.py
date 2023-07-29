@@ -38,7 +38,9 @@ def show_profile(pax_id):
 
     with columns[1]:
         st.write(f"## {pax['name']}")
-        st.write(f"##### {team['team_name']}")
+
+        if team:
+            st.write(f"##### {team['team_name']}")
 
         if pax["bio"]:
             st.write(f"{pax['bio']}")
