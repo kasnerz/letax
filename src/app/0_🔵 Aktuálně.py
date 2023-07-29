@@ -179,7 +179,12 @@ def show_overview(page):
 
 
 def main():
-    st.set_page_config(layout="centered", page_title=f"Letní X-Challenge", page_icon="static/favicon.png")
+    st.set_page_config(
+        layout="centered",
+        page_title=f"Letní X-Challenge",
+        page_icon="static/favicon.png",
+        initial_sidebar_state="expanded",
+    )
 
     utils.style_sidebar()
     params = st.experimental_get_query_params()
