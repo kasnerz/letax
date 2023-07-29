@@ -99,7 +99,9 @@ def get_participants_view():
 
 
 @st.cache_data(show_spinner=False)
-def show_participants(_stats_container):
+def show_participants():
+    st.markdown(f"# Účastníci")
+
     participants = get_participants_view()
     if participants is None:
         st.info("Nikdo se zatím nezaregistroval. Přidáš se ty?")
@@ -110,7 +112,7 @@ def show_participants(_stats_container):
     pax_registered = len(participants[participants["registered"] == True]) - test_participants_cnt
     pax_teams = len(participants[participants["team_name"].isna() == False]) - test_participants_cnt
 
-    _stats_container.caption(f"Celkem: {pax_total}, zaregistrováno: {pax_registered}, v týmu: {pax_teams}.")
+    st.caption(f"Celkem: {pax_total}, zaregistrováno: {pax_registered}, v týmu: {pax_teams}.")
     column_cnt = 5
     img_cache = {}
 
@@ -151,9 +153,6 @@ def main():
         show_profile(pax_id)
         st.stop()
 
-    st.markdown(f"# Účastníci {xchallenge_year}")
-    stats_container = st.container()
-
     st.markdown(
         """
     <style>
@@ -173,7 +172,7 @@ def main():
     """,
         unsafe_allow_html=True,
     )
-    show_participants(stats_container)
+    show_participants()
 
 
 if __name__ == "__main__":
