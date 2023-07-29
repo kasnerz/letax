@@ -1,4 +1,4 @@
-# X-Challenge app
+# letax
 
 Appka pohánějící letní X-Challenge.
 
