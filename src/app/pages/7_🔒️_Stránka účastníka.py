@@ -654,19 +654,14 @@ def show_notification_manager():
 def show_admin_page():
     st.title("Administrace")
 
-    (
-        tab_notifications,
-        tab_users,
-        tab_db,
-        tab_actions,
-        tab_settings,
-    ) = st.tabs(
+    (tab_notifications, tab_users, tab_db, tab_actions, tab_settings, tab_account) = st.tabs(
         [
             "🍍 Oznámení",
             "👤 Uživatelé",
             "✏️ Databáze",
             "🛠️ Akce",
             "⚙️ Nastavení",
+            "🔑 Účet",
         ]
     )
 
@@ -689,6 +684,10 @@ def show_admin_page():
 
     with tab_actions:
         show_actions()
+
+    with tab_account:
+        user = get_logged_info()[0]
+        show_account_info(user)
 
 
 def show_notifications(notifications):
