@@ -70,6 +70,7 @@ def get_team_name_view(team):
     return link
 
 
+@st.cache_data(show_spinner=False)
 def show_teams():
     teams = db.get_teams()
 
