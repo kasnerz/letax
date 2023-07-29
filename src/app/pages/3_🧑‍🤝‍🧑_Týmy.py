@@ -121,7 +121,7 @@ def main():
         show_profile(team_id)
         st.stop()
 
-    st.markdown(f"# Týmy {xchallenge_year}")
+    st.markdown(f"# Týmy")
 
     st.markdown(
         """
