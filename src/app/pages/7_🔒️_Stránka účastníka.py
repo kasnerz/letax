@@ -41,9 +41,7 @@ def register_new_user(config):
 
 
 def reset_password_form(authenticator):
-    st.info(
-        "Ale to snad ne! Nevíš svoje heslo? Můžeme ti na mail poslat nové, ale pozor – bude se špatně pamatovat. Máš proto od nás novou výzvu 'Neville Longbottom'."
-    )
+    st.info("Zadej své uživatelské jméno, nové heslo ti přijde na e-mail. Ve svém účtu ho můžeš později změnit.")
     username_forgot_pw, email_forgot_password, random_password = authenticator.forgot_password("Zapomenuté heslo")
 
     if username_forgot_pw is None:
@@ -315,6 +313,7 @@ def show_team_info(user, team):
 def show_user_info(user):
     with st.form("user_info"):
         participant = db.get_participant_by_email(user["email"])
+
         emergency_contact_val = participant["emergency_contact"] or ""
         bio_val = participant["bio"] or ""
         bio = st.text_area("Pár slov o mně:", value=bio_val)
@@ -343,6 +342,37 @@ def show_user_info(user):
         st.experimental_rerun()
 
 
+def show_account_info(user):
+    with st.form("account_info"):
+        participant = db.am.get_user_by_email(user["email"])
+        username = participant["username"]
+        st.markdown(f"Uživatel **{username}**")
+        name = st.text_input("Jméno:", value=participant["name"])
+
+        password = st.text_input("Nové heslo:", type="password")
+        password2 = st.text_input("Nové heslo znovu:", type="password")
+        st.caption("Heslo vyplňuj pouze pokud ho chceš změnit.")
+
+        submit_button = st.form_submit_button(label="Aktualizovat informace")
+
+    # When the submit button is clicked
+    if submit_button:
+        if password and password2 and password != password2:
+            st.error("Hesla se neshodují.")
+            st.stop()
+
+        if password:
+            db.am.set_password(username, password)
+
+        db.am.update_user_name(username, name)
+
+        st.cache_data.clear()
+        st.success(f"Informace uloženy.")
+        st.balloons()
+        time.sleep(3)
+        st.experimental_rerun()
+
+
 def get_logged_info():
     username = st.session_state["username"]
     user = db.am.get_user_by_username(username)
@@ -362,7 +392,6 @@ def get_logged_info():
 
 
 def show_settings_editor():
-
     st.warning("Pozor: údaje upravuj pouze pokud víš, co děláš!")
 
     if st.session_state.get(f"settings_data") is None:
@@ -443,7 +472,17 @@ def show_db_data_editor(table, column_config=None):
 
 
 def show_actions():
-    action = st.selectbox("Akce:", ["➕ Přidat extra účastníka", "👥 Načíst letošní účastníky", "🧹 Vyčistit cache", "📅 Změnit aktuální ročník", "📁 Obnovit zálohu databáze"], label_visibility="hidden")
+    action = st.selectbox(
+        "Akce:",
+        [
+            "➕ Přidat extra účastníka",
+            "👥 Načíst letošní účastníky",
+            "🧹 Vyčistit cache",
+            "📅 Změnit aktuální ročník",
+            "📁 Obnovit zálohu databáze",
+        ],
+        label_visibility="hidden",
+    )
 
     if action == "👥 Načíst letošní účastníky":
         st.caption("Načte seznam účastníků z WooCommerce")
@@ -452,7 +491,9 @@ def show_actions():
             product_id = st.text_input(
                 "product_id", help="Číslo produktu Letní X-Challenge na webu", value=db.get_settings_value("product_id")
             )
-            limit = st.number_input("limit (0 = bez omezení)", help="Maximální počet účastníků (0 = bez omezení)", value=0)
+            limit = st.number_input(
+                "limit (0 = bez omezení)", help="Maximální počet účastníků (0 = bez omezení)", value=0
+            )
 
             update_submit_button = st.form_submit_button(label="Aktualizovat účastníky")
 
@@ -482,7 +523,7 @@ def show_actions():
             if not email or not name:
                 st.error("Musíš vyplnit email i jméno")
                 st.stop()
-            
+
             with st.spinner("Přidávám účastníka"):
                 db.add_extra_participant(email=email, name=name)
                 utils.clear_cache()
@@ -491,7 +532,9 @@ def show_actions():
             st.balloons()
 
     elif action == "📅 Změnit aktuální ročník":
-        st.caption("Změna roku založí novou databázi a skryje současné účastníky, týmy a příspěvky. Databáze ze současného roku zůstane zachována a lze se k ní vrátit.")
+        st.caption(
+            "Změna roku založí novou databázi a skryje současné účastníky, týmy a příspěvky. Databáze ze současného roku zůstane zachována a lze se k ní vrátit."
+        )
 
         with st.form("change_year"):
             year = st.number_input("Rok", value=int(db.get_settings_value("xchallenge_year")))
@@ -514,11 +557,15 @@ def show_actions():
         backup_files.sort(reverse=True)
 
         # filename in format db_20230728163001.zip: make it more readable
-        backup_files_names = [f"📁 {f[3:7]}-{f[7:9]}-{f[9:11]} {f[11:13]}:{f[13:15]}:{f[15:17]} GMT" for f in backup_files]
+        backup_files_names = [
+            f"📁 {f[3:7]}-{f[7:9]}-{f[9:11]} {f[11:13]}:{f[13:15]}:{f[15:17]} GMT" for f in backup_files
+        ]
 
         # selectbox
         with st.form("restore_backup"):
-            backup_file = st.selectbox("Záloha", backup_files, format_func=lambda x: backup_files_names[backup_files.index(x)])
+            backup_file = st.selectbox(
+                "Záloha", backup_files, format_func=lambda x: backup_files_names[backup_files.index(x)]
+            )
             restore_backup_submit_button = st.form_submit_button(label="Obnovit databázi")
 
         if restore_backup_submit_button:
@@ -527,9 +574,6 @@ def show_actions():
 
             st.success("Databáze obnovena ze zálohy.")
             st.balloons()
-            
-
-    
 
 
 def show_db():
@@ -595,7 +639,9 @@ def show_notification_manager():
     # TODO more user friendly
     st.markdown("#### Oznámení")
 
-    st.caption("Tato oznámení se zobrazí účastníkům na jejich stránce účastníka. Typy oznámení: info, varování, důležité, skryté.")
+    st.caption(
+        "Tato oznámení se zobrazí účastníkům na jejich stránce účastníka. Typy oznámení: info, varování, důležité, skryté."
+    )
 
     show_db_data_editor(
         table="notifications",
@@ -673,7 +719,7 @@ def show_user_page(user, team):
         show_team_info(user=user, team=team)
         st.stop()
 
-    tab_list = ["💪 Výzva", "📍 Checkpoint", "✍️  Příspěvek", "🗺️ Poloha", "🧑‍🤝‍🧑 Tým", "👤 O mně"]
+    tab_list = ["💪 Výzva", "📍 Checkpoint", "✍️  Příspěvek", "🗺️ Poloha", "🧑‍🤝‍🧑 Tým", "👤 O mně", "🔑 Účet"]
     tab_idx = 0
 
     notifications = db.get_table_as_df("notifications")
@@ -705,6 +751,9 @@ def show_user_page(user, team):
 
     with tabs[5 + tab_idx]:
         show_user_info(user)
+
+    with tabs[6 + tab_idx]:
+        show_account_info(user)
 
 
 def main():
