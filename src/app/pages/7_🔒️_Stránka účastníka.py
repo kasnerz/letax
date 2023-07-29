@@ -774,10 +774,9 @@ def main():
                     """- **Email** použij stejný, jako jsi použil(a) pro registraci na akci (malými písmeny). 
 - **Username** je libovolný identifikátor, které budeš používat na přihlášení do systému.
 - **Name** je tvoje celé jméno a příjmení.
-- **Heslo** použij takové, které se ti bude dobře pamatovat, dobře psát na mobilu, a zároveň ho nenajdeš [tady](https://en.wikipedia.org/wiki/Wikipedia:10,000_most_common_passwords).
+- **Heslo** použij takové, které se ti bude dobře pamatovat, dobře psát na mobilu, a zároveň ho nenajdeš [tady](https://en.wikipedia.org/wiki/Wikipedia:10,000_most_common_passwords) :)
 
-Pokud se ti nedaří přihlásit, napiš nám e-mail na letni@x-challenge.cz.
-                    """
+Pokud tě na akci přihlásil někdo jiný nebo se ti z nějakého důvodu nedaří zaregistrovat, tak nám napiš svoje jméno, příjmení a e-mail (ideálně s dokladem o zaplacení) na letni@x-challenge.cz, přidáme tě do databáze ručně."""
                 )
                 register_form(authenticator, config)
 
