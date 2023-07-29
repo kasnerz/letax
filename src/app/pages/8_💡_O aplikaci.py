@@ -28,7 +28,7 @@ def main():
     with columns[0]:
         st.markdown(
             """
-    Tato appka pohání **[Letní X-Challenge](https://x-challenge.cz/letni/)**, akci pořádanou komunitou **[X-Challenge](https://x-challenge.cz/letni/)**. 
+    Tato appka – **[letax](https://github.com/kasnerz/letax)** (**let**ní **a**ppka **X**-Challenge) – pohání **[Letní X-Challenge](https://x-challenge.cz/letni/)**, akci pořádanou komunitou **[X-Challenge](https://x-challenge.cz/letni/)**. 
     
     Pořádáme i **[spoustu dalších akcí](https://x-challenge.cz/akce/)** a hledáme **[aktivní lidi](https://x-challenge.cz/pridej-se/)**!
 
@@ -36,9 +36,9 @@ def main():
         )
         st.markdown(
             """
-Za **[appkou](https://github.com/kasnerz/xc-app)** stojí **[Zdeněk Kasner](https://facebook.com/zdenek.kasner/)**, účastník řady X-Challenge akcí. Appku napsal ve volném čase, protože mu přišlo, že je to dobrý nápad :-)
+Za appkou stojí **[Zdeněk Kasner](https://facebook.com/zdenek.kasner/)**, účastník řady X-Challenge akcí. Appku pro tuhle akci napsal ve volném čase, protože mu přišlo, že je to dobrý nápad :-)
 
-Pokud narazíš na nějakou chybu (a že jich ze začátku může být!), dej mi prosím vědět na **info@x-challenge.cz**, případně nám napiš na **[Facebook](https://facebook.com/xchallengecz)** nebo **[Instagram](https://instagram.com/xchallengecz/)**.
+Pokud narazíš na nějakou chybu (a že jich ze začátku může být!), dej mi prosím vědět na **letni@x-challenge.cz**, případně nám napiš na **[Facebook](https://facebook.com/xchallengecz)** nebo **[Instagram](https://instagram.com/xchallengecz/)**.
 """
         )
 
