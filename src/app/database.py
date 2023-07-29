@@ -113,11 +113,11 @@ class Database:
         if not os.path.exists(zip_path):
             raise ValueError(f"Backup file {zip_path} does not exist.")
 
-        # overwrite the database in db folder by unzipping the backup
-        # the zip file contains the innards of the db folder
+        # overwrite the database in db folder and the accounts in src/app/accounts.yaml by unzipping the backup
+        # the zip file contains the folders db/ and src/
         with zipfile.ZipFile(zip_path, "r") as zip_ref:
-            zip_ref.extractall("db")
-
+            zip_ref.extractall(".")
+            
         # reload the database
         self.__init__()
         utils.clear_cache()
