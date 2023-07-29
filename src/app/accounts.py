@@ -43,6 +43,11 @@ class AccountManager:
 
         return user
 
+    def update_user_name(self, username, name):
+        self.accounts["credentials"]["usernames"][username]["name"] = name
+
+        self.save_accounts()
+
     def get_user_by_email(self, email):
         return self.email_index.get(email)
 
