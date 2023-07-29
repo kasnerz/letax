@@ -68,12 +68,11 @@ def get_profile_photo(pax):
 
 
 def get_participant_name_view(pax):
-    is_registered = pax.get("registered") and not pd.isna(pax["registered"])
-
+    # is_registered = pax.get("registered") and not pd.isna(pax["registered"])
     link_color = db.get_settings_value("link_color")
     name = pax["name"] or pax["name_web"]
 
-    if is_registered:
+    if pax["registered"]:
         pax_id = pax["id"]
         link = f"<div><a href='/Účastníci?id={pax_id}'  target='_self' style='text-decoration: none;'><h5 style='color: {link_color};'>{name}</h5></a></div>"
     else:
@@ -89,19 +88,29 @@ def get_participants_view():
     if participants.empty:
         return None
 
+    participants["registered"] = participants.apply(
+        lambda x: x.get("registered") and not pd.isna(x["registered"]), axis=1
+    )
     # add column profile_photo_view to the dataframe
     participants["profile_photo_view"] = participants.apply(get_profile_photo, axis=1)
     participants["name_view"] = participants.apply(lambda x: get_participant_name_view(x), axis=1)
 
     return participants
 
+
 @st.cache_data(show_spinner=False)
-def show_participants():
+def show_participants(_stats_container):
     participants = get_participants_view()
     if participants is None:
         st.info("Nikdo se zatím nezaregistroval. Přidáš se ty?")
         st.stop()
 
+    test_participants_cnt = 2
+    pax_total = len(participants) - test_participants_cnt
+    pax_registered = len(participants[participants["registered"] == True]) - test_participants_cnt
+    pax_teams = len(participants[participants["team_name"].isna() == False]) - test_participants_cnt
+
+    _stats_container.caption(f"Celkem: {pax_total}, zaregistrováno: {pax_registered}, v týmu: {pax_teams}.")
     column_cnt = 5
     img_cache = {}
 
@@ -143,6 +152,7 @@ def main():
         st.stop()
 
     st.markdown(f"# Účastníci {xchallenge_year}")
+    stats_container = st.container()
 
     st.markdown(
         """
@@ -163,7 +173,7 @@ def main():
     """,
         unsafe_allow_html=True,
     )
-    show_participants()
+    show_participants(stats_container)
 
 
 if __name__ == "__main__":
