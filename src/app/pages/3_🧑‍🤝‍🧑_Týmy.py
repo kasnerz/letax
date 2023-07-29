@@ -103,7 +103,7 @@ def show_teams():
             st.image(img, width=60)
 
             st.markdown(f"{team_name}", unsafe_allow_html=True)
-            st.markdown(f"<div style='margin-top: -15px; margin-bottom:20px;'>{members}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='margin-top: -15px; margin-bottom:0px;'>{members}</div>", unsafe_allow_html=True)
 
             if team["team_motto"]:
                 st.caption(team["team_motto"])
