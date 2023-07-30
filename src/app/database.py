@@ -117,7 +117,7 @@ class Database:
         # the zip file contains the folders db/ and src/
         with zipfile.ZipFile(zip_path, "r") as zip_ref:
             zip_ref.extractall(".")
-            
+
         # reload the database
         self.__init__()
         utils.clear_cache()
