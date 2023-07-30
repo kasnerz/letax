@@ -101,13 +101,19 @@ def show_teams():
                 member2 = db.get_participant_by_id(team["member2"])
                 members += f", {member2['name']}"
 
-            st.image(img, width=60)
+            st.image(img, width=100)
 
             st.markdown(f"{team_name}", unsafe_allow_html=True)
             st.markdown(f"<div style='margin-top: -15px; margin-bottom:0px;'>{members}</div>", unsafe_allow_html=True)
 
             if team["team_motto"]:
-                st.caption(team["team_motto"])
+                motto = utils.escape_html(team["team_motto"])
+                motto = motto[:100] + "..." if len(motto) > 100 else motto
+
+                st.markdown(
+                    f"<div style='margin-top: -5px; margin-bottom:30px; font-size:12px; color: grey'>{motto}</div>",
+                    unsafe_allow_html=True,
+                )
             else:
                 st.markdown("")
 
