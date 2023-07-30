@@ -124,7 +124,7 @@ class Database:
 
     @st.cache_resource(ttl=TTL, show_spinner=False)
     def get_boto3_object(_self, filepath):
-        print("get_boto3_object")
+        # print("get_boto3_object")
         obj = _self.boto3.Object(_self.fs_bucket, filepath)
         return obj
 
