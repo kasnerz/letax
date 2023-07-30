@@ -98,7 +98,7 @@ def resize_image(img, max_width=None, crop_ratio=None, circle=False):
         img = result
 
     end = time.time()
-    print(f"resize_image took {end - start} seconds")
+    # print(f"resize_image took {end - start} seconds")
 
     return img
 

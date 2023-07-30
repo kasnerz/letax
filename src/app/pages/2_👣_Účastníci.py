@@ -114,6 +114,8 @@ def show_participants():
     pax_registered = len(participants[participants["registered"] == True]) - test_participants_cnt
     pax_teams = len(participants[participants["team_name"].isna() == False]) - test_participants_cnt
 
+    link_color = db.get_settings_value("link_color")
+
     st.caption(f"Celkem: {pax_total}, zaregistrováno: {pax_registered}, v týmu: {pax_teams}.")
     column_cnt = 5
     img_cache = {}
@@ -127,6 +129,7 @@ def show_participants():
         with subcol:
             name = pax["name_view"]
             team_name = pax["team_name"]
+            team_id = pax["team_id"]
 
             if img_cache.get(pax["profile_photo_view"]):
                 img = img_cache[pax["profile_photo_view"]]
@@ -134,12 +137,13 @@ def show_participants():
                 img = utils.resize_image(db.read_image(pax["profile_photo_view"]), crop_ratio="1:1", circle=True)
                 img_cache[pax["profile_photo_view"]] = img
 
-            st.image(img, width=60)
+            st.image(img, width=80)
             st.markdown(f"{name}", unsafe_allow_html=True)
 
             if team_name:
                 st.markdown(
-                    f"<div style='margin-top: -15px; margin-bottom:20px;'>{team_name}</div>", unsafe_allow_html=True
+                    f"<div style='margin-top: -15px; margin-bottom:20px;'><a href='/Týmy?id={team_id}' style='color: {link_color}; text-decoration: none;' target='_self'>{team_name}</a></div>",
+                    unsafe_allow_html=True,
                 )
             else:
                 st.markdown("")
