@@ -328,7 +328,7 @@ class Database:
 
         if not participants.empty and sort_by_name:
             # considering unicode characters in Czech alphabet
-            participants = participants.sort_values(by="name", key=lambda x: [unidecode(a) for a in x])
+            participants = participants.sort_values(by="name", key=lambda x: [unidecode(a).lower() for a in x])
 
         if fetch_teams and not participants.empty:
             teams = self.get_table_as_df("teams")
