@@ -633,6 +633,10 @@ class Database:
             photo_dir = os.path.join(self.top_dir, "teams", slugify(team_name))
             photo_path = os.path.join(photo_dir, team_photo.name)
             self.write_file(filepath=photo_path, content=team_photo.read())
+        else:
+            # if photo already exists in the database, keep it
+            if current_team:
+                photo_path = current_team["team_photo"]
 
         self.conn.execute(
             f"INSERT OR REPLACE INTO teams (team_id, team_name, team_motto, team_web, team_photo, member1, member2) VALUES (?, ?, ?, ?, ?, ?, ?)",
