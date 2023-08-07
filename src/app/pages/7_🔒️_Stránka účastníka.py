@@ -262,6 +262,8 @@ def record_location(user, team):
 
 def show_team_info(user, team):
     team_name = team["team_name"] if team else ""
+    motto = team["team_motto"] if team else ""
+    web = team["team_web"] if team else ""
 
     # all users not part of any team and not the current user
     available_paxes = db.get_available_participants(user["pax_id"], team)
@@ -275,8 +277,8 @@ def show_team_info(user, team):
             options=range(len(available_paxes)),
             format_func=lambda x: available_paxes.iloc[x]["name"],
         )
-        team_motto = st.text_input("Motto týmu (nepovinné):")
-        team_web = st.text_input("Instagram, web, apod. (nepovinné):")
+        team_motto = st.text_input("Motto týmu (nepovinné):", value=motto)
+        team_web = st.text_input("Instagram, web, apod. (nepovinné):", value=web)
 
         cols = st.columns([4, 1])
         with cols[0]:
