@@ -644,7 +644,7 @@ class Database:
         self.conn.execute(
             """CREATE TABLE if not exists participants (
                 id text not null unique,
-                email text not null,
+                email text not null unique,
                 name_web text not null,
                 bio text,
                 emergency_contact text,
