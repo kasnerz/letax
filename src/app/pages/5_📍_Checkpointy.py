@@ -11,6 +11,7 @@ import pandas as pd
 from database import get_database
 import accounts
 import utils
+from unidecode import unidecode
 
 st.set_page_config(page_title="Checkpointy", page_icon="static/favicon.png", layout="centered")
 utils.style_sidebar()
@@ -46,7 +47,7 @@ def main():
     # st.components.v1.iframe(embed_url, height=480, scrolling=True)
 
     # sort by name
-    checkpoints = checkpoints.sort_values(by="name")
+    checkpoints = checkpoints.sort_values(by="name", key=lambda x: [unidecode(a) for a in x])
 
     for _, checkpoint in checkpoints.iterrows():
         gmaps_url = f"http://www.google.com/maps/place/{checkpoint['latitude']},{checkpoint['longitude']}"

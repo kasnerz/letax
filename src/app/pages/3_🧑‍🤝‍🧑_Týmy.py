@@ -79,7 +79,7 @@ def show_teams():
         st.stop()
 
     # considering unicode characters in Czech alphabet
-    teams = teams.sort_values(by="team_name", key=lambda x: [unidecode(a) for a in x])
+    teams = teams.sort_values(by="team_name", key=lambda x: [unidecode(a).lower() for a in x])
 
     column_cnt = 4
 
