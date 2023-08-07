@@ -104,8 +104,6 @@ def resize_image(img, max_width=None, crop_ratio=None, circle=False):
 
 
 def style_sidebar():
-    # st.sidebar.warning("Aplikace běží v testovacím režimu!")
-
     st.markdown(
         """
     <style>
