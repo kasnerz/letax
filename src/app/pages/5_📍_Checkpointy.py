@@ -20,6 +20,21 @@ db = get_database()
 def main():
     st.title("Checkpointy")
 
+    gmaps_url = db.get_settings_value("map_embed_url")
+
+    # create link to google maps
+    st.markdown(f"""
+    <iframe
+        width="100%"
+        height="480"
+        frameborder="0" style="border:0"
+        src="{gmaps_url}"
+        allowfullscreen>
+    </iframe>
+    """, unsafe_allow_html=True)
+
+
+
     checkpoints = db.get_table_as_df("checkpoints")
 
     if checkpoints.empty:
