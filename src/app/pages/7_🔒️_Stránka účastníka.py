@@ -201,6 +201,14 @@ def record_story(user):
 
     # When the submit button is clicked
     if submit_button:
+        if not story_title:
+            st.error("Dej příspěvku nějaký nadpis.")
+            st.stop()
+
+        if not comment:
+            st.error("Dej příspěvku nějaký text.")
+            st.stop()
+
         with st.spinner("Ukládám příspěvek..."):
             create_post(
                 user=user,
