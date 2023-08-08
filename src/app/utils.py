@@ -130,6 +130,7 @@ def postprocess_uploaded_video(video):
     video_path = f"/tmp/{video_uuid}_pp.mp4"
     st.write(f"Zpracovávám video {original_video_path}, může to chvíli trvat, prosím vydrž...")
 
+    # TODO write about ffmpeg as a dependency
     postprocess_ffmpeg(original_video_path, video_path)
     os.remove(original_video_path)
 
