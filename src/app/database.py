@@ -159,13 +159,19 @@ class Database:
         img = _self.read_file(filepath, mode="b")
 
         if not img:
-            print("Cannot load image")
+            print(f"Cannot load image: {filepath}")
             # return blank image
             return Image.new("RGB", (1, 1))
 
         # read image using PIL
-        img = Image.open(io.BytesIO(img))
-        img = ImageOps.exif_transpose(img)
+        try:
+            img = Image.open(io.BytesIO(img))
+            img = ImageOps.exif_transpose(img)
+        except Exception as e:
+            print(f"Cannot read image: {filepath}")
+            print(traceback.format_exc())
+            # return blank image
+            return Image.new("RGB", (1, 1))
 
         return img
 
