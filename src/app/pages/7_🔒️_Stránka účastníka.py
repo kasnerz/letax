@@ -11,6 +11,7 @@ import time
 import time
 import traceback
 import utils
+from unidecode import unidecode
 
 st.set_page_config(page_title="Stránka týmu", page_icon="static/favicon.png", layout="wide")
 utils.style_sidebar()
@@ -157,6 +158,9 @@ def record_challenge(user):
 
 def record_checkpoint(user):
     checkpoints = db.get_available_actions(user=user, action_type="checkpoint")
+
+    # sort checkpoints alphabetically
+    checkpoints = sorted(checkpoints, key=lambda x: unidecode(x["name"].lower()))
 
     with st.form("checkpoint"):
         checkpoint_idx = st.selectbox(
