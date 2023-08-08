@@ -54,6 +54,9 @@ def show_map():
 
     for _, location in last_locations.iterrows():
         team = db.get_team_by_id(location["team_id"])
+        team_icon = team["location_icon"] or "user"
+        team_color = team["location_color"] or "red"
+        team_icon_color = team["location_icon_color"] or "white"
 
         team_name = team["team_name"]
         if not db.is_team_visible(team):
@@ -78,7 +81,7 @@ def show_map():
             [location["latitude"], location["longitude"]],
             popup=popup,
             tooltip=text,
-            icon=folium.Icon(color="red", icon="user"),
+            icon=folium.Icon(color=team_color, icon=team_icon, icon_color=team_icon_color),
         ).add_to(m)
 
     # call to render Folium map in Streamlit
