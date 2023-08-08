@@ -11,7 +11,8 @@ import ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from streamlit_extras import app_logo
-
+import subprocess
+import ffmpeg
 
 TTL = 600
 
@@ -54,6 +55,88 @@ def escape_html(s):
     s = s.replace("\n", "<br>")
 
     return s
+
+
+def heic_to_jpg(input_file, output_file):
+    try:
+        subprocess.run(["heif-convert", input_file, output_file], check=True)
+    except subprocess.CalledProcessError:
+        raise Exception("Failed to convert HEIC to JPG. Is heif-convert installed?")
+
+
+def postprocess_uploaded_photo(photo):
+    # photo is a Streamlit uploaded object
+    # generate a unique filename
+    photo_uuid = generate_uuid()
+
+    # original suffix
+    photo_suffix = os.path.splitext(photo.name)[1].lower()
+
+    # generate a unique filename
+    photo_name = f"{photo_uuid}{photo_suffix}"
+    photo_path = f"/tmp/{photo_name}"
+
+    # save as a temporary file
+    with open(photo_path, "wb") as f:
+        f.write(photo.read())
+
+    # if the photo is a HEIC, convert it to JPG
+    if photo.type in ["image/heic", "image/heif"]:
+        original_photo_path = photo_path
+        photo_path = f"/tmp/{photo_uuid}.jpg"
+
+        # TODO write about libheif as a dependency
+        heic_to_jpg(original_photo_path, photo_path)
+
+        os.remove(original_photo_path)
+        photo_name = f"{photo_uuid}.jpg"
+
+    # TODO resize?
+
+    photo_content = open(photo_path, "rb").read()
+    os.remove(photo_path)
+
+    return photo_content, photo_name
+
+
+def postprocess_ffmpeg(input_file, output_file):
+    # use ffmpeg-python to efficiently convert the video to a reasonable sized-file
+    try:
+        input_stream = ffmpeg.input(input_file)
+        output_stream = ffmpeg.output(input_stream, output_file, crf=26, preset="fast")
+        ffmpeg.run(output_stream)
+        print(f"Video successfully postprocessed and saved as {output_file}")
+    except ffmpeg.Error as e:
+        print(f"An error occurred: {e}")
+
+
+def postprocess_uploaded_video(video):
+    # video is a Streamlit uploaded object
+    # generate a unique filename
+
+    video_uuid = generate_uuid()
+
+    # original suffix
+    video_suffix = os.path.splitext(video.name)[1].lower()
+
+    # generate a unique filename
+    video_name = f"{video_uuid}{video_suffix}"
+    video_path = f"/tmp/{video_name}"
+
+    with open(video_path, "wb") as f:
+        f.write(video.read())
+
+    original_video_path = video_path
+    video_path = f"/tmp/{video_uuid}_pp.mp4"
+    st.write(f"Zpracovávám video {original_video_path}, může to chvíli trvat, prosím vydrž...")
+
+    postprocess_ffmpeg(original_video_path, video_path)
+    os.remove(original_video_path)
+
+    video_content = open(video_path, "rb").read()
+    video_name = f"{video_uuid}_pp.mp4"
+
+    return video_content, video_name
 
 
 @st.cache_resource(ttl=TTL)

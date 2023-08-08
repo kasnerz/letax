@@ -383,9 +383,12 @@ class Database:
             query = "UPDATE participants SET bio = ?, emergency_contact = ?, photo = ? WHERE email = ?"
 
             dir_path = os.path.join(self.top_dir, "participants", slugify(username))
-            photo_path = os.path.join(dir_path, photo.name)
 
-            self.write_file(filepath=os.path.join(dir_path, photo.name), content=photo.read())
+            photo_content, photo_name = utils.postprocess_uploaded_photo(photo)
+
+            photo_path = os.path.join(dir_path, photo_name)
+
+            self.write_file(filepath=os.path.join(dir_path, photo_name), content=photo_content)
 
             self.conn.execute(query, (bio, emergency_contact, photo_path, email))
             self.conn.commit()
@@ -415,21 +418,39 @@ class Database:
 
         dir_path = os.path.join(self.top_dir, action_type, title, slugify(team["team_name"]))
 
-        for file in files:
-            self.write_file(filepath=os.path.join(dir_path, file.name), content=file.read())
+        files_json = []
+
+        # show progress in streamlit
+        # progress_bar = st.progress(0)
+
+        for i, file in enumerate(files):
+            # if it's a photo, we need to process it
+            if file.type.startswith("image"):
+                file_content, file_name = utils.postprocess_uploaded_photo(file)
+            elif file.type.startswith("video"):
+                file_content, file_name = utils.postprocess_uploaded_video(file)
+
+                # ... ignore the rest
+
+            file_path = os.path.join(dir_path, file_name)
+            self.write_file(filepath=file_path, content=file_content)
+
+            # TODO return type from postprocessing
+            files_json.append({"path": file_path, "type": file.type})
+
+            # progress_bar.progress((i + 1) / len(files))
 
         post_id = utils.generate_uuid()
-        files = [{"path": os.path.join(dir_path, file.name), "type": file.type} for file in files]
 
         # serialize files as json string
-        files = json.dumps(files)
+        files_json = json.dumps(files_json)
         created = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         pax_id = user["pax_id"]
         team_id = team["team_id"]
 
         self.conn.execute(
             f"INSERT INTO posts (post_id, pax_id, team_id, action_type, action_name, comment, files, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (post_id, pax_id, team_id, action_type, title, comment, files, created),
+            (post_id, pax_id, team_id, action_type, title, comment, files_json, created),
         )
         self.conn.commit()
 
@@ -631,8 +652,11 @@ class Database:
         photo_path = None
         if team_photo:
             photo_dir = os.path.join(self.top_dir, "teams", slugify(team_name))
-            photo_path = os.path.join(photo_dir, team_photo.name)
-            self.write_file(filepath=photo_path, content=team_photo.read())
+
+            photo_content, photo_name = utils.postprocess_uploaded_photo(team_photo)
+
+            photo_path = os.path.join(photo_dir, photo_name)
+            self.write_file(filepath=photo_path, content=photo_content)
         else:
             # if photo already exists in the database, keep it
             if current_team:
