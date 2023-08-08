@@ -11,6 +11,7 @@ import pandas as pd
 from database import get_database
 import accounts
 import utils
+import re
 from unidecode import unidecode
 import folium
 from streamlit_folium import st_folium
@@ -22,6 +23,29 @@ db = get_database()
 
 def backbtn():
     st.experimental_set_query_params()
+
+
+def parse_links(web):
+    if web.startswith("http"):
+        return web
+
+    if web.startswith("www"):
+        return f"https://{web}"
+
+    # some people post just instagram handles - find all handles and add https://instagram.com/ in front of them
+
+    # find all handles
+    handles = re.findall(r"@(\w+)", web)
+
+    if not handles:
+        return web
+
+    links = []
+    for handle in handles:
+        # name = handle.group(1)
+        links.append(f"[@{handle}](https://instagram.com/{handle})")
+
+    return ", ".join(links)
 
 
 def show_profile(team_id):
@@ -50,7 +74,8 @@ def show_profile(team_id):
             st.write(f"{team['team_motto']}")
 
         if team["team_web"]:
-            st.markdown(f"🔗 [{team['team_web']}]({team['team_web']})")
+            links = parse_links(team["team_web"])
+            st.markdown(f"🔗 {links}")
 
     with columns[2]:
         photo_path = team["team_photo"]
@@ -68,6 +93,12 @@ def get_team_name_view(team):
     link = f"<div><a href='/Týmy?id={team_id}'  target='_self' style='text-decoration: none;'><h5 style='color: {link_color};'>{name}</h5></a></div>"
 
     return link
+
+
+def get_member_link(member_id, member_name):
+    link_color = db.get_settings_value("link_color")
+
+    return f"<a href='/Účastníci?id={member_id}' style='color: {link_color}; text-decoration: none;' target='_self'>{member_name}</a>"
 
 
 @st.cache_data(show_spinner=False)
@@ -94,13 +125,14 @@ def show_teams():
             img_path = team["team_photo"] or "static/team.png"
             img = utils.resize_image(db.read_image(img_path), crop_ratio="1:1")
 
-            member1 = db.get_participant_by_id(team["member1"]).get("name")
-            members = member1
+            member1 = db.get_participant_by_id(team["member1"])
+            members = [get_member_link(member1["id"], member1["name"])]
 
             if team["member2"]:
                 member2 = db.get_participant_by_id(team["member2"])
-                members += f", {member2['name']}"
+                members.append(get_member_link(member2["id"], member2["name"]))
 
+            members = ", ".join(members)
             st.image(img, width=100)
 
             st.markdown(f"{team_name}", unsafe_allow_html=True)
