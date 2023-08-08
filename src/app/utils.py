@@ -60,6 +60,8 @@ def escape_html(s):
 def heic_to_jpg(input_file, output_file):
     try:
         subprocess.run(["heif-convert", input_file, output_file], check=True)
+        # TODO add libimage-exiftool-perl as a dependency
+        subprocess.run(["exiftool", "-n", "-Orientation=1", output_file], check=True)
     except subprocess.CalledProcessError:
         raise Exception("Failed to convert HEIC to JPG. Is heif-convert installed?")
 
