@@ -54,6 +54,7 @@ def show_map():
 
     for _, location in last_locations.iterrows():
         team = db.get_team_by_id(location["team_id"])
+
         team_name = team["team_name"]
         if not db.is_team_visible(team):
             continue
