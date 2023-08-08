@@ -562,6 +562,10 @@ class Database:
         posts = posts.to_dict("records")
         return posts
 
+    def delete_post(self, post_id):
+        self.conn.execute("DELETE FROM posts WHERE post_id = ?", (post_id,))
+        self.conn.commit()
+
     def get_available_actions(self, user, action_type):
         # retrieve actions (of type "challenge", etc.) which the user has not yet completed
         # return as list of dicts
@@ -797,6 +801,13 @@ class Database:
             return None
 
         return df.to_dict("records")[0]
+
+    def delete_location(self, location):
+        username = location["username"]
+        date = location["date"]
+
+        self.conn.execute(f"DELETE FROM locations WHERE username='{username}' AND date='{date}'")
+        self.conn.commit()
 
     def is_team_visible(self, team):
         team_id = team["team_id"]

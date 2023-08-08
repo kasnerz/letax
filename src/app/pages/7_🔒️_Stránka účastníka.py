@@ -739,6 +739,91 @@ def show_notifications(notifications):
             st.info(notification.text)
 
 
+def show_post_management(user, team):
+    
+
+    st.caption("Zde vidíš všechny příspěvky a polohy, které tvůj tým nasdílel. Kliknutím na tlačítko Smazat příspěvek / lokaci trvale smažeš, takže opatrně!")
+
+    st.markdown("### Příspěvky")
+    # display the list of all the posts the team posted and a "delete" button for each of them
+    posts = db.get_table_as_df("posts")
+
+    # filter posts by team
+    posts = posts[posts["team_id"] == team["team_id"]]
+
+    if posts.empty:
+        st.info("Tvůj tým zatím nepřidal žádné příspěvky.")
+
+    # keep only the columns we want to display: action_type, action_name, comment, created, files
+    for i, post in posts.iterrows():
+        col_type, col_name, col_desc, col_delete = st.columns([1,3,5,2])
+        with col_type:
+            mapping = {
+                "challenge": "💪",
+                "checkpoint": "📍",
+                "story": "✍️",
+            }
+            st.write(mapping[post["action_type"]])
+
+        with col_name:
+            st.markdown("**" + post["action_name"] + "**")
+        
+        with col_desc:
+            comment = post["comment"]
+            # crop comment if too long
+            if len(comment) > 100:
+                comment = comment[:100] + "..."
+
+            st.write(comment)
+        
+        with col_delete:
+            if st.button("❌ Smazat", key=f"delete-{post['post_id']}"):
+                db.delete_post(post.post_id)
+                st.success("Příspěvek smazán.")
+                time.sleep(2)
+                st.experimental_rerun()
+
+        st.divider()
+
+    st.markdown("### Polohy")
+
+    locations = db.get_table_as_df("locations")
+    locations = locations[locations["team_id"] == team["team_id"]]
+
+    if locations.empty:
+        st.info("Tvůj tým zatím nenasdílel žádnou polohu.")
+
+
+    for i, location in locations.iterrows():
+        col_date, col_gps, col_comment, col_delete  = st.columns([3,3,5, 2])
+        with col_date:
+            st.markdown("**" + location["date"][:-7] + "**")
+        
+        with col_gps:
+            gps = f'{location["latitude"]}, {location["longitude"]}'
+            st.write(gps)
+        
+        with col_comment:
+            comment = location["comment"]
+            # crop comment if too long
+            if len(comment) > 100:
+                comment = comment[:100] + "..."
+
+            st.write(comment)
+
+        with col_delete:
+            if st.button("❌ Smazat", key=f"delete-{location['date']}"):
+                db.delete_location(location)
+                st.success("Poloha smazána.")
+                time.sleep(2)
+                st.experimental_rerun()
+
+        st.divider()
+
+
+
+    
+
 def show_user_page(user, team):
     name = user["name"]
     team_name = team["team_name"] if team else "Žádný tým"
@@ -757,7 +842,7 @@ def show_user_page(user, team):
         show_team_info(user=user, team=team)
         st.stop()
 
-    tab_list = ["💪 Výzva", "📍 Checkpoint", "✍️  Příspěvek", "🗺️ Poloha", "🧑‍🤝‍🧑 Tým", "👤 O mně", "🔑 Účet"]
+    tab_list = ["💪 Výzva", "📍 Checkpoint", "✍️  Příspěvek", "🗺️ Poloha", "📤️ Odesláno", "🧑‍🤝‍🧑 Tým", "👤 O mně", "🔑 Účet"]
     tab_idx = 0
 
     notifications = db.get_table_as_df("notifications")
@@ -785,12 +870,15 @@ def show_user_page(user, team):
         record_location(user, team)
 
     with tabs[4 + tab_idx]:
-        show_team_info(user, team)
+        show_post_management(user, team)
 
     with tabs[5 + tab_idx]:
-        show_user_info(user)
+        show_team_info(user, team)
 
     with tabs[6 + tab_idx]:
+        show_user_info(user)
+
+    with tabs[7 + tab_idx]:
         show_account_info(user)
 
 
