@@ -59,9 +59,21 @@ def show_map():
         if not db.is_team_visible(team):
             continue
 
-        text = "<b>" + team_name + "</b><br>" + location["comment"]
-        popup = f"<b>{team_name}</b><br><i> {location['date']}</i>"
+        date = location["date"]
+        # remove "ss:ms.000" from the date
+        date = date[:-10]
 
+        # split to date and time
+        date, time = date.split(" ")
+
+        text = "<b>" + team_name + "</b>"
+
+        if location["comment"]:
+            popup = f"{location['comment']}<br><br>"
+        else:
+            popup = ""
+
+        popup += f"<i>{date}</i><br><i>{time}</i>"
         folium.Marker(
             [location["latitude"], location["longitude"]],
             popup=popup,
@@ -70,7 +82,7 @@ def show_map():
         ).add_to(m)
 
     # call to render Folium map in Streamlit
-    st_data = st_folium(m, width=900)
+    st_data = st_folium(m, width=500)
 
     # # show the locations on the map
     # st.map(last_locations)
