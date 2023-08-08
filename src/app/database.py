@@ -805,11 +805,12 @@ class Database:
             f"SELECT * FROM teams WHERE team_id='{team_id}'",
             self.conn,
         )
+        visibility = df.to_dict("records")[0]["location_visibility"]
 
-        if df.empty:
-            return None
+        if visibility is None:
+            visibility = 1
 
-        return bool(df.to_dict("records")[0]["location_visibility"])
+        return bool(visibility)
 
     def toggle_team_visibility(self, team):
         team_id = team["team_id"]
@@ -818,10 +819,12 @@ class Database:
             f"SELECT * FROM teams WHERE team_id='{team_id}'",
             self.conn,
         )
-        if df.empty:
-            return None
 
         visibility = df.to_dict("records")[0]["location_visibility"]
+
+        if visibility is None:
+            visibility = 1
+
         visibility = 1 - visibility
 
         self.conn.execute(
