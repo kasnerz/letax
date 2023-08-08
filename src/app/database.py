@@ -446,7 +446,7 @@ class Database:
         files_json = json.dumps(files_json)
         created = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         pax_id = user["pax_id"]
-        team_id = team["team_id"]
+        team_id = str(team["team_id"])
 
         self.conn.execute(
             f"INSERT INTO posts (post_id, pax_id, team_id, action_type, action_name, comment, files, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
@@ -710,7 +710,7 @@ class Database:
         self.conn.execute(
             """CREATE TABLE if not exists locations (
                 username text not null,
-                team_id text,
+                team_id text not null,
                 comment text,
                 longitude float not null,
                 latitude float not null,
@@ -754,7 +754,7 @@ class Database:
     ):
         team = self.get_team_for_user(user["pax_id"])
         username = user["username"]
-        team_id = team["team_id"]
+        team_id = str(team["team_id"])
 
         self.conn.execute(
             f"INSERT INTO locations (username, team_id, comment, longitude, latitude, accuracy, altitude, altitude_accuracy, heading, speed, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
