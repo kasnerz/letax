@@ -234,7 +234,8 @@ def record_location(user, team):
             "Komentář:",
         )
         btn_share = st.form_submit_button("📌 Zaznamenat polohu")
-
+    container = st.empty()
+    
     with st.form("location_icon"):
         location_color = team["location_color"] or "red"
         location_icon_color = team["location_icon_color"] or "#ffffff"
@@ -258,7 +259,6 @@ def record_location(user, team):
 
     is_visible = db.is_team_visible(team)
     st.checkbox(label="Veřejné sdílení polohy", value=is_visible, on_change=db.toggle_team_visibility, args=(team,))
-    container = st.empty()
 
     last_location = db.get_last_location(team)
     if last_location is not None:
@@ -740,8 +740,6 @@ def show_notifications(notifications):
 
 
 def show_post_management(user, team):
-    
-
     st.caption("Zde vidíš všechny příspěvky a polohy, které tvůj tým nasdílel. Kliknutím na tlačítko Smazat příspěvek / lokaci trvale smažeš, takže opatrně!")
 
     st.markdown("### Příspěvky")
