@@ -691,6 +691,9 @@ class Database:
                 team_web text,
                 team_photo text,
                 location_visibility integer default 1,
+                location_color text,
+                location_icon_color text,
+                location_icon text,
                 primary key(team_id)       
             );"""
         )
@@ -771,6 +774,14 @@ class Database:
                 speed,
                 date,
             ),
+        )
+        self.conn.commit()
+
+    def save_location_options(self, team, location_color, location_icon_color, location_icon):
+        team_id = str(team["team_id"])
+
+        self.conn.execute(
+            f"UPDATE teams SET location_color='{location_color}', location_icon_color='{location_icon_color}', location_icon='{location_icon}' WHERE team_id='{team_id}'"
         )
         self.conn.commit()
 

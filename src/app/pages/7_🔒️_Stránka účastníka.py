@@ -235,6 +235,27 @@ def record_location(user, team):
         )
         btn_share = st.form_submit_button("📌 Zaznamenat polohu")
 
+    with st.form("location_icon"):
+        location_color = team["location_color"] or "red"
+        location_icon_color = team["location_icon_color"] or "#ffffff"
+        location_icon = team["location_icon"] or "user"
+
+        # fmt: off
+        icon_options = [
+                "user", "star", "home", "briefcase", "globe", "flag", "tower", "road", "tree", "fire", "cloud", "sun", "moon", "camera", "film", "music", "book", "pencil", "glass", "heart", "leaf", "bell", "key", "wrench", "cog", "anchor", "plane", "train", "car", "bicycle", "ship", "motorcycle", "bus", "subway", "truck", "rocket", "dollar", "euro", "yen", "pound", "bitcoin", "calculator", "clock", "coffee", "cutlery", "flag", "graduation-cap",
+            ]
+        color_options = ["red", "blue", "green", "purple", "orange", "darkred", "lightred", "beige", "darkblue", "darkgreen", "cadetblue", "darkpurple", "white", "pink", "lightblue", "lightgreen", "gray", "black", "lightgray"]
+        
+        location_color = st.selectbox("Barva markeru na mapě", options=color_options,  index=color_options.index(location_color))
+        location_icon_color = st.color_picker("Barva ikony markeru na mapě", value=location_icon_color)
+        # fmt: on
+        location_icon = st.selectbox(
+            "Ikona markeru na mapě:",
+            options=icon_options,
+            index=icon_options.index(location_icon),
+        )
+        btn_save_options = st.form_submit_button("Uložit")
+
     is_visible = db.is_team_visible(team)
     st.checkbox(label="Veřejné sdílení polohy", value=is_visible, on_change=db.toggle_team_visibility, args=(team,))
     container = st.empty()
@@ -270,6 +291,10 @@ def record_location(user, team):
                 "Nepodařilo se nasdílet polohu. Zkontroluj, jestli má tvůj prohlížeč přístup k tvé aktuální poloze."
             )
             time.sleep(5)
+
+    if btn_save_options:
+        db.save_location_options(team, location_color, location_icon_color, location_icon)
+        container.success("Nastavení uloženo!")
 
 
 def show_team_info(user, team):
