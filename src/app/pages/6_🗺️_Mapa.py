@@ -44,7 +44,7 @@ def show_map():
     # center on Liberty Bell, add marker
     m = folium.Map(
         location=[last_locations.latitude.mean(), last_locations.longitude.mean()],
-        zoom_start=5,
+        zoom_start=4,
         # tiles="Stamen Terrain",
         # tiles="cartodbpositron",
         # tiles="https://mapserver.mapy.cz/turist-m/{z}-{x}-{y}.png",
