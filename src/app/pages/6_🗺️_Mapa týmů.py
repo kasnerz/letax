@@ -111,11 +111,10 @@ def show_map():
     # # show the locations on the map
     # st.map(last_locations)
 
-    st.info("Na mapě jsou zobrazeny pouze týmy, které zaznamenaly svoji polohu a povolily její zobrazení.")
-
 
 def main():
     st.title("Mapa týmů")
+    st.caption("Na mapě jsou zobrazeny týmy, které zaznamenaly svoji polohu a povolily její zobrazení.")
     show_map()
 
 
