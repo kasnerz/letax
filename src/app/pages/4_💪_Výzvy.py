@@ -18,7 +18,13 @@ db = get_database()
 
 
 def display_challenge(challenge):
-    st.markdown("#### " + challenge["name"] + " (" + str(challenge["points"]) + ")")
+    points = challenge["points"]
+
+    # if points can be rounded to int without loss of precision, do it
+    if points == int(points):
+        points = int(points)
+
+    st.markdown("#### " + challenge["name"] + " (" + str(points) + ")")
     st.markdown(f"{challenge['description']}")
     st.divider()
 
@@ -32,8 +38,8 @@ def main():
         st.info("Na tento ročník zatím výzvy nejsou. Ale budou!")
         st.stop()
 
-    # sort by name
-    challenges = challenges.sort_values(by="name")
+    # sort by name: letter case insensitive, interpunction before numbers
+    challenges = challenges.sort_values(by="name", key=lambda x: x.str.lower().str.replace("[", "0"))
 
     categories = db.get_settings_value("challenge_categories").split(",")
     tab_list = ["💪 vše"] + categories
