@@ -63,7 +63,17 @@ def show_post(post_id):
     description = post["comment"]
     files = post["files"]
 
-    st.write(f"## {action} - {team['team_name']}")
+    team_id = team["team_id"]
+    team_name = team["team_name"]
+    link_color = db.get_settings_value("link_color")
+
+    st.markdown(
+        f"## {action}",
+    )
+    st.markdown(
+        f"<h4><a href='/Týmy?id={team_id}' target='_self' style='text-decoration: none; color: {link_color}; margin-top: -10px;'>{team_name}</a></h4>",
+        unsafe_allow_html=True,
+    )
 
     post_datetime = utils.convert_to_local_timezone(post["created"])
     st.caption(f"*{post_datetime}*")
@@ -172,8 +182,10 @@ def show_overview(page):
 
         post_id = post["post_id"]
         team_name = team["team_name"]
+        team_id = team["team_id"]
+
         link_color = db.get_settings_value("link_color")
-        link = f"<div style='margin-bottom:-10px; display:inline-block;'><a href='/?post={post_id}&page={page}' target='_self' style='text-decoration: none;'><h4 style='color: {link_color};'>{action_type_icon} {action_name} – <b>{team_name}</b></h4></a></div>"
+        link = f"<div style='margin-bottom:-10px; display:inline-block;'><h4><a href='/?post={post_id}&page={page}' target='_self' style='text-decoration: none; color: {link_color};'>{action_type_icon} {action_name}</a> – <a href='/Týmy?id={team_id}' target='_self' style='text-decoration: none; color: {link_color};'>{team_name}</a></h4></div>"
 
         st.markdown(link, unsafe_allow_html=True)
         cols = st.columns(col_layout)
