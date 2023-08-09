@@ -225,3 +225,19 @@ def style_sidebar():
 def clear_cache():
     st.cache_resource.clear()
     st.cache_data.clear()
+
+
+def convert_to_local_timezone(d):
+    # d is a string in 2023-07-01 10:26:45 format, in GMT zone
+    # convert to timezone UTC+2
+
+    # convert to datetime object
+    d = datetime.strptime(d, "%Y-%m-%d %H:%M:%S")
+
+    # convert to UTC+2
+    d = d + timedelta(hours=2)
+
+    # convert to string
+    d = d.strftime("%Y-%m-%d %H:%M:%S")
+
+    return d
