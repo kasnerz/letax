@@ -517,10 +517,11 @@ class Database:
 
         # Use the apply() function to apply the get_points function to each row in the DataFrame
         if not posts_team.empty:
-            posts_team["points"] = posts_team.apply(
-                lambda row: self.get_points_for_action(row["action_type"], row["action_name"]), axis=1
+            posts_team = posts_team.assign(
+                points=posts_team.apply(
+                    lambda row: self.get_points_for_action(row["action_type"], row["action_name"]), axis=1
+                )
             )
-
         team = self.get_team_by_id(team_id)
 
         member1_name = participants[participants["id"] == team["member1"]].to_dict("records")[0]
