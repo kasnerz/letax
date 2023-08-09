@@ -63,11 +63,7 @@ def show_map():
             continue
 
         date = location["date"]
-        # remove "ss:ms.000" from the date
-        date = date[:-10]
-
-        # split to date and time
-        date, time = date.split(" ")
+        ago_str = utils.ago(date)
 
         text = "<b>" + team_name + "</b>"
 
@@ -76,7 +72,8 @@ def show_map():
         else:
             popup = ""
 
-        popup += f"<i>{date}</i><br><i>{time}</i>"
+        popup += f"<i>{ago_str}</i>"
+
         folium.Marker(
             [location["latitude"], location["longitude"]],
             popup=popup,

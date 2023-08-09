@@ -13,6 +13,7 @@ from email.mime.multipart import MIMEMultipart
 from streamlit_extras import app_logo
 import subprocess
 import ffmpeg
+from datetime import datetime, timedelta
 
 TTL = 600
 
@@ -55,6 +56,22 @@ def escape_html(s):
     s = s.replace("\n", "<br>")
 
     return s
+
+
+def ago(t):
+    t = pd.to_datetime(t)
+    diff = datetime.now() - t
+
+    if diff.days > 0:
+        return f"před {diff.days} dny"
+
+    elif diff.hours > 0:
+        return f"před {diff.hours} hodinami"
+
+    elif diff.minutes > 0:
+        return f"před {diff.minutes} minutami"
+
+    return "právě teď"
 
 
 def heic_to_jpg(input_file, output_file):
