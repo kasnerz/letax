@@ -176,12 +176,11 @@ def show_overview(page):
         st.markdown(link, unsafe_allow_html=True)
         cols = st.columns(col_layout)
         with cols[0]:
-            st.caption(f'*{post["created"]}*')
+            post_datetime = utils.convert_to_local_timezone(post["created"])
+            st.caption(f"*{post_datetime}*")
             st.markdown(shorten(utils.escape_html(description)), unsafe_allow_html=True)
 
         with cols[1]:
-            # show post date formatted as "YYYY-MM-DD HH:MM" as a subtitle in italics
-            # post["created"] is a string in 2023-07-01T10:26:45 format
             files = post["files"]
             for f in files:
                 if f["type"].startswith("image"):
