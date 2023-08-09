@@ -61,17 +61,17 @@ def escape_html(s):
 def ago(t):
     t = pd.to_datetime(t)
     diff = datetime.now() - t
+    hours = diff.seconds // 3600
+    minutes = diff.seconds // 60
 
     if diff.days > 0:
         return f"před {diff.days} dny"
-
     # hours
-    elif diff.seconds > 3600:
-        return f"před {diff.hours} hodinami"
-
+    elif hours > 3600:
+        return f"před {hours} hodinami"
     # minutes
-    elif diff.seconds > 60:
-        return f"před {diff.minutes} minutami"
+    elif minutes > 60:
+        return f"před {minutes} minutami"
 
     return "právě teď"
 
