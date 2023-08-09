@@ -62,18 +62,14 @@ def ago(t):
     t = pd.to_datetime(t)
     diff = datetime.now() - t
     hours = diff.seconds // 3600
-    minutes = diff.seconds // 60
 
     if diff.days > 0:
         return f"před {diff.days} dny"
     # hours
-    elif hours > 3600:
+    elif hours > 0:
         return f"před {hours} hodinami"
-    # minutes
-    elif minutes > 60:
-        return f"před {minutes} minutami"
 
-    return "právě teď"
+    return "před méně než hodinou"
 
 
 def heic_to_jpg(input_file, output_file):
