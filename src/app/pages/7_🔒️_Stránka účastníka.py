@@ -808,7 +808,7 @@ def show_post_management(user, team):
             st.write(comment)
 
         with col_delete:
-            if st.button("❌ Smazat", key=f"delete-{location['date']}"):
+            if st.button("❌ Smazat", key=f"delete-loc-{i}"):
                 db.delete_location(location)
                 st.success("Poloha smazána.")
                 time.sleep(2)
