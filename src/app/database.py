@@ -416,6 +416,10 @@ class Database:
         post["files"] = json.loads(post["files"])
         return post
 
+    def get_posts_by_team(self, team_id):
+        df = pd.read_sql_query(f"SELECT * FROM posts WHERE team_id = ?", self.conn, params=(team_id,))
+        return df
+
     def save_post(self, user, action_type, action, comment, files):
         team = self.get_team_for_user(user["pax_id"])
         # save all the files to the filesystem

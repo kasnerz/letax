@@ -84,6 +84,23 @@ def show_profile(team_id):
             links = parse_links(team["team_web"])
             st.markdown(f"🔗 {links}")
 
+        posts = db.get_posts_by_team(team_id)
+
+        if posts.empty:
+            st.stop()
+
+        st.divider()
+        st.write("#### Příspěvky")
+
+        for i, post in posts.iterrows():
+            # link to post
+            post_link = f"/?post={post['post_id']}"
+            post_date = pd.to_datetime(post["created"]).strftime("%d.%m.%Y %H:%M")
+            st.markdown(
+                f"{post_date} – <b><a href='{post_link}' target='_self'> {post['action_name']}</a><b>",
+                unsafe_allow_html=True,
+            )
+
     with columns[2]:
         photo_path = team["team_photo"]
         if photo_path:
