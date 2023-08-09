@@ -154,14 +154,24 @@ def show_overview(page):
     posts = posts[page * page_size : (page + 1) * page_size]
 
     for post in posts:
-        action = post["action_name"]
+        action_name = post["action_name"]
+        action_type = post["action_type"]
+
         team = db.get_team_by_id(post["team_id"])
         description = post["comment"]
+
+        if action_type == "challenge":
+            action = db.get_action(action_type, action_name)
+            action_type_icon = action["category"][0] if action.get("category") else "💪"
+        elif action_type == "checkpoint":
+            action_type_icon = "📍"
+        else:
+            action_type_icon = "✍️"
 
         post_id = post["post_id"]
         team_name = team["team_name"]
         link_color = db.get_settings_value("link_color")
-        link = f"<div style='margin-bottom:-10px; display:inline-block;'><a href='/?post={post_id}&page={page}' target='_self' style='text-decoration: none;'><h4 style='color: {link_color};'>{action} – <b>{team_name}</b></h4></a></div>"
+        link = f"<div style='margin-bottom:-10px; display:inline-block;'><a href='/?post={post_id}&page={page}' target='_self' style='text-decoration: none;'><h4 style='color: {link_color};'>{action_type_icon} {action_name} – <b>{team_name}</b></h4></a></div>"
 
         st.markdown(link, unsafe_allow_html=True)
         cols = st.columns(col_layout)
