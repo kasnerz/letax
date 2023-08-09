@@ -15,7 +15,7 @@ from unidecode import unidecode
 import folium
 from streamlit_folium import st_folium
 
-st.set_page_config(page_title="Mapa", page_icon="static/favicon.png", layout="centered")
+st.set_page_config(page_title="Mapa týmů", page_icon="static/favicon.png", layout="wide")
 utils.style_sidebar()
 db = get_database()
 
@@ -94,7 +94,7 @@ def show_map():
     # # show the locations on the map
     # st.map(last_locations)
 
-    st.info("Na mapě jsou zobrazeny pouze týmy, které zaznamenaly svoji polohu a povolily její veřejné sdílení")
+    st.info("Na mapě jsou zobrazeny pouze týmy, které zaznamenaly svoji polohu a povolily její zobrazení.")
 
 
 def main():
