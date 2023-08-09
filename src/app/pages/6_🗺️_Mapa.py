@@ -19,6 +19,13 @@ st.set_page_config(page_title="Mapa", page_icon="static/favicon.png", layout="wi
 utils.style_sidebar()
 db = get_database()
 
+make_map_responsive = """
+     <style>
+     [title~="st.iframe"] { width: 100%}
+     </style>
+    """
+st.markdown(make_map_responsive, unsafe_allow_html=True)
+
 
 def show_map():
     # get last locations of all teams
@@ -82,7 +89,7 @@ def show_map():
         ).add_to(m)
 
     # call to render Folium map in Streamlit
-    st_data = st_folium(m, width=500)
+    st_data = st_folium(m, width=None)
 
     # # show the locations on the map
     # st.map(last_locations)
