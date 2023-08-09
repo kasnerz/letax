@@ -183,7 +183,7 @@ def main():
         layout="centered",
         page_title=f"Letní X-Challenge",
         page_icon="static/favicon.png",
-        initial_sidebar_state="expanded",
+        # initial_sidebar_state="expanded",
     )
 
     utils.style_sidebar()
