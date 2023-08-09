@@ -65,10 +65,12 @@ def ago(t):
     if diff.days > 0:
         return f"před {diff.days} dny"
 
-    elif diff.hours > 0:
+    # hours
+    elif diff.seconds > 3600:
         return f"před {diff.hours} hodinami"
 
-    elif diff.minutes > 0:
+    # minutes
+    elif diff.seconds > 60:
         return f"před {diff.minutes} minutami"
 
     return "právě teď"
