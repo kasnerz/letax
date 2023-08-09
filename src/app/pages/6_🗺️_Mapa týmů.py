@@ -13,6 +13,7 @@ import accounts
 import utils
 from unidecode import unidecode
 import folium
+from folium.plugins import BeautifyIcon
 from streamlit_folium import st_folium
 
 st.set_page_config(page_title="Mapa týmů", page_icon="static/favicon.png", layout="wide")
@@ -86,6 +87,22 @@ def show_map():
             popup=popup,
             tooltip=text,
             icon=folium.Icon(color=team_color, icon=team_icon, icon_color=team_icon_color, prefix="fa"),
+        ).add_to(m)
+
+    checkpoints = db.get_table_as_df("checkpoints")
+
+    for _, checkpoint in checkpoints.iterrows():
+        icon_dot = BeautifyIcon(
+            # background_color="darkblue",
+            # icon="arrow-down",
+            # icon_shape="marker",
+            # text_color="white",
+            icon_shape="circle-dot",
+            border_color="grey",
+            border_width=3,
+        )
+        folium.Marker(
+            [checkpoint["latitude"], checkpoint["longitude"]], tooltip=checkpoint["name"], icon=icon_dot
         ).add_to(m)
 
     # call to render Folium map in Streamlit
