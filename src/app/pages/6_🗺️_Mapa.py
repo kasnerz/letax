@@ -15,7 +15,7 @@ from unidecode import unidecode
 import folium
 from streamlit_folium import st_folium
 
-st.set_page_config(page_title="Mapa", page_icon="static/favicon.png", layout="wide")
+st.set_page_config(page_title="Mapa", page_icon="static/favicon.png", layout="centered")
 utils.style_sidebar()
 db = get_database()
 
@@ -89,7 +89,7 @@ def show_map():
         ).add_to(m)
 
     # call to render Folium map in Streamlit
-    st_data = st_folium(m, width=None)
+    st_data = st_folium(m, width=None, height=500)
 
     # # show the locations on the map
     # st.map(last_locations)
