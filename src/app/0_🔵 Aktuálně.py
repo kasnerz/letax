@@ -64,7 +64,9 @@ def show_post(post_id):
     files = post["files"]
 
     st.write(f"## {action} - {team['team_name']}")
-    st.caption(f'*{post["created"]}*')
+
+    post_datetime = utils.convert_to_local_timezone(post["created"])
+    st.caption(f"*{post_datetime}*")
 
     if description:
         # escape html
