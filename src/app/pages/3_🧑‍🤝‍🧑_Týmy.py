@@ -48,6 +48,12 @@ def parse_links(web):
     return ", ".join(links)
 
 
+def get_pax_link(pax_id, pax_name):
+    link_color = db.get_settings_value("link_color")
+
+    return f"<a href='/Účastníci?id={pax_id}' target='_self' style='text-decoration: none; color: {link_color}; margin-top: -10px;'>{pax_name}</a>"
+
+
 def show_profile(team_id):
     st.button("Zpět", on_click=backbtn)
 
@@ -62,13 +68,14 @@ def show_profile(team_id):
         st.write(f"## {team['team_name']}")
 
         member_1 = db.get_participant_by_id(team["member1"])
-        member_string = f"{member_1['name']}"
+        member_string = get_pax_link(team["member1"], member_1["name"])
 
         if team["member2"]:
             member_2 = db.get_participant_by_id(team["member2"])
-            member_string += f" & {member_2['name']}"
+            member_string += ", "
+            member_string += get_pax_link(team["member2"], member_2["name"])
 
-        st.write(f"##### {member_string}")
+        st.markdown(f"<h5>{member_string}</h5>", unsafe_allow_html=True)
 
         if team["team_motto"]:
             st.write(f"{team['team_motto']}")
