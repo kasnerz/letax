@@ -242,16 +242,14 @@ def record_location(user, team):
         location_icon = team["location_icon"] or "user"
 
         # fmt: off
-        icon_options = [
-                "user", "star", "home", "briefcase", "globe", "flag", "tower", "road", "tree", "fire", "cloud", "sun", "moon", "camera", "film", "music", "book", "pencil", "glass", "heart", "leaf", "bell", "key", "wrench", "cog", "anchor", "plane", "train", "car", "bicycle", "ship", "motorcycle", "bus", "subway", "truck", "rocket", "dollar", "euro", "yen", "pound", "bitcoin", "calculator", "clock", "coffee", "cutlery", "flag", "graduation-cap",
-            ]
+        icon_options = utils.get_fa_icons()
         color_options = ["red", "blue", "green", "purple", "orange", "darkred", "lightred", "beige", "darkblue", "darkgreen", "cadetblue", "darkpurple", "white", "pink", "lightblue", "lightgreen", "gray", "black", "lightgray"]
         
         location_color = st.selectbox("Barva markeru na mapě", options=color_options,  index=color_options.index(location_color))
         location_icon_color = st.color_picker("Barva ikony markeru na mapě", value=location_icon_color)
         # fmt: on
         location_icon = st.selectbox(
-            "Ikona markeru na mapě:",
+            "Ikona markeru na mapě (viz https://fontawesome.com/v4/icons/):",
             options=icon_options,
             index=icon_options.index(location_icon),
         )
