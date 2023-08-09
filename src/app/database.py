@@ -33,7 +33,7 @@ current_dir = os.path.dirname(os.path.realpath(__file__))
 
 
 # TODO find a way how to retrieve this value from the config
-TTL = 600
+TTL = 3600 * 24
 
 
 @st.cache_resource
@@ -128,7 +128,7 @@ class Database:
         obj = _self.boto3.Object(_self.fs_bucket, filepath)
         return obj
 
-    @st.cache_resource(ttl=TTL, max_entries=250, show_spinner=False)
+    @st.cache_resource(ttl=TTL, max_entries=50, show_spinner=False)
     def read_file(_self, filepath, mode="b"):
         fs = _self.get_settings_value("file_system")
         if fs == "s3" and not filepath.startswith("static/"):
@@ -154,7 +154,7 @@ class Database:
         else:
             raise ValueError(f"Unknown file system: {fs}, use s3 or local.")
 
-    @st.cache_resource(ttl=TTL, max_entries=250, show_spinner=False)
+    @st.cache_resource(ttl=TTL, max_entries=50, show_spinner=False)
     def read_image(_self, filepath):
         img = _self.read_file(filepath, mode="b")
 
