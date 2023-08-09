@@ -78,7 +78,7 @@ def show_map():
             [location["latitude"], location["longitude"]],
             popup=popup,
             tooltip=text,
-            icon=folium.Icon(color=team_color, icon=team_icon, icon_color=team_icon_color),
+            icon=folium.Icon(color=team_color, icon=team_icon, icon_color=team_icon_color, prefix="fa"),
         ).add_to(m)
 
     # call to render Folium map in Streamlit
