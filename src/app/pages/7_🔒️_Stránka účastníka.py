@@ -256,7 +256,7 @@ def record_location(user, team):
         btn_save_options = st.form_submit_button("Uložit")
 
     is_visible = db.is_team_visible(team)
-    st.checkbox(label="Veřejné sdílení polohy", value=is_visible, on_change=db.toggle_team_visibility, args=(team,))
+    st.checkbox(label="Zobrazit poslední polohu na mapě", value=is_visible, on_change=db.toggle_team_visibility, args=(team,))
 
     last_location = db.get_last_location(team)
     if last_location is not None:
