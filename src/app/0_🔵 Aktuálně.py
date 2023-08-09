@@ -89,9 +89,9 @@ def show_post(post_id):
     # st.audio(audios)
 
 
-def load_posts(team_filter):
+def load_posts(team_filter=None, challenge_filter=None, checkpoint_filter=None):
     db = get_database()
-    posts = db.get_posts(team_filter)
+    posts = db.get_posts(team_filter, challenge_filter, checkpoint_filter)
 
     if not posts:
         st.write("### Čekáme na vaše příspěvky! 💙")
@@ -112,11 +112,37 @@ def shorten(s, max_len=250):
 def show_overview(page):
     db = get_database()
     year = db.get_settings_value("xchallenge_year")
+
+    team_options = [""] + sorted(list(db.get_teams()["team_name"]), key=str.lower)
+    challenge_options = [""] + sorted(list(db.get_table_as_df("challenges")["name"]), key=str.lower)
+
+    checkpoint_options = [""] + sorted(list(db.get_table_as_df("checkpoints")["name"]), key=str.lower)
+
+    # include css
+    st.markdown(
+        """
+        <style>
+        div[data-testid="stExpander"] div[role="button"] {
+            padding-top: 3px !important;
+            padding-bottom: 3px !important;
+        }
+        """,
+        unsafe_allow_html=True,
+    )
+    # with st.expander("⚙️"):
+    cols = st.columns([1, 1, 1])
+    with cols[0]:
+        team_filter = st.sidebar.selectbox("Tým:", options=team_options, key="team_filter_selector")
+    with cols[1]:
+        challenge_filter = st.sidebar.selectbox("Výzvy:", options=challenge_options, key="challenge_filter_selector")
+
+    with cols[2]:
+        checkpoint_filter = st.sidebar.selectbox(
+            "Checkpointy:", options=checkpoint_options, key="checkpoint_filter_selector"
+        )
+
     st.title(f"Letní X-Challenge {year}")
-
-    team_filter = st.sidebar.selectbox("Tým:", options=[""] + sorted(list(db.get_teams()["team_name"]), key=str.lower))
-
-    posts = load_posts(team_filter=team_filter)
+    posts = load_posts(team_filter=team_filter, challenge_filter=challenge_filter, checkpoint_filter=checkpoint_filter)
 
     col_layout = [5, 2]
     cols = st.columns(col_layout)

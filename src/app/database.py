@@ -553,7 +553,7 @@ class Database:
 
         return teams_info
 
-    def get_posts(self, team_filter):
+    def get_posts(self, team_filter=None, challenge_filter=None, checkpoint_filter=None):
         # team_filter is the team_name, the table posts contain only id -> join with teams table to get the team_name
         posts = self.get_table_as_df("posts")
         teams = self.get_table_as_df("teams")
@@ -561,6 +561,12 @@ class Database:
 
         if team_filter:
             posts = posts[posts["team_name"] == team_filter]
+
+        if challenge_filter:
+            posts = posts[posts["action_name"] == challenge_filter]
+
+        if checkpoint_filter:
+            posts = posts[posts["action_name"] == checkpoint_filter]
 
         # convert files from json string to Python object
         posts["files"] = posts["files"].apply(lambda x: json.loads(x))
