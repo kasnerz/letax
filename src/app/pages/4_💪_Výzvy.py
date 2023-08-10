@@ -39,7 +39,7 @@ def main():
         st.stop()
 
     # sort by name: letter case insensitive, interpunction before numbers
-    challenges = challenges.sort_values(by="name", key=lambda x: x.str.lower().str.replace("[", "0", regex=False))
+    challenges = utils.sort_challenges(challenges)
 
     categories = db.get_settings_value("challenge_categories").split(",")
     tab_list = ["💪 vše"] + categories

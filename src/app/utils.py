@@ -228,6 +228,20 @@ def clear_cache():
     st.cache_data.clear()
 
 
+def sort_challenges(challenges):
+    # sort by name: letter case insensitive, interpunction before numbers (for day challenges on the top)
+
+    if type(challenges) is list:
+        sorting_fn = lambda x: x.lower().replace("[", "0")
+
+        return sorted(challenges, key=lambda x: sorting_fn(x["name"]))
+
+    # pd.DataFrame
+    sorting_fn = lambda x: x.str.lower().str.replace("[", "0", regex=False)
+
+    return challenges.sort_values(by="name", key=sorting_fn)
+
+
 def convert_to_local_timezone(d):
     # d is a string in 2023-07-01 10:26:45 format, in GMT zone
     # convert to timezone UTC+2
