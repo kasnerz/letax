@@ -833,18 +833,41 @@ class Database:
         )
         self.conn.commit()
 
-    def get_last_location(self, team):
+    def get_last_location(_self, team):
         team_id = team["team_id"]
 
         df = pd.read_sql_query(
             f"SELECT * FROM locations WHERE team_id='{team_id}' AND team_id='{team_id}' ORDER BY date DESC LIMIT 1",
-            self.conn,
+            _self.conn,
         )
 
         if df.empty:
             return None
 
         return df.to_dict("records")[0]
+
+    @st.cache_data(ttl=60)
+    def get_last_locations(_self):
+        # get last locations of all teams
+        teams = _self.get_table_as_df("teams")
+        last_locations = []
+
+        for _, team in teams.iterrows():
+            # get last location of the team
+            last_location = _self.get_last_location(team)
+
+            if last_location is None:
+                continue
+
+            last_locations.append(last_location)
+
+        if not last_locations:
+            return None
+
+        # create dataframe from the list of locations
+        last_locations = pd.DataFrame(last_locations)
+
+        return last_locations
 
     def delete_location(self, location):
         username = location["username"]
