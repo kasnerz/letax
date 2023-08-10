@@ -733,7 +733,7 @@ class Database:
                 location_color text,
                 location_icon_color text,
                 location_icon text,
-                primary key(team_id)       
+                primary key(team_id)   
             );"""
         )
         self.conn.execute(
@@ -743,10 +743,11 @@ class Database:
                 team_id text,
                 action_type text not null,
                 action_name text not null,
-                comment text not null,
+                comment text,
                 created text not null,
-                files text not null,
-                primary key(post_id)  
+                files text,
+                primary key(post_id),
+                CONSTRAINT unique_post_entry UNIQUE (action_name, action_type, team_id)
             );"""
         )
         self.conn.execute(
