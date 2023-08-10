@@ -58,6 +58,7 @@ def escape_html(s):
     return s
 
 
+@st.cache_data(ttl=600)
 def ago(t):
     t = pd.to_datetime(t)
     diff = datetime.now() - t
