@@ -14,7 +14,7 @@ import utils
 from unidecode import unidecode
 import folium
 from folium.plugins import BeautifyIcon
-mlit_folium import folium_static
+from streamlit_folium import folium_static
 
 st.set_page_config(page_title="Mapa týmů", page_icon="static/favicon.png", layout="wide")
 utils.style_sidebar()
