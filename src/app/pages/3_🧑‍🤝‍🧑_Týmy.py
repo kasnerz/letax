@@ -101,7 +101,7 @@ def show_profile(team_id):
                 unsafe_allow_html=True,
             )
 
-        st.write("#### Lokace")
+        st.write("#### Trasa")
         with st.expander("Zobrazit na mapě"):
             team_locations = db.get_table_as_df("locations")
             team_locations = team_locations[team_locations["team_id"] == team_id]
