@@ -14,7 +14,7 @@ import utils
 import re
 from unidecode import unidecode
 import folium
-from streamlit_folium import st_folium
+from streamlit_folium import st_folium, folium_static
 
 st.set_page_config(page_title="Týmy", page_icon="static/favicon.png", layout="wide")
 utils.style_sidebar()
@@ -151,7 +151,7 @@ def show_profile(team_id):
 
             folium.PolyLine(locations, color=team_color, weight=2.5, opacity=1).add_to(m)
 
-            st_folium(m, width=None, height=500)
+            folium_static(m, width=None, height=500)
 
         with columns[2]:
             photo_path = team["team_photo"]

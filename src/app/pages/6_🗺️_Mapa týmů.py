@@ -14,7 +14,7 @@ import utils
 from unidecode import unidecode
 import folium
 from folium.plugins import BeautifyIcon
-from streamlit_folium import st_folium
+mlit_folium import folium_static
 
 st.set_page_config(page_title="Mapa týmů", page_icon="static/favicon.png", layout="wide")
 utils.style_sidebar()
@@ -93,7 +93,7 @@ def show_map():
         ).add_to(m)
 
     # call to render Folium map in Streamlit
-    st_data = st_folium(m, width=None, height=500)
+    folium_static(m, width=None, height=500)
 
     # # show the locations on the map
     # st.map(last_locations)
