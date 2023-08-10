@@ -69,11 +69,16 @@ def show_map():
 
         popup += f"<i>{ago_str}</i>"
 
+        icons = db.get_fa_icons()
+        icon_type = icons.get(team_icon, "fa-solid")
+
         folium.Marker(
             [location["latitude"], location["longitude"]],
             popup=popup,
             tooltip=text,
-            icon=folium.Icon(color=team_color, icon=team_icon, icon_color=team_icon_color, prefix="fa"),
+            icon=folium.Icon(
+                color=team_color, icon=f"{icon_type} fa-{team_icon}", icon_color=team_icon_color, prefix="fa"
+            ),
         ).add_to(m)
 
     checkpoints = db.get_table_as_df("checkpoints")
