@@ -875,7 +875,7 @@ class Database:
     def get_team_link(self, team):
         team_id = team["team_id"]
         team_name = team["team_name"]
-        is_top_x = bool(team["is_top_x"])
+        is_top_x = bool(int(team["is_top_x"]))
 
         link_color = self.get_settings_value("link_color")
 
