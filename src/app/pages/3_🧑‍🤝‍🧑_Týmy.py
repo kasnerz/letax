@@ -101,12 +101,64 @@ def show_profile(team_id):
                 unsafe_allow_html=True,
             )
 
-    with columns[2]:
-        photo_path = team["team_photo"]
-        if photo_path:
-            st.image(db.read_image(photo_path))
-        else:
-            st.image("static/team.png")
+        st.write("#### Lokace")
+        with st.expander("Zobrazit na mapě"):
+            team_locations = db.get_table_as_df("locations")
+            team_locations = team_locations[team_locations["team_id"] == team_id]
+
+            if team_locations.empty:
+                st.info("Tým zatím nemá žádné záznamy v mapě.")
+                st.stop()
+
+            m = folium.Map(
+                location=[team_locations.latitude.mean(), team_locations.longitude.mean()],
+                zoom_start=4,
+            )
+            # folium.TileLayer("").add_to(m)
+
+            for _, location in team_locations.iterrows():
+                team = db.get_team_by_id(location["team_id"])
+                team_icon = team["location_icon"] or "user"
+                team_color = team["location_color"] or "red"
+                team_icon_color = team["location_icon_color"] or "white"
+
+                team_name = team["team_name"]
+                if not db.is_team_visible(team):
+                    continue
+
+                date = location["date"]
+                ago_str = utils.ago(date)
+                # ago_str = date
+
+                text = "<b>" + team_name + "</b>"
+
+                if location["comment"]:
+                    popup = f"{location['comment']}<br><br>"
+                else:
+                    popup = ""
+
+                popup += f"<i>{ago_str}</i>"
+
+                folium.Marker(
+                    [location["latitude"], location["longitude"]],
+                    popup=popup,
+                    tooltip=text,
+                    icon=folium.Icon(color=team_color, icon=team_icon, icon_color=team_icon_color, prefix="fa"),
+                ).add_to(m)
+
+            # draw lines between the locations
+            locations = team_locations[["latitude", "longitude"]].values.tolist()
+
+            folium.PolyLine(locations, color=team_color, weight=2.5, opacity=1).add_to(m)
+
+            st_folium(m, width=None, height=500)
+
+        with columns[2]:
+            photo_path = team["team_photo"]
+            if photo_path:
+                st.image(db.read_image(photo_path))
+            else:
+                st.image("static/team.png")
 
 
 # def get_team_name_view(team):
