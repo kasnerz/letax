@@ -101,7 +101,9 @@ def show_map():
 
 def main():
     st.title("Mapa týmů")
-    st.caption("Na mapě jsou zobrazeny týmy, které zaznamenaly svoji polohu a povolily její zobrazení.")
+    st.caption(
+        "Na mapě je zobrazena poslední poloha týmů, které svou polohu zaznamenaly. Historii konkrétního týmu najdeš na jejich stránce."
+    )
     show_map()
 
 
