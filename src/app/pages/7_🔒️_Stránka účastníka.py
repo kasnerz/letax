@@ -244,17 +244,39 @@ def record_location(user, team):
         location_icon_color = team["location_icon_color"] or "#ffffff"
         location_icon = team["location_icon"] or "user"
 
-        # fmt: off
-        icon_options = utils.get_fa_icons()
-        color_options = ["red", "blue", "green", "purple", "orange", "darkred", "lightred", "beige", "darkblue", "darkgreen", "cadetblue", "darkpurple", "white", "pink", "lightblue", "lightgreen", "gray", "black", "lightgray"]
-        
-        location_color = st.selectbox("Barva markeru na mapě", options=color_options,  index=color_options.index(location_color))
+        icon_options = db.get_fa_icons()
+        icon_options_list = sorted(list(icon_options.keys()))
+
+        color_options = [
+            "red",
+            "blue",
+            "green",
+            "purple",
+            "orange",
+            "darkred",
+            "lightred",
+            "beige",
+            "darkblue",
+            "darkgreen",
+            "cadetblue",
+            "darkpurple",
+            "white",
+            "pink",
+            "lightblue",
+            "lightgreen",
+            "gray",
+            "black",
+            "lightgray",
+        ]
+
+        location_color = st.selectbox(
+            "Barva markeru na mapě", options=color_options, index=color_options.index(location_color)
+        )
         location_icon_color = st.color_picker("Barva ikony markeru na mapě", value=location_icon_color)
-        # fmt: on
         location_icon = st.selectbox(
-            "Ikona markeru na mapě (viz https://fontawesome.com/v4/icons/):",
-            options=icon_options,
-            index=icon_options.index(location_icon),
+            "Ikona markeru na mapě (viz https://fontawesome.com/search?o=a&m=free):",
+            options=icon_options_list,
+            index=icon_options_list.index(location_icon) if location_icon in icon_options_list else 0,
         )
         btn_save_options = st.form_submit_button("Uložit")
 

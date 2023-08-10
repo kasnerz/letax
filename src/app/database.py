@@ -78,6 +78,7 @@ class Database:
         self.preauthorized_emails = self.load_preauthorized_emails()
 
         self.static_imgs = self.load_static_images()
+        self.fa_icons = self.load_fa_icons()
 
         print("Database initialized")
 
@@ -112,6 +113,12 @@ class Database:
 
     def get_static_image_base64(self, filename):
         return self.static_imgs.get(filename)
+    
+    def load_fa_icons(self):
+        with open("static/fa_icons.json") as f:
+            fa_icons = json.load(f)
+
+        return fa_icons
 
     def get_settings_as_df(self):
         settings = [{"key": key, "value": value} for key, value in self.settings.items()]
@@ -903,6 +910,9 @@ class Database:
             is_top_x = 0
 
         return bool(is_top_x)
+
+    def get_fa_icons(self):
+        return self.fa_icons
 
     def get_team_link(self, team):
         team_id = team["team_id"]
