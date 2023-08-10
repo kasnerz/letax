@@ -700,11 +700,19 @@ class Database:
             if current_team:
                 photo_path = current_team["team_photo"]
 
-        self.conn.execute(
-            f"INSERT OR REPLACE INTO teams (team_id, team_name, team_motto, team_web, team_photo, member1, member2) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (team_id, team_name, team_motto, team_web, photo_path, first_member, second_member),
-        )
-        self.conn.commit()
+        if not current_team:
+            self.conn.execute(
+                f"INSERT INTO teams (team_id, team_name, team_motto, team_web, team_photo, member1, member2) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (team_id, team_name, team_motto, team_web, photo_path, first_member, second_member),
+            )
+            self.conn.commit()
+        else:
+            # only update new values, keep the existing
+            self.conn.execute(
+                f"UPDATE teams SET team_name = ?, team_motto = ?, team_web = ?, team_photo = ?, member1 = ?, member2 = ? WHERE team_id = ?",
+                (team_name, team_motto, team_web, photo_path, first_member, second_member, team_id),
+            )
+            self.conn.commit()
 
     def create_tables(self):
         self.conn.execute(
