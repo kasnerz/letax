@@ -853,7 +853,7 @@ class Database:
 
         return df.to_dict("records")[0]
 
-    @st.cache_data(ttl=60)
+    # @st.cache_data(ttl=60)
     def get_last_locations(_self):
         # get last locations of all teams
         teams = _self.get_table_as_df("teams")
