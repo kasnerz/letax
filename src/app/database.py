@@ -25,6 +25,7 @@ import traceback
 import utils
 import yaml
 import zipfile
+import base64
 
 # logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -76,6 +77,8 @@ class Database:
         self.am = AccountManager()
         self.preauthorized_emails = self.load_preauthorized_emails()
 
+        self.static_imgs = self.load_static_images()
+
         print("Database initialized")
 
     def __del__(self):
@@ -95,6 +98,20 @@ class Database:
     def save_settings(self):
         with open(self.settings_path, "w") as f:
             yaml.dump(self.settings, f)
+
+    def load_static_images(self):
+        static_images = {"topx.png": None}
+
+        for filename in static_images.keys():
+            with open(f"static/{filename}", "rb") as f:
+                contents = f.read()
+                data_url = base64.b64encode(contents).decode("utf-8")
+                static_images[filename] = data_url
+
+        return static_images
+
+    def get_static_image_base64(self, filename):
+        return self.static_imgs.get(filename)
 
     def get_settings_as_df(self):
         settings = [{"key": key, "value": value} for key, value in self.settings.items()]
@@ -711,6 +728,7 @@ class Database:
                 team_motto text,
                 team_web text,
                 team_photo text,
+                is_top_x integer default 0,
                 location_visibility integer default 1,
                 location_color text,
                 location_icon_color text,
@@ -839,6 +857,36 @@ class Database:
             visibility = 1
 
         return bool(visibility)
+
+    def is_top_x(self, team):
+        team_id = team["team_id"]
+
+        df = pd.read_sql_query(
+            f"SELECT * FROM teams WHERE team_id='{team_id}'",
+            self.conn,
+        )
+        is_top_x = df.to_dict("records")[0]["is_top_x"]
+
+        if is_top_x is None:
+            is_top_x = 0
+
+        return bool(is_top_x)
+
+    def get_team_link(self, team):
+        team_id = team["team_id"]
+        team_name = team["team_name"]
+        is_top_x = bool(team["is_top_x"])
+
+        link_color = self.get_settings_value("link_color")
+
+        if is_top_x:
+            # there is no other good way how to incorporate a static image into html (without st.image())
+            data_url = self.get_static_image_base64("topx.png")
+
+            top_x_badge = f"<img src='data:image/png;base64,{data_url}' style='margin-top: -5px; margin-left: 5px'>"
+            return f"<a href='/Týmy?id={team_id}' target='_self' style='text-decoration: none; color: {link_color}; margin-top: -10px;'>{team_name}</a> {top_x_badge}"
+        else:
+            return f"<a href='/Týmy?id={team_id}' target='_self' style='text-decoration: none; color: {link_color}; margin-top: -10px;'>{team_name}</a>"
 
     def toggle_team_visibility(self, team):
         team_id = team["team_id"]

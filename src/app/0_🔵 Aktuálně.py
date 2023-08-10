@@ -63,15 +63,13 @@ def show_post(post_id):
     description = post["comment"]
     files = post["files"]
 
-    team_id = team["team_id"]
-    team_name = team["team_name"]
     link_color = db.get_settings_value("link_color")
 
     st.markdown(
         f"## {action}",
     )
     st.markdown(
-        f"<h4><a href='/Týmy?id={team_id}' target='_self' style='text-decoration: none; color: {link_color}; margin-top: -10px;'>{team_name}</a></h4>",
+        f"<h4>{db.get_team_link(team)}</h4>",
         unsafe_allow_html=True,
     )
 
@@ -181,11 +179,10 @@ def show_overview(page):
             action_type_icon = "✍️"
 
         post_id = post["post_id"]
-        team_name = team["team_name"]
-        team_id = team["team_id"]
+        team_link = db.get_team_link(team)
 
         link_color = db.get_settings_value("link_color")
-        link = f"<div style='margin-bottom:-10px; display:inline-block;'><h4><a href='/?post={post_id}&page={page}' target='_self' style='text-decoration: none; color: {link_color};'>{action_type_icon} {action_name}</a> – <a href='/Týmy?id={team_id}' target='_self' style='text-decoration: none; color: {link_color};'>{team_name}</a></h4></div>"
+        link = f"<div style='margin-bottom:-10px; display:inline-block;'><h4><a href='/?post={post_id}&page={page}' target='_self' style='text-decoration: none; color: {link_color};'>{action_type_icon} {action_name}</a> – {team_link}</div>"
 
         st.markdown(link, unsafe_allow_html=True)
         cols = st.columns(col_layout)
