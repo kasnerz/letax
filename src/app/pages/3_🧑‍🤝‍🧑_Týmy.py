@@ -65,7 +65,7 @@ def show_profile(team_id):
     columns = st.columns([1, 3, 2])
 
     with columns[1]:
-        st.write(f"## {team['team_name']}")
+        st.markdown(f"<h2>{db.get_team_link(team)}</h2>", unsafe_allow_html=True)
 
         member_1 = db.get_participant_by_id(team["member1"])
         member_string = get_pax_link(team["member1"], member_1["name"])
@@ -109,14 +109,14 @@ def show_profile(team_id):
             st.image("static/team.png")
 
 
-def get_team_name_view(team):
-    link_color = db.get_settings_value("link_color")
-    name = team["team_name"]
-    team_id = team["team_id"]
+# def get_team_name_view(team):
+#     link_color = db.get_settings_value("link_color")
+#     name = team["team_name"]
+#     team_id = team["team_id"]
 
-    link = f"<div><a href='/Týmy?id={team_id}'  target='_self' style='text-decoration: none;'><h5 style='color: {link_color};'>{name}</h5></a></div>"
+#     link = f"<div><a href='/Týmy?id={team_id}'  target='_self' style='text-decoration: none;'><h5 style='color: {link_color};'>{name}</h5></a></div>"
 
-    return link
+#     return link
 
 
 def get_member_link(member_id, member_name):
@@ -149,7 +149,7 @@ def show_teams():
         subcol = cols[i % column_cnt]
 
         with subcol:
-            team_name = get_team_name_view(team)
+            team_name = f"<h5>{db.get_team_link(team)}</h5>"
             img_path = team["team_photo"] or "static/team.png"
             img = utils.resize_image(db.read_image(img_path), crop_ratio="1:1")
 
