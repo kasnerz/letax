@@ -29,25 +29,11 @@ st.markdown(make_map_responsive, unsafe_allow_html=True)
 
 
 def show_map():
-    # get last locations of all teams
-    teams = db.get_table_as_df("teams")
-    last_locations = []
+    last_locations = db.get_last_locations()
 
-    for _, team in teams.iterrows():
-        # get last location of the team
-        last_location = db.get_last_location(team)
-
-        if last_location is None:
-            continue
-
-        last_locations.append(last_location)
-
-    if not last_locations:
+    if last_locations is None:
         st.info("Žádný tým nezaznamenal svoji polohu")
         st.stop()
-
-    # create dataframe from the list of locations
-    last_locations = pd.DataFrame(last_locations)
 
     # center on Liberty Bell, add marker
     m = folium.Map(
@@ -72,6 +58,7 @@ def show_map():
 
         date = location["date"]
         ago_str = utils.ago(date)
+        # ago_str = date
 
         text = "<b>" + team_name + "</b>"
 
