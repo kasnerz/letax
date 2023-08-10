@@ -129,6 +129,9 @@ def create_post(user, action_type, action, comment, files):
 def record_challenge(user):
     challenges = db.get_available_actions(user=user, action_type="challenge")
 
+    # sort by name
+    challenges = utils.sort_challenges(challenges)
+
     with st.form("challenge"):
         challenge_idx = st.selectbox(
             "Výzva:",
