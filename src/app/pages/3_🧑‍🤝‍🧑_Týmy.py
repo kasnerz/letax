@@ -136,6 +136,10 @@ def show_teams():
     # considering unicode characters in Czech alphabet
     teams = teams.sort_values(by="team_name", key=lambda x: [unidecode(a).lower() for a in x])
 
+    teams_total = len(teams)
+
+    st.caption(f"{teams_total} týmů")
+
     column_cnt = 4
 
     for i, (_, team) in enumerate(teams.iterrows()):
