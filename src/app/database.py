@@ -217,7 +217,7 @@ class Database:
         img_150 = utils.resize_image(img, max_width=150, crop_ratio="1:1")
         self.save_thumbnail(f"{filepath}_150_square.jpg", img_150)
 
-        img_1000 = utils.resize_image(img, max_width=1000)
+        img_1000 = utils.resize_image(img, max_width=1000, max_height=1000)
         self.save_thumbnail(f"{filepath}_1000.jpg", img_1000)
 
     @st.cache_resource(max_entries=1000, show_spinner=False)
@@ -1292,8 +1292,13 @@ if __name__ == "__main__":
                     print(len(files))
                     print(path, "->", new_path)
                     # save files on the new path
-                    db.write_file(new_path, db.read_file(path))
-                    db.delete_file(path)
+                    filef = db.read_file(path)
+
+                    if filef:
+                        db.write_file(new_path, filef)
+                        db.delete_file(path)
+                    else:
+                        print(f"File {path} not found")
 
             # update `files` as new_files in db
             db.conn.execute(
