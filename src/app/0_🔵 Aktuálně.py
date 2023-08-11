@@ -113,9 +113,12 @@ def load_posts(team_filter=None, challenge_filter=None, checkpoint_filter=None):
     return posts
 
 
-def shorten(s, max_len=250):
+def shorten(s, post_id, page, link_color, max_len=250):
     if len(s) > max_len:
-        return s[:max_len] + "..."
+        return (
+            s[:max_len]
+            + f"<b><a href='/?post={post_id}&page={page}' target='_self' style='text-decoration: none; color: {link_color};'> (...)</a></b>"
+        )
     return s
 
 
@@ -189,8 +192,10 @@ def show_overview(page):
         with cols[0]:
             post_datetime = utils.convert_to_local_timezone(post["created"])
             st.caption(f"*{post_datetime}*")
-            st.markdown(shorten(utils.escape_html(description)), unsafe_allow_html=True)
-
+            st.markdown(
+                shorten(utils.escape_html(description), post_id, page, link_color),
+                unsafe_allow_html=True,
+            )
         with cols[1]:
             files = post["files"]
             for f in files:
