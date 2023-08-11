@@ -847,6 +847,8 @@ def show_user_page(user, team):
     name = user["name"]
     team_name = team["team_name"] if team else "Žádný tým"
 
+    print(f"Showing user page for {name} ({team_name})")
+
     st.markdown(f"# {name} | {team_name}")
     user, team = get_logged_info()
 
