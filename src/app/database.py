@@ -212,8 +212,8 @@ class Database:
         filepath = os.path.splitext(filepath)[0]
 
         # create thumnails: 80x80 (1:1, round), 100x100 (1:1), 150x150 (1:1), and max(1000) x max(1000)
-        img_80 = utils.resize_image(img, max_width=80, crop_ratio="1:1", circle=True)
-        self.save_thumbnail(f"{filepath}_80_round.jpg", img_80)
+        # img_80 = utils.resize_image(img, max_width=80, crop_ratio="1:1", circle=True)
+        # self.save_thumbnail(f"{filepath}_80_round.jpg", img_80)
 
         img_100 = utils.resize_image(img, max_width=100, crop_ratio="1:1")
         self.save_thumbnail(f"{filepath}_100_square.jpg", img_100)
@@ -229,7 +229,7 @@ class Database:
         # TODO simplify
         file_extension = os.path.splitext(filepath)[1]
 
-        thumbnail_size = thumbnail or "80_round"  # 80_round is just for the checks
+        thumbnail_size = thumbnail or "100_square"  # 100_square is just for the checks
         thumbnail_filepath = filepath.replace(file_extension, f"_{thumbnail_size}.jpg")
         thumbnail_img = _self.read_file(thumbnail_filepath, mode="b")
 
