@@ -131,11 +131,7 @@ def show_participants():
             team_name = pax["team_name"]
             team_id = pax["team_id"]
 
-            # if img_cache.get(pax["profile_photo_view"]):
-            #     img = img_cache[pax["profile_photo_view"]]
-            # else:
             img = db.read_image(pax["profile_photo_view"], thumbnail="100_square")
-            # img_cache[pax["profile_photo_view"]] = img
 
             st.image(img, width=80)
             st.markdown(f"{name}", unsafe_allow_html=True)
