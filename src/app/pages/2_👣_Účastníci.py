@@ -118,7 +118,7 @@ def show_participants():
 
     st.caption(f"Celkem: {pax_total}, zaregistrováno: {pax_registered}, v týmu: {pax_teams}.")
     column_cnt = 5
-    img_cache = {}
+    # img_cache = {}
 
     for i, (_, pax) in enumerate(participants.iterrows()):
         if i % column_cnt == 0:
@@ -131,11 +131,11 @@ def show_participants():
             team_name = pax["team_name"]
             team_id = pax["team_id"]
 
-            if img_cache.get(pax["profile_photo_view"]):
-                img = img_cache[pax["profile_photo_view"]]
-            else:
-                img = db.read_image(pax["profile_photo_view"], thumbnail="100_square")
-                img_cache[pax["profile_photo_view"]] = img
+            # if img_cache.get(pax["profile_photo_view"]):
+            #     img = img_cache[pax["profile_photo_view"]]
+            # else:
+            img = db.read_image(pax["profile_photo_view"], thumbnail="100_square")
+            # img_cache[pax["profile_photo_view"]] = img
 
             st.image(img, width=80)
             st.markdown(f"{name}", unsafe_allow_html=True)
@@ -159,6 +159,7 @@ def main():
         show_profile(pax_id)
         st.stop()
 
+    # rounded corners
     st.markdown(
         """
     <style>
@@ -168,6 +169,10 @@ def main():
             margin-left: auto;
             margin-right: auto;
         }
+    [data-testid=stImage] img{
+        border-radius: 50%;
+        }
+    
     [data-testid=stVerticalBlock]{
             text-align: center;
     }
