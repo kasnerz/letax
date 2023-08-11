@@ -800,6 +800,7 @@ def show_post_management(user, team):
 
         with col_delete:
             if st.button("❌ Smazat", key=f"delete-{post['post_id']}"):
+                print(f"Deleting post {post['post_id']}: {post['action_name']}")
                 db.delete_post(post.post_id)
                 st.success("Příspěvek smazán.")
                 time.sleep(2)
