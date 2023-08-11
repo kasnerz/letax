@@ -26,6 +26,7 @@ import utils
 import yaml
 import zipfile
 import base64
+import copy
 from geopy.geocoders import Nominatim
 
 # logging.basicConfig(level=logging.DEBUG)
@@ -176,6 +177,22 @@ class Database:
         elif fs == "local" or filepath.startswith("static/"):
             with open(filepath, "r" + mode) as f:
                 return f.read()
+        else:
+            raise ValueError(f"Unknown file system: {fs}, use s3 or local.")
+
+    def delete_file(self, filepath):
+        fs = self.get_settings_value("file_system")
+        if fs == "s3" and not filepath.startswith("static/"):
+            # use boto3 to get the S3 object
+            try:
+                obj = self.get_boto3_object(filepath)
+                obj.delete()
+            except Exception as e:
+                print(e)
+                return None
+
+        elif fs == "local" or filepath.startswith("static/"):
+            os.remove(filepath)
         else:
             raise ValueError(f"Unknown file system: {fs}, use s3 or local.")
 
@@ -1208,6 +1225,7 @@ if __name__ == "__main__":
     parser.add_argument("-f", "--load_from_local_file", type=str)
     parser.add_argument("--fill_addresses", action="store_true")
     parser.add_argument("--insert_data_2022", action="store_true")
+    parser.add_argument("--reslugify", action="store_true")
 
     args = parser.parse_args()
 
@@ -1252,3 +1270,37 @@ if __name__ == "__main__":
                 )
                 db.conn.commit()
                 print(location.address)
+    elif args.reslugify:
+        # hotfix - we forgot to slugify folders
+        for i, row in db.get_table_as_df("posts").iterrows():
+            challenge_name = row["action_name"]
+            challenge_slug = slugify(challenge_name)
+            files = json.loads(row["files"])
+            new_files = copy.deepcopy(files)
+
+            if not files:
+                continue
+
+            for i, file in enumerate(files):
+                path = file["path"]
+                path_parts = path.split("/")
+                path_parts[3] = challenge_slug
+                new_path = "/".join(path_parts)
+                new_files[i]["path"] = new_path
+
+                if path != new_path:
+                    print(len(files))
+                    print(path, "->", new_path)
+                    # save files on the new path
+                    db.write_file(new_path, db.read_file(path))
+                    db.delete_file(path)
+
+            # update `files` as new_files in db
+            db.conn.execute(
+                """UPDATE posts
+                SET files = ?
+                WHERE post_id = ?;
+                """,
+                (json.dumps(new_files), row["post_id"]),
+            )
+            db.conn.commit()
