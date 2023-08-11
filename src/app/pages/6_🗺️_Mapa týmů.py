@@ -111,7 +111,9 @@ def show_map():
 
         for _, location in last_locations.head(5).iterrows():
             team = db.get_team_by_id(location["team_id"])
-            team_name = team["team_name"]
+            # team_name = team["team_name"]
+
+            team_link = db.get_team_link(team)
 
             date = location["date"]
             ago_str = utils.ago(date)
@@ -136,7 +138,7 @@ def show_map():
             else:
                 address_link = ""
 
-            text = f"<i>({ago_str})</i><br> <b>{team_name}</b> {comment}<br><i>{address_link}</i>"
+            text = f"<i>({ago_str})</i><br> <b>{team_link}</b> {comment}<br><i>{address_link}</i>"
             st.markdown(text, unsafe_allow_html=True)
 
 
