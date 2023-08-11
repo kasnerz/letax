@@ -306,9 +306,10 @@ def record_location(user, team):
             heading = coords["heading"]
             speed = coords["speed"]
             date = datetime.fromtimestamp(location["timestamp"] / 1000.0)
+            address = db.get_address(latitude, longitude)
 
             db.save_location(
-                user, comment, longitude, latitude, accuracy, altitude, altitude_accuracy, heading, speed, date
+                user, comment, longitude, latitude, accuracy, altitude, altitude_accuracy, heading, speed, address, date
             )
             container.success("Poloha nasdílena!")
         else:
