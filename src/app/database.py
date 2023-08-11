@@ -26,6 +26,7 @@ import utils
 import yaml
 import zipfile
 import base64
+from geopy.geocoders import Nominatim
 
 # logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -80,6 +81,8 @@ class Database:
         self.static_imgs = self.load_static_images()
         self.fa_icons = self.load_fa_icons()
 
+        self.geoloc = Nominatim(user_agent="GetLoc")
+
         print("Database initialized")
 
     def __del__(self):
@@ -113,7 +116,7 @@ class Database:
 
     def get_static_image_base64(self, filename):
         return self.static_imgs.get(filename)
-    
+
     def load_fa_icons(self):
         with open("static/fa_icons.json") as f:
             fa_icons = json.load(f)
@@ -777,6 +780,7 @@ class Database:
                 altitude_accuracy text,
                 heading text,
                 speed text,
+                address text,
                 date text not null
             );"""
         )
@@ -807,15 +811,24 @@ class Database:
             );"""
         )
 
+    def get_address(self, latitude, longitude):
+        try:
+            locname = self.geoloc.reverse(f"{latitude}, {longitude}")
+            address = locname.address
+        except:
+            address = None
+
+        return address
+
     def save_location(
-        self, user, comment, longitude, latitude, accuracy, altitude, altitude_accuracy, heading, speed, date
+        self, user, comment, longitude, latitude, accuracy, altitude, altitude_accuracy, heading, speed, address, date
     ):
         team = self.get_team_for_user(user["pax_id"])
         username = user["username"]
         team_id = str(team["team_id"])
 
         self.conn.execute(
-            f"INSERT INTO locations (username, team_id, comment, longitude, latitude, accuracy, altitude, altitude_accuracy, heading, speed, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            f"INSERT INTO locations (username, team_id, comment, longitude, latitude, accuracy, altitude, altitude_accuracy, heading, speed, address, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 username,
                 team_id,
@@ -827,6 +840,7 @@ class Database:
                 altitude_accuracy,
                 heading,
                 speed,
+                address,
                 date,
             ),
         )
@@ -1137,6 +1151,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", "--load_from_wc_product", type=int)
     parser.add_argument("-f", "--load_from_local_file", type=str)
+    parser.add_argument("--fill_addresses", action="store_true")
     parser.add_argument("--insert_data_2022", action="store_true")
 
     args = parser.parse_args()
@@ -1158,3 +1173,27 @@ if __name__ == "__main__":
         with open(args.load_from_local_file) as f:
             wc_participants = json.load(f)
             db.add_participants(wc_participants)
+
+    elif args.fill_addresses:
+        print("Filling addresses...")
+
+        # importing modules
+        from geopy.geocoders import Nominatim
+
+        # calling the nominatim tool
+        geoLoc = Nominatim(user_agent="GetLoc")
+
+        for i, row in db.get_table_as_df("locations").iterrows():
+            print(row)
+            if row["address"] == None:
+                print(dict(row))
+                location = geoLoc.reverse(f"{row['latitude']}, {row['longitude']}")
+                db.conn.execute(
+                    """UPDATE locations
+                    SET address = ?
+                    WHERE team_id = ? AND date = ?;
+                    """,
+                    (location.address, row["team_id"], row["date"]),
+                )
+                db.conn.commit()
+                print(location.address)
