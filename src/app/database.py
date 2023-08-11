@@ -220,6 +220,10 @@ class Database:
         img_1000 = utils.resize_image(img, max_width=1000)
         self.save_thumbnail(f"{filepath}_1000.jpg", img_1000)
 
+    @st.cache_resource(max_entries=10, show_spinner=False)
+    def read_video(_self, filepath):
+        return _self.read_file(filepath, mode="b")
+        
     @st.cache_resource(max_entries=1000, show_spinner=False)
     def read_image(_self, filepath, thumbnail=None):
         # TODO simplify

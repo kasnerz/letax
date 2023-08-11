@@ -99,12 +99,8 @@ def show_post(post_id):
     videos = [f["path"] for f in files if f["type"].startswith("video")]
     if videos:
         for video in videos:
-            video_file = db.read_file(video)
+            video_file = db.read_video(video)
             st.video(video_file)
-
-    # audios = [f["path"] for f in files if f["type"].startswith("audio")]
-    # if audios:
-    # st.audio(audios)
 
 
 def load_posts(team_filter=None, challenge_filter=None, checkpoint_filter=None):
@@ -213,8 +209,7 @@ def show_overview(page):
             else:
                 for f in files:
                     if f["type"].startswith("video"):
-                        video_file = db.read_file(f["path"])
-                        breakpoint()
+                        video_file = db.read_video(f["path"])
                         st.video(video_file)
                         break
 
