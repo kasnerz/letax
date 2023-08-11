@@ -211,10 +211,6 @@ class Database:
         print(f"Creating thumbnails for {filepath}.")
         filepath = os.path.splitext(filepath)[0]
 
-        # create thumnails: 80x80 (1:1, round), 100x100 (1:1), 150x150 (1:1), and max(1000) x max(1000)
-        # img_80 = utils.resize_image(img, max_width=80, crop_ratio="1:1", circle=True)
-        # self.save_thumbnail(f"{filepath}_80_round.jpg", img_80)
-
         img_100 = utils.resize_image(img, max_width=100, crop_ratio="1:1")
         self.save_thumbnail(f"{filepath}_100_square.jpg", img_100)
 
