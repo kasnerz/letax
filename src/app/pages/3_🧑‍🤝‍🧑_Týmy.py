@@ -162,7 +162,7 @@ def show_profile(team_id):
         with columns[2]:
             photo_path = team["team_photo"]
             if photo_path:
-                st.image(db.read_image(photo_path))
+                st.image(db.read_image(photo_path, thumbnail="1000"))
             else:
                 st.image("static/team.png")
 
@@ -209,7 +209,7 @@ def show_teams():
         with subcol:
             team_name = f"<h5>{db.get_team_link(team)}</h5>"
             img_path = team["team_photo"] or "static/team.png"
-            img = utils.resize_image(db.read_image(img_path), crop_ratio="1:1")
+            img = db.read_image(img_path, thumbnail="100_square")
 
             member1 = db.get_participant_by_id(team["member1"])
             members = [get_member_link(member1["id"], member1["name"])]
@@ -219,7 +219,7 @@ def show_teams():
                 members.append(get_member_link(member2["id"], member2["name"]))
 
             members = ", ".join(members)
-            st.image(img, width=100)
+            st.image(img)
 
             st.markdown(f"{team_name}", unsafe_allow_html=True)
             st.markdown(f"<div style='margin-top: -15px; margin-bottom:0px;'>{members}</div>", unsafe_allow_html=True)

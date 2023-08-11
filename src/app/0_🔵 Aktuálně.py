@@ -82,7 +82,7 @@ def show_post(post_id):
         st.markdown(description, unsafe_allow_html=True)
         st.divider()
 
-    images = [db.read_image(f["path"]) for f in files if f["type"].startswith("image")]
+    images = [db.read_image(f["path"], thumbnail="1000") for f in files if f["type"].startswith("image")]
     if images:
         cols = st.columns(max(len(images), 3))
         for col, image in zip(cols, images):
@@ -200,7 +200,7 @@ def show_overview(page):
             files = post["files"]
             for f in files:
                 if f["type"].startswith("image"):
-                    st.image(utils.resize_image(db.read_image(f["path"]), max_width=150, crop_ratio="1:1"), clamp=True)
+                    st.image(db.read_image(f["path"], thumbnail="150_square"))
                     break
             else:
                 for f in files:

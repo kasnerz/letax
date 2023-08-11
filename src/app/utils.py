@@ -113,8 +113,6 @@ def postprocess_uploaded_photo(photo):
         os.remove(original_photo_path)
         photo_name = f"{photo_uuid}.jpg"
 
-    # TODO resize?
-
     photo_content = open(photo_path, "rb").read()
     os.remove(photo_path)
 
@@ -170,9 +168,10 @@ def postprocess_uploaded_video(video):
 
 
 @st.cache_resource(ttl=TTL)
-def resize_image(img, max_width=None, crop_ratio=None, circle=False):
-    # timeit
-    start = time.time()
+def resize_image(img, max_width=None, max_height=None, crop_ratio=None, circle=False):
+    # create a copy of img
+
+    img = img.copy()
 
     if crop_ratio:
         crop_width, crop_height = map(int, crop_ratio.split(":"))
@@ -198,6 +197,9 @@ def resize_image(img, max_width=None, crop_ratio=None, circle=False):
     if max_width and img.size[0] > max_width:
         img = img.resize((max_width, int(max_width * img.size[1] / img.size[0])))
 
+    if max_height and img.size[1] > max_height:
+        img = img.resize((int(max_height * img.size[0] / img.size[1]), max_height))
+
     # circle crop
     if circle:
         # Create a circular mask image
@@ -209,9 +211,6 @@ def resize_image(img, max_width=None, crop_ratio=None, circle=False):
         result = Image.new("RGBA", img.size)
         result.paste(img, mask=mask)
         img = result
-
-    end = time.time()
-    # print(f"resize_image took {end - start} seconds")
 
     return img
 
