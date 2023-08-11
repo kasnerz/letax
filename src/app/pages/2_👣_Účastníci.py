@@ -48,7 +48,7 @@ def show_profile(pax_id):
     with columns[2]:
         photo_path = pax["photo"]
         if photo_path:
-            st.image(db.read_image(photo_path))
+            st.image(db.read_image(photo_path, thumbnail="1000"))
         else:
             st.image("static/avatar.png")
 
@@ -134,7 +134,7 @@ def show_participants():
             if img_cache.get(pax["profile_photo_view"]):
                 img = img_cache[pax["profile_photo_view"]]
             else:
-                img = utils.resize_image(db.read_image(pax["profile_photo_view"]), crop_ratio="1:1", circle=True)
+                img = db.read_image(pax["profile_photo_view"], thumbnail="80_round")
                 img_cache[pax["profile_photo_view"]] = img
 
             st.image(img, width=80)

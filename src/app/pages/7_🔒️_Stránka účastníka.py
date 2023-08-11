@@ -348,7 +348,7 @@ def show_team_info(user, team):
             team_photo = st.file_uploader("Týmové foto (nepovinné):")
         with cols[1]:
             if team and team["team_photo"]:
-                st.image(utils.resize_image(db.read_image(team["team_photo"]), crop_ratio="1:1"))
+                st.image(db.read_image(team["team_photo"], thumbnail="150_square"))
         submit_button = st.form_submit_button(label="Uložit tým")
 
     # When the submit button is clicked
@@ -391,7 +391,7 @@ def show_user_info(user):
             photo_img = participant["photo"]
 
             if photo_img:
-                st.image(utils.resize_image(db.read_image(photo_img), crop_ratio="1:1"))
+                st.image(db.read_image(photo_img, thumbnail="150_square"))
 
         submit_button = st.form_submit_button(label="Uložit profilové informace")
 

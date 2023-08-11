@@ -155,12 +155,11 @@ class Database:
         obj = _self.boto3.Object(_self.fs_bucket, filepath)
         return obj
 
-    @st.cache_resource(ttl=TTL, max_entries=50, show_spinner=False)
+    # @st.cache_resource(ttl=TTL, max_entries=50, show_spinner=False)
     def read_file(_self, filepath, mode="b"):
         fs = _self.get_settings_value("file_system")
         if fs == "s3" and not filepath.startswith("static/"):
             # use boto3 to get the S3 object
-
             try:
                 obj = _self.get_boto3_object(filepath)
                 # read the contents of the file and return
@@ -172,7 +171,6 @@ class Database:
 
                 return content
             except Exception as e:
-                print(traceback.format_exc())
                 return None
 
         elif fs == "local" or filepath.startswith("static/"):
@@ -181,14 +179,73 @@ class Database:
         else:
             raise ValueError(f"Unknown file system: {fs}, use s3 or local.")
 
-    @st.cache_resource(ttl=TTL, max_entries=50, show_spinner=False)
-    def read_image(_self, filepath):
-        img = _self.read_file(filepath, mode="b")
+    def save_thumbnail(self, filepath, img):
+        img_byte_array = io.BytesIO()
+        img = img.convert("RGB")
+        img.save(img_byte_array, format="JPEG")
+        img_bytes = img_byte_array.getvalue()
+        self.write_file(filepath, img_bytes)
 
-        if not img:
-            print(f"Cannot load image: {filepath}")
-            # return blank image
-            return Image.new("RGB", (1, 1))
+    def create_thumbnails(self, img, filepath):
+        print(f"Creating thumbnails for {filepath}.")
+        filepath = os.path.splitext(filepath)[0]
+
+        # create thumnails: 80x80 (1:1, round), 100x100 (1:1), 150x150 (1:1), and max(1000) x max(1000)
+        img_80 = utils.resize_image(img, max_width=80, crop_ratio="1:1", circle=True)
+        self.save_thumbnail(f"{filepath}_80_round.jpg", img_80)
+
+        img_100 = utils.resize_image(img, max_width=100, crop_ratio="1:1")
+        self.save_thumbnail(f"{filepath}_100_square.jpg", img_100)
+
+        img_150 = utils.resize_image(img, max_width=150, crop_ratio="1:1")
+        self.save_thumbnail(f"{filepath}_150_square.jpg", img_150)
+
+        img_1000 = utils.resize_image(img, max_width=1000)
+        self.save_thumbnail(f"{filepath}_1000.jpg", img_1000)
+
+    @st.cache_resource(max_entries=1000, show_spinner=False)
+    def read_image(_self, filepath, thumbnail=None):
+        # TODO simplify
+        file_extension = os.path.splitext(filepath)[1]
+
+        thumbnail_size = thumbnail or "80_round"  # 80_round is just for the checks
+        thumbnail_filepath = filepath.replace(file_extension, f"_{thumbnail_size}.jpg")
+        thumbnail_img = _self.read_file(thumbnail_filepath, mode="b")
+
+        # if there are no thumbnails for the current image, create the thumbnails
+        if not thumbnail_img:
+            # try to find a thumbnail of a suitable size:
+            img = _self.read_file(filepath, mode="b")
+
+            if not img:
+                print(f"Cannot load image: {filepath}")
+                # return blank image
+                return Image.new("RGB", (1, 1))
+
+            # read image using PIL
+            try:
+                img = Image.open(io.BytesIO(img))
+                img = ImageOps.exif_transpose(img)
+            except Exception as e:
+                print(f"Cannot read image: {filepath}")
+                print(traceback.format_exc())
+                # return blank image
+                return Image.new("RGB", (1, 1))
+
+            # if the image was successfully loaded, create thumbnails
+            _self.create_thumbnails(img, filepath)
+
+            try:
+                thumbnail_img = _self.read_file(thumbnail_filepath, mode="b")
+            except:
+                print(f"Cannot load thumbnail: {thumbnail_filepath}")
+                print(traceback.format_exc())
+                # return blank image
+                return Image.new("RGB", (1, 1))
+
+        if thumbnail:
+            filepath = thumbnail_filepath
+            img = thumbnail_img
 
         # read image using PIL
         try:
@@ -453,7 +510,7 @@ class Database:
 
         title = action if action_type == "story" else action["name"]
 
-        dir_path = os.path.join(self.top_dir, action_type, title, slugify(team["team_name"]))
+        dir_path = os.path.join(self.top_dir, action_type, slugify(title), slugify(team["team_name"]))
 
         files_json = []
 
