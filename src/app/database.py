@@ -901,14 +901,9 @@ class Database:
         self.conn.commit()
 
     def is_team_visible(self, team):
-        team_id = team["team_id"]
+        visibility = team["location_visibility"]
 
-        df = pd.read_sql_query(
-            f"SELECT * FROM teams WHERE team_id='{team_id}'",
-            self.conn,
-        )
-        visibility = df.to_dict("records")[0]["location_visibility"]
-
+        # by mistake some records are NULL and not 1 by default
         if visibility is None:
             visibility = 1
 
