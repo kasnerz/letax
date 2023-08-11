@@ -136,6 +136,13 @@ def postprocess_uploaded_video(video):
     # video is a Streamlit uploaded object
     # generate a unique filename
 
+    # cleanup: delete previous videos which are older than 1 hour
+    for f in os.listdir("/tmp"):
+        if f.endswith("_pp.mp4"):
+            fpath = os.path.join("/tmp", f)
+            if datetime.now() - datetime.fromtimestamp(os.path.getmtime(fpath)) > timedelta(hours=1):
+                os.remove(fpath)
+
     video_uuid = generate_uuid()
 
     # original suffix
