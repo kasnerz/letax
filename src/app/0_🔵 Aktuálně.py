@@ -44,6 +44,14 @@ def show_post(post_id):
         div.stMarkdown > * > p {
             font-size: large !important;
         }
+        .stVideo {
+            max-height: 80vh; /* Set the maximum height as a percentage of the viewport height */
+            overflow: hidden; /* Hide any overflowing content */
+        }
+        .stVideo video {
+            width: auto; /* Let the video adjust its width to maintain aspect ratio */
+            height: 100%; /* Expand the video to fill the container's height */
+        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -206,6 +214,7 @@ def show_overview(page):
                 for f in files:
                     if f["type"].startswith("video"):
                         video_file = db.read_file(f["path"])
+                        breakpoint()
                         st.video(video_file)
                         break
 
