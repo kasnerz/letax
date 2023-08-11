@@ -225,44 +225,47 @@ class Database:
         # TODO simplify
         file_extension = os.path.splitext(filepath)[1]
 
-        thumbnail_size = thumbnail or "80_round"  # 80_round is just for the checks
-        thumbnail_filepath = filepath.replace(file_extension, f"_{thumbnail_size}.jpg")
-        thumbnail_img = _self.read_file(thumbnail_filepath, mode="b")
+        if not filepath.startswith("static/"):
+            thumbnail_size = thumbnail or "80_round"  # 80_round is just for the checks
+            thumbnail_filepath = filepath.replace(file_extension, f"_{thumbnail_size}.jpg")
+            thumbnail_img = _self.read_file(thumbnail_filepath, mode="b")
 
-        # if there are no thumbnails for the current image, create the thumbnails
-        if not thumbnail_img:
-            # try to find a thumbnail of a suitable size:
+            # if there are no thumbnails for the current image, create the thumbnails
+            if not thumbnail_img:
+                # try to find a thumbnail of a suitable size:
+                img = _self.read_file(filepath, mode="b")
+
+                if not img:
+                    print(f"Cannot load image: {filepath}")
+                    # return blank image
+                    return Image.new("RGB", (1, 1))
+
+                # read image using PIL
+                try:
+                    img = Image.open(io.BytesIO(img))
+                    img = ImageOps.exif_transpose(img)
+                except Exception as e:
+                    print(f"Cannot read image: {filepath}")
+                    print(traceback.format_exc())
+                    # return blank image
+                    return Image.new("RGB", (1, 1))
+
+                # if the image was successfully loaded, create thumbnails
+                _self.create_thumbnails(img, filepath)
+
+                try:
+                    thumbnail_img = _self.read_file(thumbnail_filepath, mode="b")
+                except:
+                    print(f"Cannot load thumbnail: {thumbnail_filepath}")
+                    print(traceback.format_exc())
+                    # return blank image
+                    return Image.new("RGB", (1, 1))
+
+            if thumbnail:
+                filepath = thumbnail_filepath
+                img = thumbnail_img
+        else:
             img = _self.read_file(filepath, mode="b")
-
-            if not img:
-                print(f"Cannot load image: {filepath}")
-                # return blank image
-                return Image.new("RGB", (1, 1))
-
-            # read image using PIL
-            try:
-                img = Image.open(io.BytesIO(img))
-                img = ImageOps.exif_transpose(img)
-            except Exception as e:
-                print(f"Cannot read image: {filepath}")
-                print(traceback.format_exc())
-                # return blank image
-                return Image.new("RGB", (1, 1))
-
-            # if the image was successfully loaded, create thumbnails
-            _self.create_thumbnails(img, filepath)
-
-            try:
-                thumbnail_img = _self.read_file(thumbnail_filepath, mode="b")
-            except:
-                print(f"Cannot load thumbnail: {thumbnail_filepath}")
-                print(traceback.format_exc())
-                # return blank image
-                return Image.new("RGB", (1, 1))
-
-        if thumbnail:
-            filepath = thumbnail_filepath
-            img = thumbnail_img
 
         # read image using PIL
         try:
