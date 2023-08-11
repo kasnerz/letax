@@ -175,6 +175,9 @@ class Database:
                 return None
 
         elif fs == "local" or filepath.startswith("static/"):
+            # if does not exist, return None
+            if not os.path.exists(filepath):
+                return None
             with open(filepath, "r" + mode) as f:
                 return f.read()
         else:
@@ -201,6 +204,7 @@ class Database:
         img = img.convert("RGB")
         img.save(img_byte_array, format="JPEG")
         img_bytes = img_byte_array.getvalue()
+
         self.write_file(filepath, img_bytes)
 
     def create_thumbnails(self, img, filepath):
@@ -217,7 +221,7 @@ class Database:
         img_150 = utils.resize_image(img, max_width=150, crop_ratio="1:1")
         self.save_thumbnail(f"{filepath}_150_square.jpg", img_150)
 
-        img_1000 = utils.resize_image(img, max_width=1000, max_height=1000)
+        img_1000 = utils.resize_image(img, max_width=1000)
         self.save_thumbnail(f"{filepath}_1000.jpg", img_1000)
 
     @st.cache_resource(max_entries=1000, show_spinner=False)
@@ -225,47 +229,44 @@ class Database:
         # TODO simplify
         file_extension = os.path.splitext(filepath)[1]
 
-        if not filepath.startswith("static/"):
-            thumbnail_size = thumbnail or "80_round"  # 80_round is just for the checks
-            thumbnail_filepath = filepath.replace(file_extension, f"_{thumbnail_size}.jpg")
-            thumbnail_img = _self.read_file(thumbnail_filepath, mode="b")
+        thumbnail_size = thumbnail or "80_round"  # 80_round is just for the checks
+        thumbnail_filepath = filepath.replace(file_extension, f"_{thumbnail_size}.jpg")
+        thumbnail_img = _self.read_file(thumbnail_filepath, mode="b")
 
-            # if there are no thumbnails for the current image, create the thumbnails
-            if not thumbnail_img:
-                # try to find a thumbnail of a suitable size:
-                img = _self.read_file(filepath, mode="b")
-
-                if not img:
-                    print(f"Cannot load image: {filepath}")
-                    # return blank image
-                    return Image.new("RGB", (1, 1))
-
-                # read image using PIL
-                try:
-                    img = Image.open(io.BytesIO(img))
-                    img = ImageOps.exif_transpose(img)
-                except Exception as e:
-                    print(f"Cannot read image: {filepath}")
-                    print(traceback.format_exc())
-                    # return blank image
-                    return Image.new("RGB", (1, 1))
-
-                # if the image was successfully loaded, create thumbnails
-                _self.create_thumbnails(img, filepath)
-
-                try:
-                    thumbnail_img = _self.read_file(thumbnail_filepath, mode="b")
-                except:
-                    print(f"Cannot load thumbnail: {thumbnail_filepath}")
-                    print(traceback.format_exc())
-                    # return blank image
-                    return Image.new("RGB", (1, 1))
-
-            if thumbnail:
-                filepath = thumbnail_filepath
-                img = thumbnail_img
-        else:
+        # if there are no thumbnails for the current image, create the thumbnails
+        if not thumbnail_img:
+            # try to find a thumbnail of a suitable size:
             img = _self.read_file(filepath, mode="b")
+
+            if not img:
+                print(f"Cannot load image: {filepath}")
+                # return blank image
+                return Image.new("RGB", (1, 1))
+
+            # read image using PIL
+            try:
+                img = Image.open(io.BytesIO(img))
+                img = ImageOps.exif_transpose(img)
+            except Exception as e:
+                print(f"Cannot read image: {filepath}")
+                print(traceback.format_exc())
+                # return blank image
+                return Image.new("RGB", (1, 1))
+
+            # if the image was successfully loaded, create thumbnails
+            _self.create_thumbnails(img, filepath)
+
+            try:
+                thumbnail_img = _self.read_file(thumbnail_filepath, mode="b")
+            except:
+                print(f"Cannot load thumbnail: {thumbnail_filepath}")
+                print(traceback.format_exc())
+                # return blank image
+                return Image.new("RGB", (1, 1))
+
+        if thumbnail:
+            filepath = thumbnail_filepath
+            img = thumbnail_img
 
         # read image using PIL
         try:
@@ -282,9 +283,9 @@ class Database:
     def write_file(self, filepath, content):
         fs = self.get_settings_value("file_system")
 
-        if fs == "s3":
+        if fs == "s3" and not filepath.startswith("static/"):
             self.boto3.Object(self.fs_bucket, filepath).put(Body=content)
-        elif fs == "local":
+        elif fs == "local" or filepath.startswith("static/"):
             mode = "t" if type(content) == str else "b"
 
             os.makedirs(os.path.dirname(filepath), exist_ok=True)
@@ -1295,13 +1296,8 @@ if __name__ == "__main__":
                     print(len(files))
                     print(path, "->", new_path)
                     # save files on the new path
-                    filef = db.read_file(path)
-
-                    if filef:
-                        db.write_file(new_path, filef)
-                        db.delete_file(path)
-                    else:
-                        print(f"File {path} not found")
+                    db.write_file(new_path, db.read_file(path))
+                    db.delete_file(path)
 
             # update `files` as new_files in db
             db.conn.execute(
