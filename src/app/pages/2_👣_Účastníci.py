@@ -134,7 +134,7 @@ def show_participants():
             if img_cache.get(pax["profile_photo_view"]):
                 img = img_cache[pax["profile_photo_view"]]
             else:
-                img = db.read_image(pax["profile_photo_view"], thumbnail="80_round")
+                img = db.read_image(pax["profile_photo_view"], thumbnail="100_square")
                 img_cache[pax["profile_photo_view"]] = img
 
             st.image(img, width=80)
