@@ -62,7 +62,7 @@ def show_profile(team_id):
         st.error("Tým nebyl nalezen.")
         st.stop()
 
-    columns = st.columns([1, 3, 2])
+    columns = st.columns([1, 3, 2], gap="large")
 
     with columns[1]:
         st.markdown(f"<h2>{db.get_team_link(team)}</h2>", unsafe_allow_html=True)
@@ -85,78 +85,79 @@ def show_profile(team_id):
             st.markdown(f"🔗 {links}")
 
         posts = db.get_posts_by_team(team_id)
-
-        if posts.empty:
-            st.stop()
-
         st.divider()
         st.write("#### Příspěvky")
 
-        for i, post in posts.iterrows():
-            # link to post
-            post_link = f"/?post={post['post_id']}"
-            post_date = pd.to_datetime(post["created"]).strftime("%d.%m.%Y %H:%M")
-            st.markdown(
-                f"{post_date} – <b><a href='{post_link}' target='_self'> {post['action_name']}</a><b>",
-                unsafe_allow_html=True,
-            )
+        if posts.empty:
+            st.info("Tým zatím nemá žádné příspěvky.")
+        else:
+            for i, post in posts.iterrows():
+                # link to post
+                post_link = f"/?post={post['post_id']}"
+                post_date = pd.to_datetime(post["created"]).strftime("%d.%m.%Y %H:%M")
+                st.markdown(
+                    f"{post_date} – <b><a href='{post_link}' target='_self'> {post['action_name']}</a><b>",
+                    unsafe_allow_html=True,
+                )
 
         st.write("#### Trasa")
-        with st.expander("Zobrazit na mapě"):
-            team_locations = db.get_table_as_df("locations")
-            team_locations = team_locations[team_locations["team_id"] == team_id]
+        team_locations = db.get_table_as_df("locations")
+        team_locations = team_locations[team_locations["team_id"] == team_id]
 
-            if team_locations.empty:
-                st.info("Tým zatím nemá žádné záznamy v mapě.")
-                st.stop()
+        if team_locations.empty:
+            st.info("Tým zatím nemá žádné záznamy v mapě.")
+        else:
+            with st.expander("Zobrazit na mapě"):
+                m = folium.Map(
+                    location=[team_locations.latitude.mean(), team_locations.longitude.mean()],
+                    zoom_start=4,
+                )
+                # folium.TileLayer("").add_to(m)
 
-            m = folium.Map(
-                location=[team_locations.latitude.mean(), team_locations.longitude.mean()],
-                zoom_start=4,
-            )
-            # folium.TileLayer("").add_to(m)
+                for _, location in team_locations.iterrows():
+                    team = db.get_team_by_id(location["team_id"])
+                    team_icon = team["location_icon"] or "user"
+                    team_color = team["location_color"] or "red"
+                    team_icon_color = team["location_icon_color"] or "white"
 
-            for _, location in team_locations.iterrows():
-                team = db.get_team_by_id(location["team_id"])
-                team_icon = team["location_icon"] or "user"
-                team_color = team["location_color"] or "red"
-                team_icon_color = team["location_icon_color"] or "white"
+                    team_name = team["team_name"]
+                    if not db.is_team_visible(team):
+                        continue
 
-                team_name = team["team_name"]
-                if not db.is_team_visible(team):
-                    continue
+                    date = location["date"]
+                    ago_str = utils.ago(date)
+                    # ago_str = date
 
-                date = location["date"]
-                ago_str = utils.ago(date)
-                # ago_str = date
+                    text = "<b>" + team_name + "</b>"
 
-                text = "<b>" + team_name + "</b>"
+                    if location["comment"]:
+                        popup = f"{location['comment']}<br><br>"
+                    else:
+                        popup = ""
 
-                if location["comment"]:
-                    popup = f"{location['comment']}<br><br>"
-                else:
-                    popup = ""
+                    popup += f"<i>{ago_str}</i>"
 
-                popup += f"<i>{ago_str}</i>"
+                    icons = db.get_fa_icons()
+                    icon_type = icons.get(team_icon, "fa-solid")
 
-                icons = db.get_fa_icons()
-                icon_type = icons.get(team_icon, "fa-solid")
+                    folium.Marker(
+                        [location["latitude"], location["longitude"]],
+                        popup=popup,
+                        tooltip=text,
+                        icon=folium.Icon(
+                            color=team_color,
+                            icon=f"{icon_type} fa-{team_icon}",
+                            icon_color=team_icon_color,
+                            prefix="fa",
+                        ),
+                    ).add_to(m)
 
-                folium.Marker(
-                    [location["latitude"], location["longitude"]],
-                    popup=popup,
-                    tooltip=text,
-                    icon=folium.Icon(
-                        color=team_color, icon=f"{icon_type} fa-{team_icon}", icon_color=team_icon_color, prefix="fa"
-                    ),
-                ).add_to(m)
+                # draw lines between the locations
+                locations = team_locations[["latitude", "longitude"]].values.tolist()
 
-            # draw lines between the locations
-            locations = team_locations[["latitude", "longitude"]].values.tolist()
+                folium.PolyLine(locations, color=team_color, weight=2.5, opacity=1).add_to(m)
 
-            folium.PolyLine(locations, color=team_color, weight=2.5, opacity=1).add_to(m)
-
-            folium_static(m, width=None, height=500)
+                folium_static(m, width=None, height=500)
 
         with columns[2]:
             photo_path = team["team_photo"]
