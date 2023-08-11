@@ -880,6 +880,9 @@ class Database:
             if last_location is None:
                 continue
 
+            if not _self.is_team_visible(team):
+                continue
+
             last_locations.append(last_location)
 
         if not last_locations:

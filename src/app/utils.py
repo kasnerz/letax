@@ -64,11 +64,15 @@ def ago(t):
     diff = datetime.now() - t
     hours = diff.seconds // 3600
 
-    if diff.days > 0:
+    if diff.days > 1:
         return f"před {diff.days} dny"
+    elif diff.days == 1:
+        return "včera"
     # hours
-    elif hours > 0:
+    elif hours > 1:
         return f"před {hours} hodinami"
+    elif hours == 1:
+        return "před hodinou"
 
     return "před méně než hodinou"
 

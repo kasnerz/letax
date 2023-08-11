@@ -59,9 +59,6 @@ def show_map():
             team_icon_color = team["location_icon_color"] or "white"
 
             team_name = team["team_name"]
-            if not db.is_team_visible(team):
-                continue
-
             date = location["date"]
             ago_str = utils.ago(date)
             # ago_str = date
@@ -111,11 +108,10 @@ def show_map():
         last_locations = last_locations.sort_values(by="date", ascending=False)
 
         st.subheader("Nedávné aktualizace")
+
         for _, location in last_locations.head(5).iterrows():
             team = db.get_team_by_id(location["team_id"])
             team_name = team["team_name"]
-            if not db.is_team_visible(team):
-                continue
 
             date = location["date"]
             ago_str = utils.ago(date)
