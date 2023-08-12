@@ -121,9 +121,6 @@ def show_profile(team_id):
                     team_icon_color = team["location_icon_color"] or "white"
 
                     team_name = team["team_name"]
-                    if not db.is_team_visible(team):
-                        continue
-
                     date = location["date"]
                     ago_str = utils.ago(date)
                     # ago_str = date
