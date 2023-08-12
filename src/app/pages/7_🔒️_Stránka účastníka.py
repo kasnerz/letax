@@ -11,6 +11,7 @@ import time
 import time
 import traceback
 import utils
+import pytz
 from unidecode import unidecode
 
 st.set_page_config(page_title="Stránka týmu", page_icon="static/favicon.png", layout="wide")
@@ -246,10 +247,15 @@ def record_location(user, team):
                 "Pokud se ti nepodařilo zadat pozici pomocí GPS, můžeš ji zadat ručně. Zadej buď GPS pozici nebo adresu (např. název města)."
             )
             cols = st.columns(2)
+
+            datetime_now = datetime.now()
+            datetime_now = utils.convert_datetime_server_to_prague(datetime_now)
+
             with cols[0]:
-                date_manual = st.date_input("Datum:", value=datetime.now())
+                date_manual = st.date_input("Datum:", value=datetime_now.date())
             with cols[1]:
-                time_manual = st.time_input("Čas:", value=datetime.now().time())
+                time_manual = st.time_input("Čas (UTC+2):", value=datetime_now.time())
+
             position_manual = st.text_input("GPS pozice / adresa:")
             comment_manual = st.text_input(
                 "Komentář:",
@@ -338,7 +344,11 @@ def record_location(user, team):
         longitude = position.longitude
         latitude = position.latitude
         address = position.address
+
+        # time_manual is in utc+2, move back to gmt
+
         date = datetime.combine(date_manual, time_manual)
+        date = utils.convert_datetime_prague_to_server(date)
 
         date_str = date.strftime("%d.%m.%Y %H:%M")
         # if date is in the future, refuse

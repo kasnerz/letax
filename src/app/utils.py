@@ -14,6 +14,7 @@ from streamlit_extras import app_logo
 import subprocess
 import ffmpeg
 from datetime import datetime, timedelta
+import pytz
 
 TTL = 600
 
@@ -103,6 +104,24 @@ def get_readable_datetime(t_str):
         t_str = t_str.split(".")[0]
 
     return t_str[:-3]
+
+
+def convert_datetime_server_to_prague(dt):
+    server_timezone = pytz.timezone("GMT")
+    target_timezone = pytz.timezone("Europe/Prague")  # UTC+2
+
+    dt = dt.astimezone(server_timezone).replace(tzinfo=target_timezone)
+
+    return dt
+
+
+def convert_datetime_prague_to_server(dt):
+    server_timezone = pytz.timezone("GMT")
+    target_timezone = pytz.timezone("Europe/Prague")  # UTC+2
+
+    dt = dt.astimezone(target_timezone).replace(tzinfo=server_timezone)
+
+    return dt
 
 
 def heic_to_jpg(input_file, output_file):
