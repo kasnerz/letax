@@ -314,7 +314,7 @@ def record_location(user, team):
             container.success("Poloha nasdílena!")
         else:
             container.warning(
-                "Nepodařilo se nasdílet polohu. Zkontroluj, jestli má tvůj prohlížeč přístup k tvé aktuální poloze."
+                "Nepodařilo se nasdílet polohu. Zkontroluj, jestli má tvůj prohlížeč přístup k tvé aktuální poloze, a zkus to prosím znovu."
             )
             time.sleep(5)
 
