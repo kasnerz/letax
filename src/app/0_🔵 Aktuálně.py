@@ -91,9 +91,11 @@ def show_post(post_id):
         st.divider()
 
     images = [db.read_image(f["path"], thumbnail="1000") for f in files if f["type"].startswith("image")]
+
     if images:
-        cols = st.columns(max(len(images), 3))
-        for col, image in zip(cols, images):
+        cols = st.columns(min(3, len(images)))
+        for i, image in enumerate(images):
+            col = cols[i % 3]
             col.image(image, use_column_width=True)
 
     videos = [f["path"] for f in files if f["type"].startswith("video")]
