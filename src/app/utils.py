@@ -117,7 +117,7 @@ def convert_datetime_prague_to_server(dt):
     server_timezone = pytz.timezone("GMT")
     target_timezone = pytz.timezone("Europe/Prague")  # UTC+2
 
-    dt = dt.astimezone(target_timezone).replace(tzinfo=server_timezone)
+    dt = dt.astimezone(server_timezone).replace(tzinfo=target_timezone)
 
     return dt
 
