@@ -89,7 +89,7 @@ def show_profile(team_id):
         st.write("#### Příspěvky")
 
         if posts.empty:
-            st.info("Tým zatím nemá žádné příspěvky.")
+            st.info("Tým nemá žádné příspěvky.")
         else:
             for i, post in posts.iterrows():
                 # link to post
@@ -105,7 +105,7 @@ def show_profile(team_id):
         team_locations = team_locations[team_locations["team_id"] == team_id]
 
         if team_locations.empty:
-            st.info("Tým zatím nemá žádné záznamy v mapě.")
+            st.info("Tým nemá žádné záznamy v mapě.")
         else:
             with st.expander("Zobrazit na mapě"):
                 m = folium.Map(
