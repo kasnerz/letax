@@ -67,7 +67,7 @@ def ago(t):
     if diff.days > 1:
         return f"před {diff.days} dny"
     elif diff.days == 1:
-        return "včera"
+        return "před 1 dnem"
     # hours
     elif hours > 1:
         return f"před {hours} hodinami"
