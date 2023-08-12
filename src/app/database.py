@@ -899,6 +899,16 @@ class Database:
 
         return address
 
+    def parse_position(self, position):
+        # position is a string
+        # first, let's try to parse GPS coordinates
+        position = self.geoloc.geocode(position)
+
+        if position:
+            return position
+
+        return None
+
     def save_location(
         self, user, comment, longitude, latitude, accuracy, altitude, altitude_accuracy, heading, speed, address, date
     ):
