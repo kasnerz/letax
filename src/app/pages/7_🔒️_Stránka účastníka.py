@@ -818,7 +818,7 @@ def show_post_management(user, team):
 
         with col_delete:
             if st.button("❌ Smazat", key=f"delete-{post['post_id']}"):
-                print(f"Deleting post {post['post_id']}: {post['action_name']}")
+                utils.log(f"Deleting post {post['post_id']}: {post['action_name']}", level="info")
                 db.delete_post(post.post_id)
                 st.success("Příspěvek smazán.")
                 time.sleep(2)
@@ -864,8 +864,6 @@ def show_post_management(user, team):
 def show_user_page(user, team):
     name = user["name"]
     team_name = team["team_name"] if team else "Žádný tým"
-
-    print(f"Showing user page for {name} ({team_name})")
 
     st.markdown(f"# {name} | {team_name}")
     user, team = get_logged_info()

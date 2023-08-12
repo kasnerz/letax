@@ -18,6 +18,28 @@ from datetime import datetime, timedelta
 TTL = 600
 
 
+def log(m, level="info"):
+    # We don't want to use the logging module since it's used by Streamlit
+    current_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+
+    if level == "info":
+        print("{} - \033[96m{}\033[00m {}".format(current_time, level.upper(), m))
+    elif level == "warning":
+        print("{} - \033[93m{}\033[00m {}".format(current_time, level.upper(), m))
+    elif level == "error":
+        print("{} - \033[91m{}\033[00m {}".format(current_time, level.upper(), m))
+    elif level == "debug":
+        print("{} - \033[95m{}\033[00m {}".format(current_time, level.upper(), m))
+    elif level == "success":
+        print("{} - \033[92m{}\033[00m {}".format(current_time, level.upper(), m))
+    else:
+        print("{} - {} {}".format(current_time, level.upper(), m))
+
+    # write to file
+    with open("letax.log", "a") as f:
+        f.write("{} - {} {}\n".format(current_time, level.upper(), m))
+
+
 def generate_uuid():
     # generate a short unique uuid
     return str(uuid.uuid4())[:8]
@@ -42,11 +64,10 @@ def send_email(address, subject, content_html):
     message.attach(content_part)
 
     with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
-        print(f"Logging to mailserver...")
+        log(f"Logging to mailserver...", level="debug")
         server.login(sender_email, password)
-        print(f"Sending e-mail from {sender_email} to {address}")
         server.sendmail(sender_email, address, message.as_string())
-        print("E-mail sent")
+        log(f"Sending e-mail from {sender_email} to {address}", level="info")
 
     return True
 
@@ -122,12 +143,13 @@ def postprocess_uploaded_photo(photo):
 def postprocess_ffmpeg(input_file, output_file):
     # use ffmpeg-python to efficiently convert the video to a reasonable sized-file
     try:
+        log(f"Postprocessing video {input_file}...", level="info")
         input_stream = ffmpeg.input(input_file)
         output_stream = ffmpeg.output(input_stream, output_file, crf=26, preset="fast")
-        ffmpeg.run(output_stream)
-        print(f"Video successfully postprocessed and saved as {output_file}")
+        ffmpeg.run(output_stream, quiet=True)
+        log(f"Video postprocessed and saved as {output_file}", level="success")
     except ffmpeg.Error as e:
-        print(f"An error occurred: {e}")
+        log(f"An error occurred: {e}", level="error")
 
 
 def postprocess_uploaded_video(video):
