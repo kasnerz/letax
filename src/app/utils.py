@@ -98,6 +98,13 @@ def ago(t):
     return "před méně než hodinou"
 
 
+def get_readable_datetime(t_str):
+    if "." in t_str:
+        t_str = t_str.split(".")[0]
+
+    return t_str[:-3]
+
+
 def heic_to_jpg(input_file, output_file):
     try:
         subprocess.run(["heif-convert", input_file, output_file], check=True)

@@ -233,64 +233,68 @@ def record_location(user, team):
     st.markdown("#### Sdílení polohy")
 
     with st.form("location"):
+        st.caption("Aktuální poloha pomocí GPS pozice.")
         comment = st.text_input(
             "Komentář:",
         )
         btn_share = st.form_submit_button("📌 Zaznamenat polohu")
     container = st.empty()
 
-    with st.form("location_icon"):
-        location_color = team["location_color"] or "red"
-        location_icon_color = team["location_icon_color"] or "#ffffff"
-        location_icon = team["location_icon"] or "user"
+    with st.expander("🌐 Zadat polohu ručně"):
+        with st.form("location_manual"):
+            st.caption(
+                "Pokud se ti nepodařilo zadat pozici pomocí GPS, můžeš ji zadat ručně. Zadej buď GPS pozici nebo adresu (např. název města)."
+            )
+            cols = st.columns(2)
+            with cols[0]:
+                date_manual = st.date_input("Datum:", value=datetime.now())
+            with cols[1]:
+                time_manual = st.time_input("Čas:", value=datetime.now().time())
+            position_manual = st.text_input("GPS pozice / adresa:")
+            comment_manual = st.text_input(
+                "Komentář:",
+            )
+            btn_share_manual = st.form_submit_button("🌐 Zadat polohu ručně")
 
-        icon_options = db.get_fa_icons()
-        icon_options_list = sorted(list(icon_options.keys()))
+    container2 = st.empty()
 
-        color_options = [
-            "red",
-            "blue",
-            "green",
-            "purple",
-            "orange",
-            "darkred",
-            "lightred",
-            "beige",
-            "darkblue",
-            "darkgreen",
-            "cadetblue",
-            "darkpurple",
-            "white",
-            "pink",
-            "lightblue",
-            "lightgreen",
-            "gray",
-            "black",
-            "lightgray",
-        ]
+    with st.expander("🔧 Nastavení ikony na mapě"):
+        with st.form("location_icon"):
+            location_color = team["location_color"] or "red"
+            location_icon_color = team["location_icon_color"] or "#ffffff"
+            location_icon = team["location_icon"] or "user"
 
-        location_color = st.selectbox(
-            "Barva markeru na mapě", options=color_options, index=color_options.index(location_color)
-        )
-        location_icon_color = st.color_picker("Barva ikony markeru na mapě", value=location_icon_color)
-        location_icon = st.selectbox(
-            "Ikona markeru na mapě (viz https://fontawesome.com/search?o=a&m=free):",
-            options=icon_options_list,
-            index=icon_options_list.index(location_icon) if location_icon in icon_options_list else 0,
-        )
-        btn_save_options = st.form_submit_button("Uložit")
+            icon_options = db.get_fa_icons()
+            icon_options_list = sorted(list(icon_options.keys()))
+
+            # fmt: off
+            color_options = [ "red", "blue", "green", "purple", "orange", "darkred", "lightred", "beige", "darkblue", "darkgreen", "cadetblue", "darkpurple", "white", "pink", "lightblue", "lightgreen", "gray", "black", "lightgray", ]
+            # fmt: on
+
+            location_color = st.selectbox(
+                "Barva markeru na mapě", options=color_options, index=color_options.index(location_color)
+            )
+            location_icon_color = st.color_picker("Barva ikony markeru na mapě", value=location_icon_color)
+            location_icon = st.selectbox(
+                "Ikona markeru na mapě (viz https://fontawesome.com/search?o=a&m=free):",
+                options=icon_options_list,
+                index=icon_options_list.index(location_icon) if location_icon in icon_options_list else 0,
+            )
+            btn_save_options = st.form_submit_button("Uložit")
+
+    container3 = st.empty()
 
     is_visible = db.is_team_visible(team)
     st.checkbox(
         label="Zobrazit poslední polohu na mapě", value=is_visible, on_change=db.toggle_team_visibility, args=(team,)
     )
 
-    last_location = db.get_last_location(team)
-    if last_location is not None:
-        st.markdown(f"#### Poslední poloha")
-        st.write(f"{last_location['latitude']}, {last_location['longitude']}")
-        st.caption(f"{last_location['date']}")
-        st.map(pd.DataFrame([last_location]))
+    # last_location = db.get_last_location(team)
+    # if last_location is not None:
+    #     st.markdown(f"#### Poslední poloha")
+    #     st.write(f"{last_location['latitude']}, {last_location['longitude']}")
+    #     st.caption(f"{last_location['date']}")
+    #     st.map(pd.DataFrame([last_location]))
 
     if btn_share:
         location = get_geolocation()
@@ -318,9 +322,39 @@ def record_location(user, team):
             )
             time.sleep(5)
 
+    if btn_share_manual:
+        if not position_manual:
+            container2.error("Zadej GPS pozici nebo adresu.")
+            st.stop()
+
+        position = db.parse_position(position_manual)
+
+        if not position:
+            container2.warning(
+                f"Zadaný vstup '{position_manual}' se nepodařilo naparsovat na polohu. Zkus ho prosím přeformulovat např. na '50.123456, 14.123456' nebo 'Praha'."
+            )
+            st.stop()
+
+        longitude = position.longitude
+        latitude = position.latitude
+        address = position.address
+        date = datetime.combine(date_manual, time_manual)
+
+        date_str = date.strftime("%d.%m.%Y %H:%M")
+        # if date is in the future, refuse
+        # note that server is in GMT timezone and we are in UTC+2
+        if date > datetime.now():
+            container2.error("Cestování v čase zatím nepodporujeme :) Zadej prosím polohu v minulosti.")
+            st.stop()
+
+        db.save_location(user, comment_manual, longitude, latitude, None, None, None, None, None, address, date)
+        container2.success(
+            f"Pozice nalezena: {address} ({latitude}, {longitude}).\n Poloha byla nasdílena jako aktuální v {date_str}."
+        )
+
     if btn_save_options:
         db.save_location_options(team, location_color, location_icon_color, location_icon)
-        container.success("Nastavení uloženo!")
+        container3.success("Nastavení uloženo!")
 
 
 def show_team_info(user, team):
@@ -834,22 +868,25 @@ def show_post_management(user, team):
     if locations.empty:
         st.info("Tvůj tým zatím nenasdílel žádnou polohu.")
 
+    # sort
+    locations = locations.sort_values(by="date", ascending=False)
+
     for i, location in locations.iterrows():
-        col_date, col_gps, col_comment, col_delete = st.columns([3, 3, 5, 2])
+        col_date, col_gps, col_delete = st.columns([3, 5, 3])
         with col_date:
-            st.markdown("**" + location["date"][:-7] + "**")
+            date = utils.get_readable_datetime(location["date"])
+            st.markdown("**" + date + "**")
 
-        with col_gps:
-            gps = f'{location["latitude"]}, {location["longitude"]}'
-            st.write(gps)
-
-        with col_comment:
             comment = location["comment"]
             # crop comment if too long
             if len(comment) > 100:
                 comment = comment[:100] + "..."
 
             st.write(comment)
+
+        with col_gps:
+            gps = f'{location["address"]} ({location["latitude"]}, {location["longitude"]})'
+            st.write(gps)
 
         with col_delete:
             if st.button("❌ Smazat", key=f"delete-loc-{i}"):
