@@ -447,7 +447,7 @@ def show_info_info():
         #### Kontakty
         - **dotazy a připomínky**: letni@x-challenge.cz
         - **happiness manager**: {happiness_manager}
-        - **krizové číslo (dostupné 24/7)**: {crisis_number}
+        - **krizová čísla (24/7)**: {crisis_number}
 
         #### Odkazy
         - **pravidla akce**: https://x-challenge.cz/letni/pravidla/
