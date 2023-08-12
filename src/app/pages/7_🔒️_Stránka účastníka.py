@@ -348,9 +348,9 @@ def record_location(user, team):
         # time_manual is in utc+2, move back to gmt
 
         date = datetime.combine(date_manual, time_manual)
+        date_str = date.strftime("%d.%m.%Y %H:%M")
         date = utils.convert_datetime_prague_to_server(date)
 
-        date_str = date.strftime("%d.%m.%Y %H:%M")
         # if date is in the future, refuse
         # note that server is in GMT timezone and we are in UTC+2
         if date > datetime.now():
