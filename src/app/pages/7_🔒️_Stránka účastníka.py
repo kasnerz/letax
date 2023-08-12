@@ -353,7 +353,7 @@ def record_location(user, team):
         date_str = date.strftime("%d.%m.%Y %H:%M")
         # if date is in the future, refuse
         # note that server is in GMT timezone and we are in UTC+2
-        if date > datetime.now().astimezone(pytz.timezone("GMT")):
+        if date > datetime.now():
             container2.error("Cestování v čase zatím nepodporujeme :)")
             st.stop()
 
