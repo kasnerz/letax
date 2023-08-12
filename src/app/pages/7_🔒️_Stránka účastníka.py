@@ -438,6 +438,23 @@ def show_account_info(user):
         st.experimental_rerun()
 
 
+def show_info_info():
+    crisis_number = db.get_settings_value("crisis_number")
+    happiness_manager = db.get_settings_value("happiness_number")
+
+    st.markdown(
+        f"""
+        #### Kontakty
+        - **krizové číslo (dostupné 24/7)**: {crisis_number}
+        - **happiness manager**: {happiness_manager}
+
+        #### Odkazy
+        - **pravidla akce**: https://x-challenge.cz/letni/pravidla/
+        - **etický kodex**: https://x-challenge.cz/moral-principles/
+        """
+    )
+
+
 def get_logged_info():
     username = st.session_state["username"]
     user = db.am.get_user_by_username(username)
@@ -872,6 +889,7 @@ def show_user_page(user, team):
         "🧑‍🤝‍🧑 Tým",
         "👤 O mně",
         "🔑 Účet",
+        "ℹ️ Info",
     ]
     tab_idx = 0
 
@@ -910,6 +928,9 @@ def show_user_page(user, team):
 
     with tabs[7 + tab_idx]:
         show_account_info(user)
+
+    with tabs[8 + tab_idx]:
+        show_info_info()
 
 
 def main():
