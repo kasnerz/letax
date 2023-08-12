@@ -54,7 +54,7 @@ def main():
                 display_challenge(challenge)
 
         else:
-            print(f'Kategorie {challenge["category"]} zatím nemá svůj tab')
+            utils.log(f'Category {challenge["category"]} does not have its own tab', level="warning")
 
 
 if __name__ == "__main__":

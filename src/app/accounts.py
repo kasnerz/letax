@@ -4,6 +4,7 @@ import yaml
 import pandas as pd
 import os
 import streamlit_authenticator as stauth
+import utils
 
 
 class AccountManager:
@@ -15,7 +16,7 @@ class AccountManager:
         self.recompute_index()
 
     def load_accounts(self):
-        print("Reloading accounts...")
+        utils.log("Reloading accounts...")
         with open(self.accounts_file) as f:
             self.accounts = yaml.load(f, Loader=yaml.FullLoader)
 

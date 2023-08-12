@@ -84,7 +84,7 @@ class Database:
 
         self.geoloc = Nominatim(user_agent="GetLoc")
 
-        print("Database initialized")
+        utils.log("Database initialized")
 
     def __del__(self):
         self.conn.close()
@@ -152,7 +152,6 @@ class Database:
 
     @st.cache_resource(ttl=TTL, show_spinner=False)
     def get_boto3_object(_self, filepath):
-        # print("get_boto3_object")
         obj = _self.boto3.Object(_self.fs_bucket, filepath)
         return obj
 
@@ -191,7 +190,7 @@ class Database:
                 obj = self.get_boto3_object(filepath)
                 obj.delete()
             except Exception as e:
-                print(e)
+                utils.log(str(e), level="error")
                 return None
 
         elif fs == "local" or filepath.startswith("static/"):
@@ -208,7 +207,7 @@ class Database:
         self.write_file(filepath, img_bytes)
 
     def create_thumbnails(self, img, filepath):
-        print(f"Creating thumbnails for {filepath}.")
+        utils.log(f"Creating thumbnails for {filepath}.", level="debug")
         filepath = os.path.splitext(filepath)[0]
 
         img_100 = utils.resize_image(img, max_width=100, crop_ratio="1:1")
@@ -239,7 +238,7 @@ class Database:
             img = _self.read_file(filepath, mode="b")
 
             if not img:
-                print(f"Cannot load image: {filepath}")
+                utils.log(f"Cannot load image: {filepath}", level="error")
                 # return blank image
                 return Image.new("RGB", (1, 1))
 
@@ -248,8 +247,7 @@ class Database:
                 img = Image.open(io.BytesIO(img))
                 img = ImageOps.exif_transpose(img)
             except Exception as e:
-                print(f"Cannot read image: {filepath}")
-                print(traceback.format_exc())
+                utils.log(f"Cannot read image: {filepath}", level="error")
                 # return blank image
                 return Image.new("RGB", (1, 1))
 
@@ -259,8 +257,7 @@ class Database:
             try:
                 thumbnail_img = _self.read_file(thumbnail_filepath, mode="b")
             except:
-                print(f"Cannot load thumbnail: {thumbnail_filepath}")
-                print(traceback.format_exc())
+                utils.log(f"Cannot load thumbnail: {thumbnail_filepath}", level="error")
                 # return blank image
                 return Image.new("RGB", (1, 1))
 
@@ -273,8 +270,7 @@ class Database:
             img = Image.open(io.BytesIO(img))
             img = ImageOps.exif_transpose(img)
         except Exception as e:
-            print(f"Cannot read image: {filepath}")
-            print(traceback.format_exc())
+            utils.log(f"Cannot read image: {filepath}", level="error")
             # return blank image
             return Image.new("RGB", (1, 1))
 
@@ -317,9 +313,6 @@ class Database:
 
                 # Increment the page number for the next request
                 page += 1
-
-                # print("DEBUG! TODO remove has_more_orders = False for fetching all orders")
-                # has_more_orders = False
             else:
                 # No more orders, exit the loop
                 has_more_orders = False
@@ -332,11 +325,11 @@ class Database:
 
         # print all existing participants
         for row in self.conn.execute("SELECT * FROM participants"):
-            print(dict(row))
+            utils.log(str(dict(row)), level="debug")
 
         # TODO fetch only orders after last update
         orders = self.wc_get_all_orders(product_id=product_id)
-        print(f"Found {len(orders)} orders")
+        utils.log(f"Found {len(orders)} orders", level="info")
 
         if log_area:
             st.write(f"Nalezeno {len(orders)} objednávek")
@@ -393,6 +386,8 @@ class Database:
             (user_id, email, name),
         )
         self.conn.commit()
+
+        utils.log(f"Added extra participant {email} ({name})", level="success")
 
     def add_participants(self, new_participants):
         for user in new_participants:
@@ -504,6 +499,8 @@ class Database:
             self.conn.execute(query, (bio, emergency_contact, photo_path, email))
             self.conn.commit()
 
+            utils.log(f"Updated info for {username}", level="info")
+
     def get_table_as_df(self, table_name):
         df = pd.read_sql_query(f"SELECT * FROM {table_name}", self.conn)
         return df
@@ -569,6 +566,8 @@ class Database:
         )
         self.conn.commit()
 
+        utils.log(f"{user['username']} ({team['team_name']}) added post '{title}'", level="success")
+
     def get_team_by_id(self, team_id):
         # retrieve team from the database, return a single Python object or None
         query = "SELECT * FROM teams WHERE team_id = ?"
@@ -611,7 +610,7 @@ class Database:
         action = self.get_action(action_type, action_name)
 
         if not action:
-            print(f"Action {action_name} not found")
+            utils.log(f"Action {action_name} not found", level="warning")
             return 0
 
         pts = action.get("points", 0)
@@ -794,6 +793,7 @@ class Database:
                 (team_id, team_name, team_motto, team_web, photo_path, first_member, second_member),
             )
             self.conn.commit()
+            utils.log(f"Added team {team_name}", level="success")
         else:
             # only update new values, keep the existing
             self.conn.execute(
@@ -801,6 +801,7 @@ class Database:
                 (team_name, team_motto, team_web, photo_path, first_member, second_member, team_id),
             )
             self.conn.commit()
+            utils.log(f"Updated team {team_name}", level="info")
 
     def create_tables(self):
         self.conn.execute(
@@ -923,6 +924,7 @@ class Database:
             ),
         )
         self.conn.commit()
+        utils.log(f"Saved location {latitude}, {longitude} for {username}", level="success")
 
     def save_location_options(self, team, location_color, location_icon_color, location_icon):
         team_id = str(team["team_id"])
@@ -931,6 +933,7 @@ class Database:
             f"UPDATE teams SET location_color='{location_color}', location_icon_color='{location_icon_color}', location_icon='{location_icon}' WHERE team_id='{team_id}'"
         )
         self.conn.commit()
+        utils.log(f"Updated location options for {team['team_name']}", level="info")
 
     def get_last_location(_self, team):
         team_id = team["team_id"]
@@ -977,6 +980,8 @@ class Database:
 
         self.conn.execute(f"DELETE FROM locations WHERE username='{username}' AND date='{date}'")
         self.conn.commit()
+
+        utils.log(f"Deleted location {username} {date}", level="info")
 
     def is_team_visible(self, team):
         visibility = team["location_visibility"]
@@ -1050,7 +1055,7 @@ class Database:
             team_name = self.get_team_by_id(team_id)
 
             if not team_name:
-                print(f"Team {team_id} not found")
+                utils.log(f"Team {team_id} not found", level="warning")
                 return files
             team_name = team_name["team_name"]
 
@@ -1074,7 +1079,6 @@ class Database:
                 files.append({"path": file_path, "type": file_type})
         except FileNotFoundError:
             pass
-            # print(f"No files found: {action_type}, {action_name}, {team_id}")
 
         return files
 
@@ -1201,7 +1205,7 @@ class Database:
                     lat = float(gps[0].strip())
                     lon = float(gps[1].strip())
                 except:
-                    print("Cannot convert", gps)
+                    utils.log(f"Cannot convert {gps}", level="warning")
                     gps = None
 
                 self.conn.execute(
