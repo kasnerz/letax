@@ -107,17 +107,15 @@ def get_readable_datetime(t_str):
 
 
 def convert_datetime_server_to_prague(dt):
-    target_timezone = pytz.timezone("Europe/Prague")  # UTC+2
-    dt = dt.astimezone(target_timezone)
+    delta = timedelta(hours=2)
+    dt = dt + delta
 
     return dt
 
 
 def convert_datetime_prague_to_server(dt):
-    server_timezone = pytz.timezone("GMT")
-    target_timezone = pytz.timezone("Europe/Prague")  # UTC+2
-
-    dt = dt.astimezone(server_timezone).replace(tzinfo=target_timezone)
+    delta = timedelta(hours=-2)
+    dt = dt + delta
 
     return dt
 
