@@ -20,6 +20,9 @@ db = get_database()
 def display_challenge(challenge):
     points = challenge["points"]
 
+    if not points:
+        points = "0"
+
     # if points can be rounded to int without loss of precision, do it
     if points == int(points):
         points = int(points)
