@@ -25,7 +25,7 @@ def backbtn():
 
 
 def show_profile(pax_id):
-    st.button("Zpět", on_click=backbtn)
+    # st.button("Zpět", on_click=backbtn)
 
     pax = db.get_participant_by_id(pax_id)
     team = db.get_team_for_user(pax_id)

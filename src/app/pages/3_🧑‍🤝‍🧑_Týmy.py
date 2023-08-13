@@ -55,7 +55,7 @@ def get_pax_link(pax_id, pax_name):
 
 
 def show_profile(team_id):
-    st.button("Zpět", on_click=backbtn)
+    # st.button("Zpět", on_click=backbtn)
 
     team = db.get_team_by_id(team_id)
     if not team:
