@@ -207,7 +207,7 @@ class Database:
         self.write_file(filepath, img_bytes)
 
     def create_thumbnails(self, img, filepath):
-        utils.log(f"Creating thumbnails for {filepath}.", level="debug")
+        # utils.log(f"Creating thumbnails for {filepath}.", level="debug")
         filepath = os.path.splitext(filepath)[0]
 
         img_100 = utils.resize_image(img, max_width=100, crop_ratio="1:1")
