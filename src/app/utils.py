@@ -263,7 +263,7 @@ def resize_image(img, max_width=None, max_height=None, crop_ratio=None, circle=F
 
 
 def check_ram_limit():
-    threshold_percentage = 90
+    threshold_percentage = 85
     memory_info = psutil.virtual_memory()
     used_percentage = memory_info.percent
 
