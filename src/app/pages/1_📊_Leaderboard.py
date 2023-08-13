@@ -60,7 +60,7 @@ def main():
             )
         },
         use_container_width=True,
-        # height=2000,
+        height=600,
     )
 
 
