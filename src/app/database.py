@@ -934,7 +934,6 @@ class Database:
             ),
         )
         self.conn.commit()
-        utils.log(f"Saved location {latitude}, {longitude} for {username}", level="success")
 
     def save_location_options(self, team, location_color, location_icon_color, location_icon):
         team_id = str(team["team_id"])
