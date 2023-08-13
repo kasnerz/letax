@@ -789,8 +789,8 @@ class Database:
 
         if not current_team:
             self.conn.execute(
-                f"INSERT INTO teams (team_id, team_name, team_motto, team_web, team_photo, member1, member2) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (team_id, team_name, team_motto, team_web, photo_path, first_member, second_member),
+                f"INSERT INTO teams (team_id, team_name, team_motto, team_web, team_photo, member1, member2, is_top_x) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (team_id, team_name, team_motto, team_web, photo_path, first_member, second_member, 0),
             )
             self.conn.commit()
             utils.log(f"Added team {team_name}", level="success")
