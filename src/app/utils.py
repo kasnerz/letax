@@ -15,6 +15,9 @@ import subprocess
 import ffmpeg
 from datetime import datetime, timedelta
 import pytz
+import psutil
+import gc
+
 
 TTL = 600
 
@@ -259,6 +262,17 @@ def resize_image(img, max_width=None, max_height=None, crop_ratio=None, circle=F
     return img
 
 
+def check_ram_limit():
+    threshold_percentage = 90
+    memory_info = psutil.virtual_memory()
+    used_percentage = memory_info.percent
+
+    if used_percentage > threshold_percentage:
+        log(f"Used RAM: {used_percentage}%, clearing cache and calling garbage collector.", "debug")
+        clear_cache()
+        gc.collect()
+
+
 def style_sidebar():
     st.markdown(
         """
@@ -269,6 +283,9 @@ def style_sidebar():
     )
 
     app_logo.add_logo("static/letax.png", height=40)
+
+    # it is useful to run it here since this gets called every time
+    check_ram_limit()
 
 
 def clear_cache():
