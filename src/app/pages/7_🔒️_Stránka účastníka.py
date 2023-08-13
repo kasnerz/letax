@@ -863,9 +863,9 @@ def show_post_management(user, team):
 
         with col_delete:
             if st.button("❌ Smazat", key=f"delete-{post['post_id']}"):
-                utils.log(f"Deleting post {post['post_id']}: {post['action_name']}", level="info")
                 db.delete_post(post.post_id)
                 st.success("Příspěvek smazán.")
+                utils.log(f"Team {team['team_name']} deleted post {post['post_id']}: {post['action_name']}", level="info")
                 time.sleep(2)
                 st.experimental_rerun()
 
