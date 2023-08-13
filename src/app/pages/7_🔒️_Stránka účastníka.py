@@ -345,8 +345,6 @@ def record_location(user, team):
         latitude = position.latitude
         address = position.address
 
-        # time_manual is in utc+2, move back to gmt
-
         date = datetime.combine(date_manual, time_manual)
         date_str = date.strftime("%d.%m.%Y %H:%M")
         date = utils.convert_datetime_prague_to_server(date)
@@ -986,9 +984,8 @@ def main():
     # delete query parameters
     st.experimental_set_query_params()
 
-    _, center_column, _ = st.columns([1, 3, 1])
-
     if st.session_state["authentication_status"] == None:
+        _, center_column, _ = st.columns([1, 3, 1])
         with center_column:
             tabs = st.tabs(["Přihlásit se", "Zaregistrovat se", "Reset hesla"])
             with tabs[0]:
@@ -1035,6 +1032,7 @@ Pokud tě na akci přihlásil někdo jiný nebo se ti z nějakého důvodu neda�
         if user["role"] == "admin":
             show_admin_page()
         else:
+            _, center_column, _ = st.columns([1, 3, 1])
             with center_column:
                 show_user_page(user, team)
 
