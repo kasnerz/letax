@@ -137,8 +137,9 @@ def show_participants():
             st.markdown(f"{name}", unsafe_allow_html=True)
 
             if team_name:
+                team = db.get_team_by_id(team_id)
                 st.markdown(
-                    f"<div style='margin-top: -15px; margin-bottom:20px;'><a href='/Týmy?id={team_id}' style='color: {link_color}; text-decoration: none;' target='_self'>{team_name}</a></div>",
+                    f"<h4>{db.get_team_link(team)}</h4>",
                     unsafe_allow_html=True,
                 )
             else:
