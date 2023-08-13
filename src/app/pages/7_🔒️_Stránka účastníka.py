@@ -322,6 +322,7 @@ def record_location(user, team):
                 user, comment, longitude, latitude, accuracy, altitude, altitude_accuracy, heading, speed, address, date
             )
             container.success("Poloha nasdílena!")
+            utils.log(f"{team['team_name']} shared location: {address} ({latitude}, {longitude})", "success")
         else:
             container.warning(
                 "Nepodařilo se nasdílet polohu. Zkontroluj, jestli má tvůj prohlížeč přístup k tvé aktuální poloze, a zkus to prosím znovu."
@@ -359,6 +360,8 @@ def record_location(user, team):
         container2.success(
             f"Pozice nalezena: {address} ({latitude}, {longitude}).\n Poloha byla nasdílena jako aktuální v {date_str}."
         )
+
+        utils.log(f"{team['team_name']} shared location manually: {address} ({latitude}, {longitude})", "success")
 
     if btn_save_options:
         db.save_location_options(team, location_color, location_icon_color, location_icon)
