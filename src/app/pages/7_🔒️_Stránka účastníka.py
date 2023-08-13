@@ -244,7 +244,7 @@ def record_location(user, team):
     with st.expander("🌐 Zadat polohu ručně"):
         with st.form("location_manual"):
             st.caption(
-                "Pokud se ti nepodařilo zadat pozici pomocí GPS, můžeš ji zadat ručně. Zadej buď GPS pozici nebo adresu (např. název města)."
+                "Zde můžeš zadat polohu v určitém čase zpětně. Zadej buď GPS pozici nebo adresu (stačí např. '<město>, <země>')."
             )
             cols = st.columns(2)
 
