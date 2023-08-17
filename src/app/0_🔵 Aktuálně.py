@@ -165,7 +165,7 @@ def show_overview(page):
     col_layout = [5, 2]
     cols = st.columns(col_layout)
 
-    page_size = int(db.get_settings_value("feed_page_size"))
+    page_size = 10
     page_count = len(posts) // page_size + 1
     page = min(page, page_count - 1)
 

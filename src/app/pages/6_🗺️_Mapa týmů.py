@@ -1,21 +1,11 @@
 #!/usr/bin/env python3
 
 import streamlit as st
-import streamlit_authenticator as stauth
-import os
-import time
-import yaml
-from yaml.loader import SafeLoader
-import time
-import pandas as pd
 from database import get_database
-import accounts
 import utils
-from unidecode import unidecode
 import folium
 from folium.plugins import BeautifyIcon
 from streamlit_folium import folium_static
-from geopy.geocoders import Nominatim
 
 st.set_page_config(page_title="Mapa týmů", page_icon="static/favicon.png", layout="wide")
 utils.style_sidebar()
