@@ -305,7 +305,7 @@ def show_actions():
                 "👥 Načíst letošní účastníky",
                 "ℹ️ Nastavit infotext",
                 "📁 Obnovit zálohu databáze",
-                "💻️ Systémová nastavení",
+                "💻️ Pokročilá nastavení",
                 "🗺️ Upravit mapu s checkpointy",
                 "🧹 Vyčistit cache",
                 "📅 Změnit aktuální ročník",
@@ -334,7 +334,7 @@ def show_actions():
         elif action == "🗺️ Upravit mapu s checkpointy":
             ret = action_set_map_link()
 
-        elif action == "💻️ Systémová nastavení":
+        elif action == "💻️ Pokročilá nastavení":
             ret = action_set_system_settings()
 
     if ret is True:
