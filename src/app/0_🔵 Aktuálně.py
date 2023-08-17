@@ -148,19 +148,18 @@ def show_overview(page):
         """,
         unsafe_allow_html=True,
     )
-    # with st.expander("⚙️"):
-    cols = st.columns([1, 1, 1])
-    with cols[0]:
-        team_filter = st.sidebar.selectbox("Tým:", options=team_options, key="team_filter_selector")
-    with cols[1]:
-        challenge_filter = st.sidebar.selectbox("Výzvy:", options=challenge_options, key="challenge_filter_selector")
+    st.sidebar.caption("Filtrovat feed")
+    # st.sidebar.markdown("**Filtrovat**")
+    team_filter = st.sidebar.selectbox("Tým:", options=team_options, key="team_filter_selector")
+    challenge_filter = st.sidebar.selectbox("Výzvy:", options=challenge_options, key="challenge_filter_selector")
 
-    with cols[2]:
-        checkpoint_filter = st.sidebar.selectbox(
-            "Checkpointy:", options=checkpoint_options, key="checkpoint_filter_selector"
-        )
+    checkpoint_filter = st.sidebar.selectbox(
+        "Checkpointy:", options=checkpoint_options, key="checkpoint_filter_selector"
+    )
 
     st.title(f"Letní X-Challenge {year}")
+    cols = st.columns([1, 3, 1])
+
     posts = load_posts(team_filter=team_filter, challenge_filter=challenge_filter, checkpoint_filter=checkpoint_filter)
 
     col_layout = [5, 2]
@@ -191,7 +190,8 @@ def show_overview(page):
         team_link = db.get_team_link(team)
 
         link_color = db.get_settings_value("link_color")
-        link = f"<div style='margin-bottom:-10px; display:inline-block;'><h4><a href='/?post={post_id}&page={page}' target='_self' style='text-decoration: none; color: {link_color};'>{action_type_icon} {action_name}</a> – {team_link}</div>"
+        link = f"<div style='margin-bottom:-10px; display:inline-block;'><h4><a href='/?post={post_id}&page={page}' target='_self' style='text-decoration: none; color: {link_color};'>{action_type_icon} {action_name} – {team['team_name']}</a></div>"
+        # link = f"<div style='margin-bottom:-10px; display:inline-block;'><h4><a href='/?post={post_id}&page={page}' target='_self' style='text-decoration: none; color: {link_color};'>{action_type_icon} {action_name}</a> – {team_link}</div>"
 
         st.markdown(link, unsafe_allow_html=True)
         cols = st.columns(col_layout)
@@ -217,22 +217,30 @@ def show_overview(page):
 
         st.divider()
 
-    cols = st.columns([1, 5, 1])
+    cols = st.columns([1, 3, 1])
 
-    if page_count - 1 > 0:
-        cols[1].slider(
-            "Stránka",
+    with cols[1]:
+        st.number_input(
+            f"Stránka {page}/{page_count-1}",
             min_value=0,
             max_value=page_count - 1,
             value=page,
-            label_visibility="hidden",
-            on_change=set_page,
             key="page_slider",
+            on_change=set_page,
         )
-    if page > 0:
-        cols[0].button("Přechozí", args=(page,), on_click=prev_page)
-    if page < page_count - 1:
-        cols[2].button("Další", args=(page,), on_click=next_page)
+    # cols[1].slider(
+    #     "Stránka",
+    #     min_value=0,
+    #     max_value=page_count - 1,
+    #     value=page,
+    #     label_visibility="hidden",
+    #     on_change=set_page,
+    #     key="page_slider",
+    # )
+    # if page > 0:
+    #     cols[0].button("Přechozí", args=(page,), on_click=prev_page)
+    # if page < page_count - 1:
+    #     cols[4].button("Další", args=(page,), on_click=next_page)
 
 
 def main():
