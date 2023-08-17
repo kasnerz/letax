@@ -13,8 +13,11 @@ import accounts
 import utils
 from unidecode import unidecode
 
-st.set_page_config(page_title="Checkpointy", page_icon="static/favicon.png", layout="centered")
+st.set_page_config(page_title="Checkpointy", page_icon="static/favicon.png", layout="wide")
 utils.style_sidebar()
+
+from authenticator import login_page
+
 db = get_database()
 
 
@@ -63,4 +66,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    user, team = login_page()
+
+    if user:
+        cols = st.columns([1, 3, 1])
+        with cols[1]:
+            main()
