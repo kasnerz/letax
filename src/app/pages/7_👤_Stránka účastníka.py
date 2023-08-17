@@ -11,6 +11,9 @@ from authenticator import login_page
 if __name__ == "__main__":
     user, team = login_page()
 
+    if user is None:
+        st.stop()
+
     if user["role"] == "admin":
         show_admin_page(user)
     else:
