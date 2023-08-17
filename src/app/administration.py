@@ -59,7 +59,7 @@ def show_users_editor():
         key=f"users_data_editor",
         column_config={
             "role": st.column_config.SelectboxColumn(options=["user", "admin"]),
-            # "password": st.column_config.Column(disabled=True),
+            "username": st.column_config.Column(disabled=True),
         },
     )
     edits = st.session_state[f"users_data_editor"]
