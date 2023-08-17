@@ -1,7 +1,7 @@
 import streamlit as st
 import utils
 
-st.set_page_config(page_title="Stránka týmu", page_icon="static/favicon.png", layout="wide")
+st.set_page_config(page_title="Stránka účastníka", page_icon="static/favicon.png", layout="wide")
 utils.style_sidebar()
 
 from administration import show_admin_page

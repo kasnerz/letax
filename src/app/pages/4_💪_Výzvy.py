@@ -12,9 +12,11 @@ from database import get_database
 import accounts
 import utils
 
-st.set_page_config(page_title="Výzvy", page_icon="static/favicon.png", layout="centered")
+st.set_page_config(page_title="Výzvy", page_icon="static/favicon.png", layout="wide")
 utils.style_sidebar()
 db = get_database()
+
+from authenticator import login_page
 
 
 def display_challenge(challenge):
@@ -61,4 +63,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    user, team = login_page()
+
+    if user:
+        cols = st.columns([1, 3, 1])
+        with cols[1]:
+            main()
