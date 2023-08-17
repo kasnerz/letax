@@ -289,6 +289,7 @@ def style_sidebar():
 
 
 def clear_cache():
+    log("Clearing cache", "debug")
     st.cache_resource.clear()
     st.cache_data.clear()
 

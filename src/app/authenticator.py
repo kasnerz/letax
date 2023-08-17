@@ -38,12 +38,12 @@ def register_new_user(config):
         st.stop()
 
     # if the user is allowed to register through extra accounts, find their role
-    extra_account = db.am.get_extra_account(user["email"])
+    extra_account = db.am.get_extra_account(user["email"].lower())
     role = extra_account["role"] if extra_account else "user"
 
     db.am.add_user(
         username=username,
-        email=user["email"],
+        email=user["email"].lower(),
         name=user["name"],
         password_hash=user["password"],
         registered=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),

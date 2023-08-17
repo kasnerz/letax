@@ -65,8 +65,8 @@ class AccountManager:
 
     def get_registered_user(self, config):
         # there is no way to tell which user just registered except for comparing the old and new config files
-        old_emails = {user["email"] for user in self.accounts["credentials"]["usernames"].values()}
-        new_emails = {user["email"] for user in config["credentials"]["usernames"].values()}
+        old_emails = {user["email"].lower() for user in self.accounts["credentials"]["usernames"].values()}
+        new_emails = {user["email"].lower() for user in config["credentials"]["usernames"].values()}
 
         if len(new_emails) == len(old_emails):
             # no new user
@@ -141,7 +141,7 @@ class AccountManager:
             if any([value is None for value in row_dict.values()]):
                 continue
 
-            email = row_dict["email"]
+            email = row_dict["email"].lower()
             del row_dict["email"]
 
             self.accounts["preauthorized_emails"][email] = row_dict
