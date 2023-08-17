@@ -16,12 +16,9 @@ import mimetypes
 import os
 import pandas as pd
 import re
-import requests
 import s3fs
 import sqlite3
 import streamlit as st
-import time
-import traceback
 import utils
 import yaml
 import zipfile
@@ -91,7 +88,7 @@ class Database:
 
     def load_settings(self):
         with open(self.settings_path) as f:
-            self.settings = yaml.load(f, Loader=yaml.FullLoader)
+            self.settings = yaml.safe_load(f)
 
     def get_settings_value(self, key):
         return self.settings.get(key)
@@ -123,17 +120,6 @@ class Database:
             fa_icons = json.load(f)
 
         return fa_icons
-
-    def get_settings_as_df(self):
-        settings = [{"key": key, "value": value} for key, value in self.settings.items()]
-        df = pd.DataFrame(settings)
-        return df
-
-    def save_settings_from_df(self, df):
-        for key, value in zip(df["key"], df["value"]):
-            self.settings[key] = value
-
-        self.save_settings()
 
     def restore_backup(self, backup_file):
         zip_path = os.path.join("backups", backup_file)
