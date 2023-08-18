@@ -500,6 +500,10 @@ class Database:
     def get_post_by_id(self, post_id):
         query = "SELECT * FROM posts WHERE post_id = ?"
         post = self.conn.execute(query, (post_id,)).fetchone()
+
+        if not post:
+            return None
+            
         post = dict(post)
         post["files"] = json.loads(post["files"])
         return post
