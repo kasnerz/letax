@@ -57,7 +57,7 @@ def show_post(post_id):
         unsafe_allow_html=True,
     )
 
-    st.button("Zpět", on_click=back_btn)
+    st.button("← Aktuálně", on_click=back_btn)
 
     db = get_database()
     post = db.get_post_by_id(post_id)
