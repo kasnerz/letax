@@ -138,7 +138,7 @@ def show_participants():
 
             if team_name:
                 st.markdown(
-                    f"<div style='margin-top: -15px; margin-bottom:20px;'><a href='/Týmy?id={team_id}' style='color: {link_color}; text-decoration: none;' target='_self'>{team_name}</a></div>",
+                    f"<div style='margin-top: -15px; margin-bottom:20px;'><a href='/Týmy?team_id={team_id}' style='color: {link_color}; text-decoration: none;' target='_self'>{team_name}</a></div>",
                     unsafe_allow_html=True,
                 )
             else:
