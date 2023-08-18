@@ -164,16 +164,6 @@ def show_profile(team_id):
                 st.image("static/team.png")
 
 
-# def get_team_name_view(team):
-#     link_color = db.get_settings_value("link_color")
-#     name = team["team_name"]
-#     team_id = team["team_id"]
-
-#     link = f"<div><a href='/Týmy?id={team_id}'  target='_self' style='text-decoration: none;'><h5 style='color: {link_color};'>{name}</h5></a></div>"
-
-#     return link
-
-
 def get_member_link(member_id, member_name):
     link_color = db.get_settings_value("link_color")
 
@@ -237,8 +227,8 @@ def main():
     params = st.experimental_get_query_params()
     xchallenge_year = db.get_settings_value("xchallenge_year")
 
-    if params.get("id"):
-        team_id = params["id"][0]
+    if params.get("team_id"):
+        team_id = params["team_id"][0]
 
         show_profile(team_id)
         st.stop()
