@@ -262,6 +262,7 @@ def action_set_map_link():
             db.set_settings_value("map_embed_url", map_link)
             return True
 
+
 def action_set_system_settings():
     with st.form("Kategorie výzev:"):
         challenge_categories = st.text_area(
@@ -274,7 +275,7 @@ def action_set_system_settings():
         challenge_categories = challenge_categories.split("\n")
         db.set_settings_value("challenge_categories", challenge_categories)
         return True
-    
+
     with st.form("Filesystem:"):
         filesystem = st.selectbox(
             "Filesystém",
@@ -291,7 +292,6 @@ def action_set_system_settings():
         db.set_settings_value("file_system", filesystem)
         db.set_settings_value("fs_bucket", s3_bucket)
         return True
-    
 
 
 def show_actions():
@@ -367,7 +367,7 @@ def show_db():
             column_config={
                 "points": st.column_config.NumberColumn(min_value=0),
                 "category": st.column_config.SelectboxColumn(
-                    options=db.get_settings_value("challenge_categories").split(","),
+                    options=db.get_settings_value("challenge_categories"),
                 ),
             },
         )
