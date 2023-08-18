@@ -503,7 +503,7 @@ class Database:
 
         if not post:
             return None
-            
+
         post = dict(post)
         post["files"] = json.loads(post["files"])
         return post
