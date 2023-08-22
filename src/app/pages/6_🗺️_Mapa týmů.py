@@ -32,11 +32,10 @@ def main():
         # )
         m, last_locations = show_positions()
         show_checkpoints(m)
+        render_map(m)
 
     with cols[1]:
         show_last_shared_locations(last_locations)
-
-    render_map(m)
 
 
 if __name__ == "__main__":
