@@ -34,7 +34,7 @@ def next_page(page):
 def set_page():
     # get value of the slider `page_slider`
     page = st.session_state.page_slider
-    st.experimental_set_query_params(page=page)
+    st.experimental_set_query_params(page=page - 1)
 
 
 def show_post(post_id):
@@ -157,7 +157,6 @@ def show_overview(page):
         "Checkpointy:", options=checkpoint_options, key="checkpoint_filter_selector"
     )
 
-    st.title(f"Letní X-Challenge {year}")
     cols = st.columns([1, 3, 1])
 
     posts = load_posts(team_filter=team_filter, challenge_filter=challenge_filter, checkpoint_filter=checkpoint_filter)
@@ -168,6 +167,21 @@ def show_overview(page):
     page_size = 10
     page_count = len(posts) // page_size + 1
     page = min(page, page_count - 1)
+
+    center_cols = st.columns([1, 3, 1])
+
+    with center_cols[0]:
+        st.title(f"Příspěvky")
+
+    with center_cols[2]:
+        st.number_input(
+            f"Stránka {page+1}/{page_count}",
+            min_value=1,
+            max_value=page_count,
+            value=page + 1,
+            key="page_slider",
+            on_change=set_page,
+        )
 
     posts = posts[page * page_size : (page + 1) * page_size]
 
@@ -216,30 +230,11 @@ def show_overview(page):
 
         st.divider()
 
-    cols = st.columns([1, 3, 1])
-
-    with cols[1]:
-        st.number_input(
-            f"Stránka {page}/{page_count-1}",
-            min_value=0,
-            max_value=page_count - 1,
-            value=page,
-            key="page_slider",
-            on_change=set_page,
-        )
-    # cols[1].slider(
-    #     "Stránka",
-    #     min_value=0,
-    #     max_value=page_count - 1,
-    #     value=page,
-    #     label_visibility="hidden",
-    #     on_change=set_page,
-    #     key="page_slider",
-    # )
-    # if page > 0:
-    #     cols[0].button("Přechozí", args=(page,), on_click=prev_page)
-    # if page < page_count - 1:
-    #     cols[4].button("Další", args=(page,), on_click=next_page)
+    bottom_cols = st.columns([1, 3, 1])
+    if page > 0:
+        bottom_cols[0].button("Přechozí", args=(page,), on_click=prev_page)
+    if page < page_count - 1:
+        bottom_cols[2].button("Další", args=(page,), on_click=next_page)
 
 
 def main():
