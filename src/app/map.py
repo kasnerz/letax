@@ -20,7 +20,7 @@ def show_positions():
     end_datetime = datetime.datetime.strptime(end_datetime, "%Y-%m-%d %H:%M:%S")
 
     slider = st.slider(
-        "Datum & čas",
+        "Poslední nasdílená poloha k datu a času",
         min_value=start_datetime,
         max_value=end_datetime,
         value=end_datetime,
