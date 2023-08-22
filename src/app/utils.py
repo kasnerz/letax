@@ -86,6 +86,10 @@ def escape_html(s):
 @st.cache_data(ttl=600)
 def ago(t):
     t = pd.to_datetime(t)
+    # if off-set aware, remove the offset
+    if t.tzinfo is not None and t.tzinfo.utcoffset(t) is not None:
+        t = t.tz_convert(None)
+
     diff = datetime.now() - t
     hours = diff.seconds // 3600
 
