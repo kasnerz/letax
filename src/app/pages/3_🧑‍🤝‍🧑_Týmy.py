@@ -170,7 +170,7 @@ def get_member_link(member_id, member_name):
     return f"<a href='/Účastníci?id={member_id}' style='color: {link_color}; text-decoration: none;' target='_self'>{member_name}</a>"
 
 
-@st.cache_data(show_spinner=False)
+# @st.cache_data(show_spinner=False)
 def show_teams():
     teams = db.get_teams()
 

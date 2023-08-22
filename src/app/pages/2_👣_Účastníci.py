@@ -83,7 +83,7 @@ def get_participant_name_view(pax):
     return link
 
 
-@st.cache_data(show_spinner=False)
+# @st.cache_data(show_spinner=False)
 def get_participants_view():
     participants = db.get_participants(include_non_registered=True, fetch_teams=True)
 
@@ -100,7 +100,7 @@ def get_participants_view():
     return participants
 
 
-@st.cache_data(show_spinner=False)
+# @st.cache_data(show_spinner=False)
 def show_participants():
     st.markdown(f"# Účastníci")
 

@@ -136,7 +136,7 @@ class Database:
         self.__init__()
         utils.clear_cache()
 
-    @st.cache_resource(ttl=TTL, show_spinner=False)
+    # @st.cache_resource(ttl=TTL, show_spinner=False)
     def get_boto3_object(_self, filepath):
         obj = _self.boto3.Object(_self.fs_bucket, filepath)
         return obj
@@ -205,11 +205,11 @@ class Database:
         img_1000 = utils.resize_image(img, max_width=1000)
         self.save_thumbnail(f"{filepath}_1000.jpg", img_1000)
 
-    @st.cache_resource(max_entries=1, show_spinner=False)
+    # @st.cache_resource(max_entries=1, show_spinner=False)
     def read_video(_self, filepath):
         return _self.read_file(filepath, mode="b")
 
-    @st.cache_resource(max_entries=500, show_spinner=False)
+    # @st.cache_resource(max_entries=500, show_spinner=False)
     def read_image(_self, filepath, thumbnail=None):
         # TODO simplify
         file_extension = os.path.splitext(filepath)[1]
