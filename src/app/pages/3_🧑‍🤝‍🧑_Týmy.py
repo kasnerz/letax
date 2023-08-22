@@ -93,7 +93,7 @@ def show_profile(team_id):
         else:
             for i, post in posts.iterrows():
                 # link to post
-                post_link = f"/?post={post['post_id']}"
+                post_link = f"/Příspěvky?post={post['post_id']}"
                 post_date = pd.to_datetime(post["created"]).strftime("%d.%m.%Y %H:%M")
                 st.markdown(
                     f"{post_date} – <b><a href='{post_link}' target='_self'> {post['action_name']}</a><b>",

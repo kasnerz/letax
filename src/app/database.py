@@ -935,11 +935,20 @@ class Database:
         self.conn.commit()
         utils.log(f"Updated location options for {team['team_name']}", level="info")
 
-    def get_last_location(_self, team):
+    def get_last_location(_self, team, for_datetime=None):
         team_id = team["team_id"]
 
+        if not for_datetime:
+            for_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        # df = pd.read_sql_query(
+        #     f"SELECT * FROM locations WHERE team_id='{team_id}' AND team_id='{team_id}' ORDER BY date DESC LIMIT 1",
+        #     _self.conn,
+        # )
+
+        # select the last location for the given datetime
         df = pd.read_sql_query(
-            f"SELECT * FROM locations WHERE team_id='{team_id}' AND team_id='{team_id}' ORDER BY date DESC LIMIT 1",
+            f"SELECT * FROM locations WHERE team_id='{team_id}' AND date <= '{for_datetime}' ORDER BY date DESC LIMIT 1",
             _self.conn,
         )
 
@@ -948,15 +957,14 @@ class Database:
 
         return df.to_dict("records")[0]
 
-    # @st.cache_data(ttl=60)
-    def get_last_locations(_self):
+    def get_last_locations(_self, for_datetime=None):
         # get last locations of all teams
         teams = _self.get_table_as_df("teams")
         last_locations = []
 
         for _, team in teams.iterrows():
             # get last location of the team
-            last_location = _self.get_last_location(team)
+            last_location = _self.get_last_location(team, for_datetime=for_datetime)
 
             if last_location is None:
                 continue
