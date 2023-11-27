@@ -6,3 +6,8 @@ maxUploadSize = 1000
 [theme]
 base = "light"
 primaryColor = "#002676"
+
+[runner]
+# fix for st.session_state has no key "$$WIDGET_ID
+# https://discuss.streamlit.io/t/keyerror-st-session-state-has-no-key-generated-widget-id-none-did-you-forget-to-initialize-it-more-info/39325/38
+fastReruns = false
