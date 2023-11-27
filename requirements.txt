@@ -11,6 +11,6 @@ streamlit_extras==0.2.7
 streamlit_authenticator @ git+https://github.com/kasnerz/Streamlit-Authenticator.git#egg=streamlit_authenticator
 streamlit-folium==0.12.0
 streamlit-js-eval==0.1.5
-streamlit==1.23.0
+streamlit==1.28.2
 unidecode==1.3.6
 woocommerce==3.0.0
