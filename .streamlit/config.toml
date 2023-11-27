@@ -1,6 +1,7 @@
 [server]
 port = 7334
 enableStaticServing = true
+maxUploadSize = 1000
 
 [theme]
 base = "light"
