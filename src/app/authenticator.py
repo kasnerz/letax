@@ -53,8 +53,14 @@ def register_new_user(config):
 
 
 def reset_password_form(authenticator):
-    st.info("Zadej své uživatelské jméno, nové heslo ti přijde na e-mail. Ve svém účtu ho můžeš později změnit.")
-    username_forgot_pw, email_forgot_password, random_password = authenticator.forgot_password("Zapomenuté heslo")
+    st.info(
+        "Zadej své uživatelské jméno, nové heslo ti přijde na e-mail. Ve svém účtu ho můžeš později změnit."
+    )
+    (
+        username_forgot_pw,
+        email_forgot_password,
+        random_password,
+    ) = authenticator.forgot_password("Zapomenuté heslo")
 
     if username_forgot_pw is None:
         st.stop()
@@ -86,9 +92,13 @@ def reset_password_form(authenticator):
             )
             if ret:
                 db.am.set_password(username_forgot_pw, random_password)
-                st.success("Nové heslo odesláno na email. Pokud nepřišel do pár minut, zkontroluj spam.")
+                st.success(
+                    "Nové heslo odesláno na email. Pokud nepřišel do pár minut, zkontroluj spam."
+                )
             else:
-                st.error("Omlouváme se, e-mail se nepodařilo odeslat. Zkus to prosím znovu.")
+                st.error(
+                    "Omlouváme se, e-mail se nepodařilo odeslat. Zkus to prosím znovu."
+                )
 
 
 def register_form(authenticator, config):
@@ -100,7 +110,7 @@ def register_form(authenticator, config):
             st.success("Uživatel úspěšně zaregistrován. Nyní se můžeš přihlásit.")
             st.balloons()
             # time.sleep(5)
-            # st.experimental_rerun()
+            # st.rerun()
 
     except Exception as e:
         st.error(e)
@@ -151,7 +161,7 @@ Pokud tě na akci přihlásil někdo jiný nebo se ti z nějakého důvodu neda�
                 st.session_state["username"] = res[2]
                 time.sleep(0.1)
 
-                st.experimental_rerun()
+                st.rerun()
 
         with tabs[2]:
             reset_password_form(authenticator)

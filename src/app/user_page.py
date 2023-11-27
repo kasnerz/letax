@@ -26,7 +26,9 @@ def show_user_page(user, team):
         st.stop()
 
     if not team:
-        st.info("Příspěvky budeš moct přidávat po tom, co se připojíš do týmu. Všechny informace můžeš později změnit.")
+        st.info(
+            "Příspěvky budeš moct přidávat po tom, co se připojíš do týmu. Všechny informace můžeš později změnit."
+        )
         st.markdown("### Vytvořit tým")
 
         show_team_info(user=user, team=team)
@@ -253,13 +255,19 @@ def record_location(user, team):
             # fmt: on
 
             location_color = st.selectbox(
-                "Barva markeru na mapě", options=color_options, index=color_options.index(location_color)
+                "Barva markeru na mapě",
+                options=color_options,
+                index=color_options.index(location_color),
             )
-            location_icon_color = st.color_picker("Barva ikony markeru na mapě", value=location_icon_color)
+            location_icon_color = st.color_picker(
+                "Barva ikony markeru na mapě", value=location_icon_color
+            )
             location_icon = st.selectbox(
                 "Ikona markeru na mapě (viz https://fontawesome.com/search?o=a&m=free):",
                 options=icon_options_list,
-                index=icon_options_list.index(location_icon) if location_icon in icon_options_list else 0,
+                index=icon_options_list.index(location_icon)
+                if location_icon in icon_options_list
+                else 0,
             )
             btn_save_options = st.form_submit_button("Uložit")
 
@@ -267,7 +275,10 @@ def record_location(user, team):
 
     is_visible = db.is_team_visible(team)
     st.checkbox(
-        label="Zobrazit poslední polohu na mapě", value=is_visible, on_change=db.toggle_team_visibility, args=(team,)
+        label="Zobrazit poslední polohu na mapě",
+        value=is_visible,
+        on_change=db.toggle_team_visibility,
+        args=(team,),
     )
 
     if btn_share:
@@ -287,10 +298,23 @@ def record_location(user, team):
             address = db.get_address(latitude, longitude)
 
             db.save_location(
-                user, comment, longitude, latitude, accuracy, altitude, altitude_accuracy, heading, speed, address, date
+                user,
+                comment,
+                longitude,
+                latitude,
+                accuracy,
+                altitude,
+                altitude_accuracy,
+                heading,
+                speed,
+                address,
+                date,
             )
             container.success("Poloha nasdílena!")
-            utils.log(f"{team['team_name']} shared location: {address} ({latitude}, {longitude})", "success")
+            utils.log(
+                f"{team['team_name']} shared location: {address} ({latitude}, {longitude})",
+                "success",
+            )
         else:
             container.warning(
                 "Nepodařilo se nasdílet polohu. Zkontroluj, jestli má tvůj prohlížeč přístup k tvé aktuální poloze, a zkus to prosím znovu."
@@ -324,15 +348,32 @@ def record_location(user, team):
             container2.error("Cestování v čase zatím nepodporujeme :)")
             st.stop()
 
-        db.save_location(user, comment_manual, longitude, latitude, None, None, None, None, None, address, date)
+        db.save_location(
+            user,
+            comment_manual,
+            longitude,
+            latitude,
+            None,
+            None,
+            None,
+            None,
+            None,
+            address,
+            date,
+        )
         container2.success(
             f"Pozice nalezena: {address} ({latitude}, {longitude}).\n Poloha byla nasdílena jako aktuální v {date_str}."
         )
 
-        utils.log(f"{team['team_name']} shared location manually: {address} ({latitude}, {longitude})", "success")
+        utils.log(
+            f"{team['team_name']} shared location manually: {address} ({latitude}, {longitude})",
+            "success",
+        )
 
     if btn_save_options:
-        db.save_location_options(team, location_color, location_icon_color, location_icon)
+        db.save_location_options(
+            team, location_color, location_icon_color, location_icon
+        )
         container3.success("Nastavení uloženo!")
 
 
@@ -385,7 +426,7 @@ def show_team_info(user, team):
         st.success(f"Tým **{team_name}** uložen.")
         st.balloons()
         time.sleep(3)
-        st.experimental_rerun()
+        st.rerun()
 
 
 def show_user_info(user):
@@ -395,7 +436,10 @@ def show_user_info(user):
         emergency_contact_val = participant["emergency_contact"] or ""
         bio_val = participant["bio"] or ""
         bio = st.text_area("Pár slov o mně:", value=bio_val)
-        emergency_contact = st.text_input("Nouzový kontakt (kdo + tel. číslo; neveřejné):", value=emergency_contact_val)
+        emergency_contact = st.text_input(
+            "Nouzový kontakt (kdo + tel. číslo; neveřejné):",
+            value=emergency_contact_val,
+        )
 
         cols = st.columns([4, 1])
         with cols[0]:
@@ -411,13 +455,17 @@ def show_user_info(user):
     # When the submit button is clicked
     if submit_button:
         db.update_participant(
-            username=user["username"], email=user["email"], bio=bio, emergency_contact=emergency_contact, photo=photo
+            username=user["username"],
+            email=user["email"],
+            bio=bio,
+            emergency_contact=emergency_contact,
+            photo=photo,
         )
         st.cache_data.clear()
         st.success(f"Informace uloženy.")
         st.balloons()
         time.sleep(3)
-        st.experimental_rerun()
+        st.rerun()
 
 
 def show_account_info(user):
@@ -448,7 +496,7 @@ def show_account_info(user):
         st.success(f"Informace uloženy.")
         st.balloons()
         time.sleep(3)
-        st.experimental_rerun()
+        st.rerun()
 
 
 def show_info_info():
@@ -504,10 +552,11 @@ def show_post_management(user, team):
                 db.delete_post(post.post_id)
                 st.success("Příspěvek smazán.")
                 utils.log(
-                    f"Team {team['team_name']} deleted post {post['post_id']}: {post['action_name']}", level="info"
+                    f"Team {team['team_name']} deleted post {post['post_id']}: {post['action_name']}",
+                    level="info",
                 )
                 time.sleep(2)
-                st.experimental_rerun()
+                st.rerun()
 
         st.divider()
 
@@ -544,6 +593,6 @@ def show_post_management(user, team):
                 db.delete_location(location)
                 st.success("Poloha smazána.")
                 time.sleep(2)
-                st.experimental_rerun()
+                st.rerun()
 
         st.divider()

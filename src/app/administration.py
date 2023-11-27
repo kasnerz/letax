@@ -89,7 +89,10 @@ def show_preauthorized_editor():
 
 
 def show_db_data_editor(table, column_config=None):
-    if st.session_state.get(f"{table}_data") is None or st.session_state.get(f"{table}_data_editor") is None:
+    if (
+        st.session_state.get(f"{table}_data") is None
+        or st.session_state.get(f"{table}_data_editor") is None
+    ):
         st.session_state[f"{table}_data"] = db.get_table_as_df(table_name=f"{table}")
 
     edited_df = st.data_editor(
@@ -115,9 +118,15 @@ def action_fetch_users():
 
     with st.form("fetch_wc_users"):
         product_id = st.text_input(
-            "product_id", help="Číslo produktu Letní X-Challenge na webu", value=db.get_settings_value("product_id")
+            "product_id",
+            help="Číslo produktu Letní X-Challenge na webu",
+            value=db.get_settings_value("product_id"),
         )
-        limit = st.number_input("limit (0 = bez omezení)", help="Maximální počet účastníků (0 = bez omezení)", value=0)
+        limit = st.number_input(
+            "limit (0 = bez omezení)",
+            help="Maximální počet účastníků (0 = bez omezení)",
+            value=0,
+        )
 
         update_submit_button = st.form_submit_button(label="Aktualizovat účastníky")
 
@@ -127,7 +136,9 @@ def action_fetch_users():
 
         with st.spinner("Aktualizuji účastníky"):
             container = st.container()
-            db.wc_fetch_participants(product_id=int(product_id), log_area=container, limit=limit)
+            db.wc_fetch_participants(
+                product_id=int(product_id), log_area=container, limit=limit
+            )
 
         return True
 
@@ -164,7 +175,9 @@ def action_change_year():
     )
 
     with st.form("change_year"):
-        year = st.number_input("Rok", value=int(db.get_settings_value("xchallenge_year")))
+        year = st.number_input(
+            "Rok", value=int(db.get_settings_value("xchallenge_year"))
+        )
         change_year_submit_button = st.form_submit_button(label="Změnit rok")
 
     if change_year_submit_button:
@@ -174,7 +187,9 @@ def action_change_year():
 
 def action_restore_db():
     # list all the files in the "backups" folder
-    backup_files = [f for f in os.listdir("backups") if os.path.isfile(os.path.join("backups", f))]
+    backup_files = [
+        f for f in os.listdir("backups") if os.path.isfile(os.path.join("backups", f))
+    ]
 
     if not backup_files:
         st.warning("Nejsou k dispozici žádné zálohy")
@@ -184,12 +199,17 @@ def action_restore_db():
     backup_files.sort(reverse=True)
 
     # filename in format db_20230728163001.zip: make it more readable
-    backup_files_names = [f"📁 {f[3:7]}-{f[7:9]}-{f[9:11]} {f[11:13]}:{f[13:15]}:{f[15:17]} GMT" for f in backup_files]
+    backup_files_names = [
+        f"📁 {f[3:7]}-{f[7:9]}-{f[9:11]} {f[11:13]}:{f[13:15]}:{f[15:17]} GMT
+       " for f in backup_file
+    s]
 
     # selectbox
     with st.form("restore_backup"):
         backup_file = st.selectbox(
-            "Záloha", backup_files, format_func=lambda x: backup_files_names[backup_files.index(x)]
+            "Záloha",
+            backup_files,
+            format_func=lambda x: backup_files_names[backup_files.index(x)],
         )
         restore_backup_submit_button = st.form_submit_button(label="Obnovit databázi")
 
@@ -341,13 +361,22 @@ def show_actions():
         utils.clear_cache()
         st.balloons()
         time.sleep(2)
-        st.experimental_rerun()
+        st.rerun()
 
 
 def show_db():
     # selectbox
     table = st.selectbox(
-        "Tabulka", ["🧒 Účastníci", "🧑‍🤝‍🧑 Týmy", "🏆 Výzvy", "📍 Checkpointy", "📝 Příspěvky", "🗺️ Lokace", "🍍 Oznámení"]
+        "Tabulka",
+        [
+            "🧒 Účastníci"
+           , "🧑‍🤝‍🧑 Tý
+           my", "🏆 Vý
+           zvy", "📍 Checkpo
+           inty", "📝 Přís
+           pěvky", "🗺️ 
+           Lokace", "🍍 ,
+        O,známení"]
     )
 
     if table == "🧒 Účastníci":
@@ -384,7 +413,9 @@ def show_db():
         show_db_data_editor(
             table="posts",
             column_config={
-                "action_type": st.column_config.SelectboxColumn(options=["challenge", "checkpoint", "note"]),
+                "action_type": st.column_config.SelectboxColumn(
+                    options=["challenge", "checkpoint", "note"]
+                ),
             },
         )
 
@@ -403,6 +434,8 @@ def show_notification_manager():
     show_db_data_editor(
         table="notifications",
         column_config={
-            "type": st.column_config.SelectboxColumn(options=["info", "varování", "důležité", "skryté"]),
+            "type": st.column_config.SelectboxColumn(
+                options=["info", "varování", "důležité", "skryté"]
+            ),
         },
     )
