@@ -13,8 +13,10 @@ import accounts
 import utils
 from unidecode import unidecode
 
-st.set_page_config(page_title="Checkpointy", page_icon="static/favicon.png", layout="wide")
-utils.style_sidebar()
+st.set_page_config(
+    page_title="Checkpointy", page_icon="static/favicon.png", layout="wide"
+)
+utils.page_wrapper()
 
 from authenticator import login_page
 
@@ -47,15 +49,16 @@ def main():
         st.stop()
 
     embed_url = db.get_settings_value("map_embed_url")
-    link_color = db.get_settings_value("link_color")
     # st.components.v1.iframe(embed_url, height=480, scrolling=True)
 
     # sort by name
-    checkpoints = checkpoints.sort_values(by="name", key=lambda x: [unidecode(a) for a in x])
+    checkpoints = checkpoints.sort_values(
+        by="name", key=lambda x: [unidecode(a) for a in x]
+    )
 
     for _, checkpoint in checkpoints.iterrows():
         gmaps_url = f"http://www.google.com/maps/place/{checkpoint['latitude']},{checkpoint['longitude']}"
-        link = f"<div style='margin-bottom:-10px; display:inline-block;'><a href='{gmaps_url}' style='text-decoration: none;'><h4 style='color: {link_color};'>{checkpoint['name']} ({checkpoint['points']})</b></h4></a></div>"
+        link = f"<div style='margin-bottom:-10px; display:inline-block;'><a href='{gmaps_url}' style='text-decoration: none;'><h4 class='app-link'>{checkpoint['name']} ({checkpoint['points']})</b></h4></a></div>"
 
         st.markdown(link, unsafe_allow_html=True)
         # st.caption(f", ")

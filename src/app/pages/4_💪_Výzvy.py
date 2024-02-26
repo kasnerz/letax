@@ -13,7 +13,7 @@ import accounts
 import utils
 
 st.set_page_config(page_title="Výzvy", page_icon="static/favicon.png", layout="wide")
-utils.style_sidebar()
+utils.page_wrapper()
 db = get_database()
 
 from authenticator import login_page
@@ -59,7 +59,10 @@ def main():
                 display_challenge(challenge)
 
         else:
-            utils.log(f'Category {challenge["category"]} does not have its own tab', level="warning")
+            utils.log(
+                f'Category {challenge["category"]} does not have its own tab',
+                level="warning",
+            )
 
 
 if __name__ == "__main__":

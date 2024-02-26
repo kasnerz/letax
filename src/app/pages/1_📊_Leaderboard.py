@@ -12,8 +12,10 @@ import pandas as pd
 from database import get_database
 
 
-st.set_page_config(page_title="Leaderboard", page_icon="static/favicon.png", layout="wide")
-utils.style_sidebar()
+st.set_page_config(
+    page_title="Leaderboard", page_icon="static/favicon.png", layout="wide"
+)
+utils.page_wrapper()
 
 db = get_database()
 
@@ -28,11 +30,21 @@ def main():
         posts = team["posts"]
         posts["action_type"].value_counts()
         for action_type in ["challenge", "checkpoint", "story"]:
-            teams_overview[i][action_type] = posts["action_type"].value_counts().get(action_type, 0)
+            teams_overview[i][action_type] = (
+                posts["action_type"].value_counts().get(action_type, 0)
+            )
 
     table = pd.DataFrame(
         teams_overview,
-        columns=["team_name", "points", "member1_name", "member2_name", "challenge", "checkpoint", "story"],
+        columns=[
+            "team_name",
+            "points",
+            "member1_name",
+            "member2_name",
+            "challenge",
+            "checkpoint",
+            "story",
+        ],
     )
 
     table = table.sort_values(by="points", ascending=False)

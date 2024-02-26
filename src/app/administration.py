@@ -361,7 +361,7 @@ def show_actions():
         utils.clear_cache()
         st.balloons()
         time.sleep(2)
-        st.experimental_rerun()
+        st.rerun()
 
 
 def show_db():

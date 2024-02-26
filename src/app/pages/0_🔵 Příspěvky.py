@@ -71,8 +71,6 @@ def show_post(post_id):
     description = post["comment"]
     files = post["files"]
 
-    link_color = db.get_settings_value("link_color")
-
     st.markdown(
         f"## {action}",
     )
@@ -90,7 +88,11 @@ def show_post(post_id):
         st.markdown(description, unsafe_allow_html=True)
         st.divider()
 
-    images = [db.read_image(f["path"], thumbnail="1000") for f in files if f["type"].startswith("image")]
+    images = [
+        db.read_image(f["path"], thumbnail="1000")
+        for f in files
+        if f["type"].startswith("image")
+    ]
 
     if images:
         cols = st.columns(min(3, len(images)))
@@ -119,11 +121,11 @@ def load_posts(team_filter=None, challenge_filter=None, checkpoint_filter=None):
     return posts
 
 
-def shorten(s, post_id, page, link_color, max_len=250):
+def shorten(s, post_id, page, max_len=250):
     if len(s) > max_len:
         return (
             s[:max_len]
-            + f"<b><a href='/Příspěvky?post={post_id}&page={page}' target='_self' style='text-decoration: none; color: {link_color};'> (...)</a></b>"
+            + f"<b><a href='/Příspěvky?post={post_id}&page={page}' target='_self' class='app-link'> (...)</a></b>"
         )
     return s
 
@@ -133,9 +135,13 @@ def show_overview(page):
     year = db.get_settings_value("xchallenge_year")
 
     team_options = [""] + sorted(list(db.get_teams()["team_name"]), key=str.lower)
-    challenge_options = [""] + sorted(list(db.get_table_as_df("challenges")["name"]), key=str.lower)
+    challenge_options = [""] + sorted(
+        list(db.get_table_as_df("challenges")["name"]), key=str.lower
+    )
 
-    checkpoint_options = [""] + sorted(list(db.get_table_as_df("checkpoints")["name"]), key=str.lower)
+    checkpoint_options = [""] + sorted(
+        list(db.get_table_as_df("checkpoints")["name"]), key=str.lower
+    )
 
     # include css
     st.markdown(
@@ -150,8 +156,12 @@ def show_overview(page):
     )
     st.sidebar.caption("Filtrovat feed")
     # st.sidebar.markdown("**Filtrovat**")
-    team_filter = st.sidebar.selectbox("Tým:", options=team_options, key="team_filter_selector")
-    challenge_filter = st.sidebar.selectbox("Výzvy:", options=challenge_options, key="challenge_filter_selector")
+    team_filter = st.sidebar.selectbox(
+        "Tým:", options=team_options, key="team_filter_selector"
+    )
+    challenge_filter = st.sidebar.selectbox(
+        "Výzvy:", options=challenge_options, key="challenge_filter_selector"
+    )
 
     checkpoint_filter = st.sidebar.selectbox(
         "Checkpointy:", options=checkpoint_options, key="checkpoint_filter_selector"
@@ -159,7 +169,11 @@ def show_overview(page):
 
     cols = st.columns([1, 3, 1])
 
-    posts = load_posts(team_filter=team_filter, challenge_filter=challenge_filter, checkpoint_filter=checkpoint_filter)
+    posts = load_posts(
+        team_filter=team_filter,
+        challenge_filter=challenge_filter,
+        checkpoint_filter=checkpoint_filter,
+    )
 
     col_layout = [5, 2]
     cols = st.columns(col_layout)
@@ -203,8 +217,7 @@ def show_overview(page):
         post_id = post["post_id"]
         team_link = db.get_team_link(team)
 
-        link_color = db.get_settings_value("link_color")
-        link = f"<div style='margin-bottom:-10px; display:inline-block;'><h4><a href='/Příspěvky?post={post_id}&page={page}' target='_self' style='text-decoration: none; color: {link_color};'>{action_type_icon} {action_name} – {team['team_name']}</a></div>"
+        link = f"<div style='margin-bottom:-10px; display:inline-block;'><h4><a href='/Příspěvky?post={post_id}&page={page}' target='_self' class='app-link'>{action_type_icon} {action_name} – {team['team_name']}</a></div>"
 
         st.markdown(link, unsafe_allow_html=True)
         cols = st.columns(col_layout)
@@ -212,7 +225,7 @@ def show_overview(page):
             post_datetime = utils.convert_to_local_timezone(post["created"])
             st.caption(f"*{post_datetime}*")
             st.markdown(
-                shorten(utils.escape_html(description), post_id, page, link_color),
+                shorten(utils.escape_html(description), post_id, page),
                 unsafe_allow_html=True,
             )
         with cols[1]:
@@ -245,7 +258,7 @@ def main():
         # initial_sidebar_state="expanded",
     )
 
-    utils.style_sidebar()
+    utils.page_wrapper()
     params = st.experimental_get_query_params()
 
     if params.get("post"):

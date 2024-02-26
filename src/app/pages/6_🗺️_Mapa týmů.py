@@ -8,8 +8,10 @@ import datetime
 from folium.plugins import BeautifyIcon
 from streamlit_folium import folium_static
 
-st.set_page_config(page_title="Mapa týmů", page_icon="static/favicon.png", layout="wide")
-utils.style_sidebar()
+st.set_page_config(
+    page_title="Mapa týmů", page_icon="static/favicon.png", layout="wide"
+)
+utils.page_wrapper()
 db = get_database()
 
 from map import show_last_shared_locations, show_positions, show_checkpoints, render_map

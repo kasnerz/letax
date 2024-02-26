@@ -334,7 +334,10 @@ class Database:
                 if limit:
                     total_paxes = min(limit, total_paxes)
 
-                pb.progress(i / float(len(user_ids)), f"Načítám info o účastnících ({i}/{total_paxes})")
+                pb.progress(
+                    i / float(len(user_ids)),
+                    f"Načítám info o účastnících ({i}/{total_paxes})",
+                )
 
         with open("wc_participants.json", "w") as f:
             json.dump(new_participants, f)
@@ -393,7 +396,9 @@ class Database:
         query = "SELECT * FROM participants WHERE email = ?"
         return self.conn.execute(query, (email,)).fetchone()
 
-    def get_participants(self, sort_by_name=True, include_non_registered=False, fetch_teams=False):
+    def get_participants(
+        self, sort_by_name=True, include_non_registered=False, fetch_teams=False
+    ):
         # the table `participants` include only emails
         # we need to join this with the user accounts
 
@@ -420,13 +425,25 @@ class Database:
 
         if not participants.empty and sort_by_name:
             # considering unicode characters in Czech alphabet
-            participants = participants.sort_values(by="name", key=lambda x: [unidecode(a).lower() for a in x])
+            participants = participants.sort_values(
+                by="name", key=lambda x: [unidecode(a).lower() for a in x]
+            )
 
         if fetch_teams and not participants.empty:
             teams = self.get_table_as_df("teams")
             # participant is either member1 or member2, if not - no team
-            pax_id_to_team = {str(row["member1"]): row for _, row in teams.iterrows() if row["member1"]}
-            pax_id_to_team.update({str(row["member2"]): row for _, row in teams.iterrows() if row["member2"]})
+            pax_id_to_team = {
+                str(row["member1"]): row
+                for _, row in teams.iterrows()
+                if row["member1"]
+            }
+            pax_id_to_team.update(
+                {
+                    str(row["member2"]): row
+                    for _, row in teams.iterrows()
+                    if row["member2"]
+                }
+            )
 
             participants["team_name"] = participants.apply(
                 lambda x: pax_id_to_team.get(str(x["id"]), {}).get("team_name"), axis=1
@@ -467,7 +484,9 @@ class Database:
 
     def update_participant(self, username, email, bio, emergency_contact, photo=None):
         if photo is None:
-            query = "UPDATE participants SET bio = ?, emergency_contact = ? WHERE email = ?"
+            query = (
+                "UPDATE participants SET bio = ?, emergency_contact = ? WHERE email = ?"
+            )
             self.conn.execute(query, (bio, emergency_contact, email))
             self.conn.commit()
 
@@ -480,7 +499,9 @@ class Database:
 
             photo_path = os.path.join(dir_path, photo_name)
 
-            self.write_file(filepath=os.path.join(dir_path, photo_name), content=photo_content)
+            self.write_file(
+                filepath=os.path.join(dir_path, photo_name), content=photo_content
+            )
 
             self.conn.execute(query, (bio, emergency_contact, photo_path, email))
             self.conn.commit()
@@ -509,7 +530,9 @@ class Database:
         return post
 
     def get_posts_by_team(self, team_id):
-        df = pd.read_sql_query(f"SELECT * FROM posts WHERE team_id = ?", self.conn, params=(team_id,))
+        df = pd.read_sql_query(
+            f"SELECT * FROM posts WHERE team_id = ?", self.conn, params=(team_id,)
+        )
         return df
 
     def save_post(self, user, action_type, action, comment, files):
@@ -518,7 +541,9 @@ class Database:
 
         title = action if action_type == "story" else action["name"]
 
-        dir_path = os.path.join(self.top_dir, action_type, slugify(title), slugify(team["team_name"]))
+        dir_path = os.path.join(
+            self.top_dir, action_type, slugify(title), slugify(team["team_name"])
+        )
 
         files_json = []
 
@@ -552,11 +577,23 @@ class Database:
 
         self.conn.execute(
             f"INSERT INTO posts (post_id, pax_id, team_id, action_type, action_name, comment, files, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (post_id, pax_id, team_id, action_type, title, comment, files_json, created),
+            (
+                post_id,
+                pax_id,
+                team_id,
+                action_type,
+                title,
+                comment,
+                files_json,
+                created,
+            ),
         )
         self.conn.commit()
 
-        utils.log(f"{user['username']} ({team['team_name']}) added post '{title}'", level="success")
+        utils.log(
+            f"{user['username']} ({team['team_name']}) added post '{title}'",
+            level="success",
+        )
 
     def get_team_by_id(self, team_id):
         # retrieve team from the database, return a single Python object or None
@@ -617,17 +654,24 @@ class Database:
         if not posts_team.empty:
             posts_team = posts_team.assign(
                 points=posts_team.apply(
-                    lambda row: self.get_points_for_action(row["action_type"], row["action_name"]), axis=1
+                    lambda row: self.get_points_for_action(
+                        row["action_type"], row["action_name"]
+                    ),
+                    axis=1,
                 )
             )
         team = self.get_team_by_id(team_id)
 
-        member1_name = participants[participants["id"] == team["member1"]].to_dict("records")[0]
+        member1_name = participants[participants["id"] == team["member1"]].to_dict(
+            "records"
+        )[0]
         member1_name = member1_name["name"]
 
         member2_name = ""
         if team["member2"]:
-            member2_name = participants[participants["id"] == team["member2"]].to_dict("records")[0]
+            member2_name = participants[participants["id"] == team["member2"]].to_dict(
+                "records"
+            )[0]
             member2_name = member2_name["name"]
 
         team_info = {
@@ -645,14 +689,21 @@ class Database:
     def get_teams_overview(self):
         teams = self.get_table_as_df("teams")
         posts = self.get_table_as_df("posts")
-        participants = self.get_participants(include_non_registered=True, sort_by_name=False)
+        participants = self.get_participants(
+            include_non_registered=True, sort_by_name=False
+        )
 
         # get team overview for each team
-        teams_info = [self.get_team_overview(team_id, posts, participants) for team_id in teams["team_id"]]
+        teams_info = [
+            self.get_team_overview(team_id, posts, participants)
+            for team_id in teams["team_id"]
+        ]
 
         return teams_info
 
-    def get_posts(self, team_filter=None, challenge_filter=None, checkpoint_filter=None):
+    def get_posts(
+        self, team_filter=None, challenge_filter=None, checkpoint_filter=None
+    ):
         # team_filter is the team_name, the table posts contain only id -> join with teams table to get the team_name
         posts = self.get_table_as_df("posts")
         teams = self.get_table_as_df("teams")
@@ -691,7 +742,9 @@ class Database:
         # get all the actions completed by `team_id` in the table `posts`
         completed_actions = self.get_table_as_df("posts")
 
-        completed_actions = completed_actions[completed_actions["action_type"] == action_type]
+        completed_actions = completed_actions[
+            completed_actions["action_type"] == action_type
+        ]
         completed_actions = completed_actions[completed_actions["team_id"] == team_id]
         completed_actions = completed_actions["action_name"].unique()
 
@@ -701,7 +754,9 @@ class Database:
         elif action_type == "checkpoint":
             available_actions = self.get_table_as_df("checkpoints")
 
-        available_actions = available_actions[~available_actions["name"].isin(completed_actions)]
+        available_actions = available_actions[
+            ~available_actions["name"].isin(completed_actions)
+        ]
 
         # convert df to list with dicts
         available_actions = available_actions.to_dict("records")
@@ -713,7 +768,9 @@ class Database:
         return pd.read_sql_query("SELECT * FROM teams", self.conn)
 
     def get_available_participants(self, pax_id, team):
-        all_paxes = self.get_participants(fetch_teams=True, sort_by_name=True, include_non_registered=True)
+        all_paxes = self.get_participants(
+            fetch_teams=True, sort_by_name=True, include_non_registered=True
+        )
 
         if all_paxes.empty:
             return []
@@ -747,12 +804,21 @@ class Database:
         if teammate:
             # teammate is not in the list because they are already in a team, but we want to show them as available
             teammate_row = all_paxes[all_paxes["id"] == teammate]
-            available_paxes = pd.concat([teammate_row, available_paxes], ignore_index=True)
+            available_paxes = pd.concat(
+                [teammate_row, available_paxes], ignore_index=True
+            )
 
         return available_paxes
 
     def add_or_update_team(
-        self, team_name, team_motto, team_web, team_photo, first_member, second_member, current_team=None
+        self,
+        team_name,
+        team_motto,
+        team_web,
+        team_photo,
+        first_member,
+        second_member,
+        current_team=None,
     ):
         # if team is already in the database, get its id
         if current_team:
@@ -780,7 +846,16 @@ class Database:
         if not current_team:
             self.conn.execute(
                 f"INSERT INTO teams (team_id, team_name, team_motto, team_web, team_photo, member1, member2, is_top_x) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                (team_id, team_name, team_motto, team_web, photo_path, first_member, second_member, 0),
+                (
+                    team_id,
+                    team_name,
+                    team_motto,
+                    team_web,
+                    photo_path,
+                    first_member,
+                    second_member,
+                    0,
+                ),
             )
             self.conn.commit()
             utils.log(f"Added team {team_name}", level="success")
@@ -788,7 +863,15 @@ class Database:
             # only update new values, keep the existing
             self.conn.execute(
                 f"UPDATE teams SET team_name = ?, team_motto = ?, team_web = ?, team_photo = ?, member1 = ?, member2 = ? WHERE team_id = ?",
-                (team_name, team_motto, team_web, photo_path, first_member, second_member, team_id),
+                (
+                    team_name,
+                    team_motto,
+                    team_web,
+                    photo_path,
+                    first_member,
+                    second_member,
+                    team_id,
+                ),
             )
             self.conn.commit()
             utils.log(f"Updated team {team_name}", level="info")
@@ -900,7 +983,18 @@ class Database:
         return None
 
     def save_location(
-        self, user, comment, longitude, latitude, accuracy, altitude, altitude_accuracy, heading, speed, address, date
+        self,
+        user,
+        comment,
+        longitude,
+        latitude,
+        accuracy,
+        altitude,
+        altitude_accuracy,
+        heading,
+        speed,
+        address,
+        date,
     ):
         team = self.get_team_for_user(user["pax_id"])
         username = user["username"]
@@ -926,7 +1020,9 @@ class Database:
         self.conn.commit()
         # utils.log(f"Saved location {latitude}, {longitude} for {username}", level="success")
 
-    def save_location_options(self, team, location_color, location_icon_color, location_icon):
+    def save_location_options(
+        self, team, location_color, location_icon_color, location_icon
+    ):
         team_id = str(team["team_id"])
 
         self.conn.execute(
@@ -986,7 +1082,9 @@ class Database:
         username = location["username"]
         date = location["date"]
 
-        self.conn.execute(f"DELETE FROM locations WHERE username='{username}' AND date='{date}'")
+        self.conn.execute(
+            f"DELETE FROM locations WHERE username='{username}' AND date='{date}'"
+        )
         self.conn.commit()
 
         utils.log(f"Deleted location {username} {date}", level="info")
@@ -1022,16 +1120,14 @@ class Database:
         team_name = team["team_name"]
         is_top_x = bool(int(team["is_top_x"]))
 
-        link_color = self.get_settings_value("link_color")
-
         if is_top_x:
             # there is no other good way how to incorporate a static image into html (without st.image())
             data_url = self.get_static_image_base64("topx.png")
 
             top_x_badge = f"<img src='data:image/png;base64,{data_url}' style='margin-top: -5px; margin-left: 5px'>"
-            return f"<a href='/Týmy?team_id={team_id}' target='_self' style='text-decoration: none; color: {link_color}; margin-top: -10px;'>{team_name}</a> {top_x_badge}"
+            return f"<a href='/Týmy?team_id={team_id}' target='_self' class='app-link' margin-top: -10px;'>{team_name}</a> {top_x_badge}"
         else:
-            return f"<a href='/Týmy?team_id={team_id}' target='_self' style='text-decoration: none; color: {link_color}; margin-top: -10px;'>{team_name}</a>"
+            return f"<a href='/Týmy?team_id={team_id}' target='_self' class='app-link' margin-top: -10px;'>{team_name}</a>"
 
     def toggle_team_visibility(self, team):
         team_id = team["team_id"]
@@ -1067,7 +1163,9 @@ class Database:
                 return files
             team_name = team_name["team_name"]
 
-            path = os.path.join("files", "2022", action_type, slugify(action_name), slugify(team_name))
+            path = os.path.join(
+                "files", "2022", action_type, slugify(action_name), slugify(team_name)
+            )
 
             # find all files in the directory
             for file in os.listdir(path):
@@ -1081,7 +1179,9 @@ class Database:
                     # guess from the extension
                     extension = file.split(".")[-1]
                     file_type = (
-                        f"video/{extension}" if extension.lower() in ["mp4", "mov", "avi"] else f"image/{extension}"
+                        f"video/{extension}"
+                        if extension.lower() in ["mp4", "mov", "avi"]
+                        else f"image/{extension}"
                     )
 
                 files.append({"path": file_path, "type": file_type})

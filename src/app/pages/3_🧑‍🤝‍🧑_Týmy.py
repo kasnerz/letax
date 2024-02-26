@@ -17,7 +17,7 @@ import folium
 from streamlit_folium import st_folium, folium_static
 
 st.set_page_config(page_title="Týmy", page_icon="static/favicon.png", layout="wide")
-utils.style_sidebar()
+utils.page_wrapper()
 db = get_database()
 
 
@@ -49,9 +49,7 @@ def parse_links(web):
 
 
 def get_pax_link(pax_id, pax_name):
-    link_color = db.get_settings_value("link_color")
-
-    return f"<a href='/Účastníci?id={pax_id}' target='_self' style='text-decoration: none; color: {link_color}; margin-top: -10px;'>{pax_name}</a>"
+    return f"<a href='/Účastníci?id={pax_id}' target='_self' class='app-link' margin-top: -10px;'>{pax_name}</a>"
 
 
 def show_profile(team_id):
@@ -109,7 +107,10 @@ def show_profile(team_id):
         else:
             with st.expander("Zobrazit na mapě"):
                 m = folium.Map(
-                    location=[team_locations.latitude.mean(), team_locations.longitude.mean()],
+                    location=[
+                        team_locations.latitude.mean(),
+                        team_locations.longitude.mean(),
+                    ],
                     zoom_start=4,
                 )
                 # folium.TileLayer("").add_to(m)
@@ -152,7 +153,9 @@ def show_profile(team_id):
                 # draw lines between the locations
                 locations = team_locations[["latitude", "longitude"]].values.tolist()
 
-                folium.PolyLine(locations, color=team_color, weight=2.5, opacity=1).add_to(m)
+                folium.PolyLine(
+                    locations, color=team_color, weight=2.5, opacity=1
+                ).add_to(m)
 
                 folium_static(m, width=None, height=500)
 
@@ -165,9 +168,7 @@ def show_profile(team_id):
 
 
 def get_member_link(member_id, member_name):
-    link_color = db.get_settings_value("link_color")
-
-    return f"<a href='/Účastníci?id={member_id}' style='color: {link_color}; text-decoration: none;' target='_self'>{member_name}</a>"
+    return f"<a href='/Účastníci?id={member_id}' class='app-link' target='_self'>{member_name}</a>"
 
 
 # @st.cache_data(show_spinner=False)
@@ -179,7 +180,9 @@ def show_teams():
         st.stop()
 
     # considering unicode characters in Czech alphabet
-    teams = teams.sort_values(by="team_name", key=lambda x: [unidecode(a).lower() for a in x])
+    teams = teams.sort_values(
+        by="team_name", key=lambda x: [unidecode(a).lower() for a in x]
+    )
 
     teams_total = len(teams)
 
@@ -209,7 +212,10 @@ def show_teams():
             st.image(img)
 
             st.markdown(f"{team_name}", unsafe_allow_html=True)
-            st.markdown(f"<div style='margin-top: -15px; margin-bottom:0px;'>{members}</div>", unsafe_allow_html=True)
+            st.markdown(
+                f"<div style='margin-top: -15px; margin-bottom:0px;'>{members}</div>",
+                unsafe_allow_html=True,
+            )
 
             if team["team_motto"]:
                 motto = utils.escape_html(team["team_motto"])
