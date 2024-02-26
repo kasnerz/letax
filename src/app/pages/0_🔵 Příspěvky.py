@@ -13,28 +13,28 @@ def text_bubble(text, color):
 
 def back_btn():
     # delete query params
-    params = st.experimental_get_query_params()
+    params = st.query_params
 
     if params.get("page"):
         page = params["page"][0]
     else:
         page = 0
 
-    st.experimental_set_query_params(page=page)
+    st.query_params.page = page
 
 
 def prev_page(page):
-    st.experimental_set_query_params(page=page - 1)
+    st.query_params.page = page - 1
 
 
 def next_page(page):
-    st.experimental_set_query_params(page=page + 1)
+    st.query_params.page = page + 1
 
 
 def set_page():
     # get value of the slider `page_slider`
     page = st.session_state.page_slider
-    st.experimental_set_query_params(page=page - 1)
+    st.query_params.page = page - 1
 
 
 def show_post(post_id):
@@ -259,7 +259,7 @@ def main():
     )
 
     utils.page_wrapper()
-    params = st.experimental_get_query_params()
+    params = st.query_params
 
     if params.get("post"):
         post = params["post"][0]

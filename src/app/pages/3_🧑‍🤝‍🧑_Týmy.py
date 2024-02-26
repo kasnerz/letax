@@ -22,7 +22,7 @@ db = get_database()
 
 
 def backbtn():
-    st.experimental_set_query_params()
+    st.query_params.clear()
 
 
 def parse_links(web):
@@ -230,7 +230,7 @@ def show_teams():
 
 
 def main():
-    params = st.experimental_get_query_params()
+    params = st.query_params
     xchallenge_year = db.get_settings_value("xchallenge_year")
 
     if params.get("team_id"):
