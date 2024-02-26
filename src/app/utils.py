@@ -17,7 +17,7 @@ from datetime import datetime, timedelta
 import pytz
 import psutil
 import gc
-
+from streamlit_javascript import st_javascript
 
 TTL = 600
 
@@ -285,19 +285,31 @@ def check_ram_limit():
 
 
 def page_wrapper():
+    # currently the only way to detect streamlit theme
+    bg_color = st_javascript(
+        """window.getComputedStyle(window.parent.document.getElementsByClassName("stApp")[0]).getPropertyValue("background-color")"""
+    )
+    # bg_color is set to 0 until the page is loaded, we need to ignore it
+    if bg_color:
+        st.session_state.bg_color = bg_color
+
+    link_color = (
+        "#002676" if st.session_state.bg_color == "rgb(255, 255, 255)" else "#6bb6fe"
+    )
     st.markdown(
         """
     <style>
     div[data-testid='stSidebarNav'] ul {max-height:none}
     .app-link {
-        color: #002676 !important;
+        color: """
+        + link_color
+        + """ !important;
         text-decoration: none;
     }
     </style>
     """,
         unsafe_allow_html=True,
     )
-
     app_logo.add_logo("static/letax.png", height=40)
 
     # it is useful to run it here since this gets called every time
