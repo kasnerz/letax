@@ -724,6 +724,13 @@ class Database:
         posts = posts.to_dict("records")
         return posts
 
+    def update_post_comment(self, post_id, comment):
+        self.conn.execute(
+            "UPDATE posts SET comment = ? WHERE post_id = ?", (comment, post_id)
+        )
+        self.conn.commit()
+        utils.log(f"Updated comment for post {post_id}", level="info")
+
     def delete_post(self, post_id):
         self.conn.execute("DELETE FROM posts WHERE post_id = ?", (post_id,))
         self.conn.commit()
