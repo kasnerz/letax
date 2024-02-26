@@ -39,7 +39,7 @@ def show_user_page(user, team):
         "📍 Checkpoint",
         "✍️  Příspěvek",
         "🗺️ Poloha",
-        "📤️ Odesláno",
+        "🪂 Moje aktivita",
         "🧑‍🤝‍🧑 Tým",
         "👤 O mně",
         "🔑 Účet",
@@ -518,9 +518,7 @@ def show_notifications(notifications):
 
 
 def show_post_management(user, team):
-    st.caption(
-        "Zde vidíš všechny příspěvky a polohy, které tvůj tým nasdílel. Kliknutím na tlačítko Smazat příspěvek / lokaci trvale smažeš, takže opatrně!"
-    )
+    st.caption("Zde vidíš všechny příspěvky a polohy, které tvůj tým nasdílel.")
     st.markdown("### Příspěvky")
     # display the list of all the posts the team posted and a "delete" button for each of them
     posts = db.get_posts_by_team(team["team_id"])
@@ -573,7 +571,7 @@ def show_post_management(user, team):
             if st.session_state[f"{post['post_id']}-edit-state"] == True:
                 if st.button("💾 Uložit", key=f"save-{post['post_id']}"):
                     db.update_post_comment(post["post_id"], edit_txt_area)
-                    st.success("Komentář upraven.")
+                    st.toast("Komentář upraven.")
                     st.session_state[f"{post['post_id']}-edit-state"] = False
                     time.sleep(2)
                     st.rerun()
@@ -583,15 +581,25 @@ def show_post_management(user, team):
                     st.rerun()
 
         with col_delete:
-            if st.button("❌ Smazat", key=f"delete-{post['post_id']}"):
-                db.delete_post(post.post_id)
-                st.success("Příspěvek smazán.")
-                utils.log(
-                    f"Team {team['team_name']} deleted post {post['post_id']}: {post['action_name']}",
-                    level="info",
+            if st.session_state.get(f"delete-{post['post_id']}-confirm") == True:
+                submit_button = st.button(
+                    "🔨 Ano, opravdu smazat", key=f"delete-{post['post_id']}-confirm-btn"
                 )
-                time.sleep(2)
-                st.rerun()
+
+                if submit_button:
+                    st.session_state[f"delete-{post['post_id']}-confirm"] = False
+                    db.delete_post(post.post_id)
+                    st.toast("Příspěvek smazán.")
+                    utils.log(
+                        f"Team {team['team_name']} deleted post {post['post_id']}: {post['action_name']}",
+                        level="info",
+                    )
+                    time.sleep(2)
+                    st.rerun()
+            else:
+                if st.button("❌ Smazat", key=f"delete-{post['post_id']}"):
+                    st.session_state[f"delete-{post['post_id']}-confirm"] = True
+                    st.rerun()
 
         st.divider()
 
