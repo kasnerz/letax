@@ -24,6 +24,8 @@ import yaml
 import zipfile
 import base64
 import copy
+import dateutil.parser
+from gpxpy.gpx import GPX, GPXRoute, GPXRoutePoint, GPXWaypoint
 from geopy.geocoders import Nominatim
 
 # logging.basicConfig(level=logging.DEBUG)
@@ -1059,6 +1061,42 @@ class Database:
             return None
 
         return df.to_dict("records")[0]
+
+    def get_locations_as_gpx(_self, team):
+        team_id = team["team_id"]
+
+        df = pd.read_sql_query(
+            f"SELECT * FROM locations WHERE team_id='{team_id}'",
+            _self.conn,
+        )
+        if df.empty:
+            return None
+
+        gpx = GPX()
+
+        route = GPXRoute()
+        gpx.routes.append(route)
+
+        for i, location in df.iterrows():
+            gpx_routepoint = GPXRoutePoint(
+                latitude=location["latitude"],
+                longitude=location["longitude"],
+            )
+            route.points.append(gpx_routepoint)
+
+            date = dateutil.parser.parse(location["date"])
+            date_text = date.strftime("%Y-%m-%d %H:%M:%S")
+
+            waypoint = GPXWaypoint(
+                latitude=location["latitude"],
+                longitude=location["longitude"],
+                time=date,
+                name=f"Bod #{i}: {date_text}",
+                description=location["comment"],
+            )
+            gpx.waypoints.append(waypoint)
+
+        return gpx.to_xml()
 
     def get_last_locations(_self, for_datetime=None):
         # get last locations of all teams

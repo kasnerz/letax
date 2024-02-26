@@ -517,15 +517,7 @@ def show_notifications(notifications):
             st.info(notification.text)
 
 
-def show_post_management(user, team):
-    st.caption("Zde vidíš všechny příspěvky a polohy, které tvůj tým nasdílel.")
-    st.markdown("### Příspěvky")
-    # display the list of all the posts the team posted and a "delete" button for each of them
-    posts = db.get_posts_by_team(team["team_id"])
-
-    if posts.empty:
-        st.info("Tvůj tým zatím nepřidal žádné příspěvky.")
-
+def show_posts(user, team, posts):
     # keep only the columns we want to display: action_type, action_name, comment, created, files
     for i, post in posts.iterrows():
         col_type, col_name, col_desc, col_edit, col_delete = st.columns([1, 3, 5, 2, 2])
@@ -603,17 +595,10 @@ def show_post_management(user, team):
 
         st.divider()
 
-    st.markdown("### Polohy")
 
-    locations = db.get_table_as_df("locations")
-    locations = locations[locations["team_id"] == team["team_id"]]
-
-    if locations.empty:
-        st.info("Tvůj tým zatím nenasdílel žádnou polohu.")
-
+def show_locations(locations):
     # sort
     locations = locations.sort_values(by="date", ascending=False)
-
     for i, location in locations.iterrows():
         col_date, col_gps, col_delete = st.columns([3, 5, 3])
         with col_date:
@@ -639,3 +624,53 @@ def show_post_management(user, team):
                 st.rerun()
 
         st.divider()
+
+
+def show_post_management(user, team):
+    st.markdown("### Moje příspěvky")
+    # display the list of all the posts the team posted and a "delete" button for each of them
+    posts = db.get_posts_by_team(team["team_id"])
+
+    if posts.empty:
+        st.info("Tvůj tým zatím nepřidal žádné příspěvky.")
+
+    else:
+        with st.expander("Zobrazit příspěvky"):
+            show_posts(user, team, posts)
+    st.markdown("### Moje polohy")
+
+    locations = db.get_table_as_df("locations")
+    locations = locations[locations["team_id"] == team["team_id"]]
+
+    if locations.empty:
+        st.info("Tvůj tým zatím nenasdílel žádnou polohu.")
+
+    else:
+        with st.expander("Zobrazit polohy"):
+            show_locations(locations)
+
+    st.markdown("### Export dat")
+
+    gpx = db.get_locations_as_gpx(team)
+    # gpx_button = st.button("🗺️ Stáhnout trasu jako GPX")
+
+    st.markdown(
+        "Trasu ve formátu GPX si můžeš prohlédnout například například na [Google Maps](https://michaelminn.net/tutorials/google-gpx/) nebo [Mapy.cz](https://napoveda.seznam.cz/cz/mapy/nastroje/import-dat/)."
+    )
+
+    st.download_button(
+        "🗺️ Stáhnout trasu jako GPX", gpx, file_name="team_route.gpx", mime="text/xml"
+    )
+
+    # export_posts_btn = st.button("🗞️ Exportovat posty")
+
+    # if export_posts_btn:
+    #     html_zip = utils.generate_post_html()
+
+    #     with open(html_zip, "rb") as f:
+    #         st.download_button(
+    #             "🔽 Stáhnout HTML soubor",
+    #             f,
+    #             file_name="posts.zip",
+    #             mime="application/zip",
+    #         )
