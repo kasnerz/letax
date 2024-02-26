@@ -135,6 +135,7 @@ def record_challenge(user):
                 comment=comment,
                 files=files,
             )
+            st.rerun()
 
 
 def record_checkpoint(user):
@@ -168,6 +169,7 @@ def record_checkpoint(user):
                 comment=comment,
                 files=files,
             )
+            st.rerun()
 
 
 def record_story(user):
@@ -202,6 +204,7 @@ def record_story(user):
                 comment=comment,
                 files=files,
             )
+            st.rerun()
 
 
 def record_location(user, team):
