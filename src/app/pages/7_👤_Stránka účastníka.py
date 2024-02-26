@@ -1,8 +1,10 @@
 import streamlit as st
 import utils
 
-st.set_page_config(page_title="Stránka účastníka", page_icon="static/favicon.png", layout="wide")
-utils.style_sidebar()
+st.set_page_config(
+    page_title="Stránka účastníka", page_icon="static/favicon.png", layout="wide"
+)
+utils.page_wrapper()
 
 from administration import show_admin_page
 from user_page import show_user_page

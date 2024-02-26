@@ -12,8 +12,10 @@ import pandas as pd
 from database import get_database
 
 
-st.set_page_config(page_title="O aplikaci", page_icon="static/favicon.png", layout="centered")
-utils.style_sidebar()
+st.set_page_config(
+    page_title="O aplikaci", page_icon="static/favicon.png", layout="centered"
+)
+utils.page_wrapper()
 
 db = get_database()
 

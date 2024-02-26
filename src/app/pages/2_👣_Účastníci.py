@@ -15,8 +15,10 @@ from unidecode import unidecode
 import folium
 from streamlit_folium import st_folium
 
-st.set_page_config(page_title="Účastníci", page_icon="static/favicon.png", layout="wide")
-utils.style_sidebar()
+st.set_page_config(
+    page_title="Účastníci", page_icon="static/favicon.png", layout="wide"
+)
+utils.page_wrapper()
 db = get_database()
 
 
@@ -71,12 +73,11 @@ def get_profile_photo(pax):
 
 def get_participant_name_view(pax):
     # is_registered = pax.get("registered") and not pd.isna(pax["registered"])
-    link_color = db.get_settings_value("link_color")
     name = pax["name"] or pax["name_web"]
 
     if pax["registered"]:
         pax_id = pax["id"]
-        link = f"<div><a href='/Účastníci?id={pax_id}'  target='_self' style='text-decoration: none;'><h5 style='color: {link_color};'>{name}</h5></a></div>"
+        link = f"<div><a href='/Účastníci?id={pax_id}'  target='_self' class='app-link'><h5 class='app-link'>{name}</h5></a></div>"
     else:
         link = f"<div><h5>{name}</h5></div>"
 
@@ -95,7 +96,9 @@ def get_participants_view():
     )
     # add column profile_photo_view to the dataframe
     participants["profile_photo_view"] = participants.apply(get_profile_photo, axis=1)
-    participants["name_view"] = participants.apply(lambda x: get_participant_name_view(x), axis=1)
+    participants["name_view"] = participants.apply(
+        lambda x: get_participant_name_view(x), axis=1
+    )
 
     return participants
 
@@ -111,12 +114,17 @@ def show_participants():
 
     test_participants_cnt = 2
     pax_total = len(participants) - test_participants_cnt
-    pax_registered = len(participants[participants["registered"] == True]) - test_participants_cnt
-    pax_teams = len(participants[participants["team_name"].isna() == False]) - test_participants_cnt
+    pax_registered = (
+        len(participants[participants["registered"] == True]) - test_participants_cnt
+    )
+    pax_teams = (
+        len(participants[participants["team_name"].isna() == False])
+        - test_participants_cnt
+    )
 
-    link_color = db.get_settings_value("link_color")
-
-    st.caption(f"Celkem: {pax_total}, zaregistrováno: {pax_registered}, v týmu: {pax_teams}.")
+    st.caption(
+        f"Celkem: {pax_total}, zaregistrováno: {pax_registered}, v týmu: {pax_teams}."
+    )
     column_cnt = 5
     # img_cache = {}
 
@@ -138,7 +146,7 @@ def show_participants():
 
             if team_name:
                 st.markdown(
-                    f"<div style='margin-top: -15px; margin-bottom:20px;'><a href='/Týmy?team_id={team_id}' style='color: {link_color}; text-decoration: none;' target='_self'>{team_name}</a></div>",
+                    f"<div style='margin-top: -15px; margin-bottom:20px;'><a href='/Týmy?team_id={team_id}' class='app-link' target='_self'>{team_name}</a></div>",
                     unsafe_allow_html=True,
                 )
             else:

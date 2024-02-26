@@ -32,19 +32,17 @@ def load_posts(team_filter=None, challenge_filter=None, checkpoint_filter=None):
     return posts
 
 
-def shorten(s, post_id, link_color, max_len=250):
+def shorten(s, post_id, max_len=250):
     if len(s) > max_len:
         return (
             s[:max_len]
-            + f"<b><a href='/Příspěvky?post={post_id}' target='_self' style='text-decoration: none; color: {link_color};'> (...)</a></b>"
+            + f"<b><a href='/Příspěvky?post={post_id}' class='app-link' target='_self'> (...)</a></b>"
         )
     return s
 
 
-def get_member_link(db, member_id, member_name):
-    link_color = db.get_settings_value("link_color")
-
-    return f"<a href='/Účastníci?id={member_id}' style='color: {link_color}; text-decoration: none;' target='_self'>{member_name}</a>"
+def get_member_link(member_id, member_name):
+    return f"<a href='/Účastníci?id={member_id}' class='app-link' target='_self'>{member_name}</a>"
 
 
 def show_overview():
@@ -76,12 +74,11 @@ def show_overview():
         """,
         unsafe_allow_html=True,
     )
-    link_color = db.get_settings_value("link_color")
     st.title(f"Letní X-Challenge {year}")
     st.caption("Letní X-Challenge 2023 je za námi! Prohlédni si, jak akce probíhala.")
     st.divider()
     st.markdown(
-        f"<h2><a href='/Příspěvky' target='_self' style='text-decoration: none; color: {link_color};'>Příspěvky</a></h2>",
+        f"<h2><a href='/Příspěvky' target='_self' class='app-link'>Příspěvky</a></h2>",
         unsafe_allow_html=True,
     )
     cols = st.columns(post_gallery_cnt, gap="large")
@@ -102,7 +99,7 @@ def show_overview():
             action_type_icon = "✍️"
 
         post_id = post["post_id"]
-        link = f"<div style='margin-bottom:-10px; display:inline-block;'><h4><a href='/Příspěvky?post={post_id}' target='_self' style='text-decoration: none; color: {link_color};'>{action_type_icon} {action_name} – {team['team_name']}</a></div>"
+        link = f"<div style='margin-bottom:-10px; display:inline-block;'><h4><a href='/Příspěvky?post={post_id}' target='_self' class='app-link'>{action_type_icon} {action_name} – {team['team_name']}</a></div>"
 
         with col:
             st.markdown(link, unsafe_allow_html=True)
@@ -120,13 +117,13 @@ def show_overview():
                         st.video(video_file)
                         break
             st.markdown(
-                shorten(utils.escape_html(description), post_id, link_color, max_len=150),
+                shorten(utils.escape_html(description), post_id, max_len=150),
                 unsafe_allow_html=True,
             )
 
     st.divider()
     st.markdown(
-        f"<h2><a href='/Týmy' target='_self' style='text-decoration: none; color: {link_color};'>Nejlepší týmy</a></h2>",
+        f"<h2><a href='/Týmy' target='_self' class='app-link'>Nejlepší týmy</a></h2>",
         unsafe_allow_html=True,
     )
     teams = db.get_teams()
@@ -155,21 +152,24 @@ def show_overview():
             img = db.read_image(img_path, thumbnail="100_square")
 
             member1 = db.get_participant_by_id(team["member1"])
-            members = [get_member_link(db, member1["id"], member1["name"])]
+            members = [get_member_link(member1["id"], member1["name"])]
 
             if team["member2"]:
                 member2 = db.get_participant_by_id(team["member2"])
-                members.append(get_member_link(db, member2["id"], member2["name"]))
+                members.append(get_member_link(member2["id"], member2["name"]))
 
             members = ", ".join(members)
             st.image(img)
 
             st.markdown(f"{team_name}", unsafe_allow_html=True)
-            st.markdown(f"<div style='margin-top: -15px; margin-bottom: 25px;'>{members}</div>", unsafe_allow_html=True)
+            st.markdown(
+                f"<div style='margin-top: -15px; margin-bottom: 25px;'>{members}</div>",
+                unsafe_allow_html=True,
+            )
 
     st.divider()
     st.markdown(
-        f"<h2><a href='/Mapa_týmů' target='_self' style='text-decoration: none; color: {link_color};'>Mapa týmů</a></h2>",
+        f"<h2><a href='/Mapa_týmů' target='_self' class='app-link'>Mapa týmů</a></h2>",
         unsafe_allow_html=True,
     )
 
@@ -187,7 +187,7 @@ def main():
         # initial_sidebar_state="expanded",
     )
 
-    utils.style_sidebar()
+    utils.page_wrapper()
 
     params = st.experimental_get_query_params()
     show_overview()

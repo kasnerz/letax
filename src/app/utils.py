@@ -189,7 +189,9 @@ def postprocess_uploaded_video(video):
     for f in os.listdir("/tmp"):
         if f.endswith("_pp.mp4"):
             fpath = os.path.join("/tmp", f)
-            if datetime.now() - datetime.fromtimestamp(os.path.getmtime(fpath)) > timedelta(hours=1):
+            if datetime.now() - datetime.fromtimestamp(
+                os.path.getmtime(fpath)
+            ) > timedelta(hours=1):
                 os.remove(fpath)
 
     video_uuid = generate_uuid()
@@ -206,7 +208,9 @@ def postprocess_uploaded_video(video):
 
     original_video_path = video_path
     video_path = f"/tmp/{video_uuid}_pp.mp4"
-    st.write(f"Zpracovávám video {original_video_path}, může to chvíli trvat, prosím vydrž...")
+    st.write(
+        f"Zpracovávám video {original_video_path}, může to chvíli trvat, prosím vydrž..."
+    )
 
     # TODO write about ffmpeg as a dependency
     postprocess_ffmpeg(original_video_path, video_path)
@@ -272,16 +276,24 @@ def check_ram_limit():
     used_percentage = memory_info.percent
 
     if used_percentage > threshold_percentage:
-        log(f"Used RAM: {used_percentage}%, clearing cache and calling garbage collector.", "debug")
+        log(
+            f"Used RAM: {used_percentage}%, clearing cache and calling garbage collector.",
+            "debug",
+        )
         clear_cache()
         gc.collect()
 
 
-def style_sidebar():
+def page_wrapper():
     st.markdown(
         """
     <style>
-    div[data-testid='stSidebarNav'] ul {max-height:none}</style>
+    div[data-testid='stSidebarNav'] ul {max-height:none}
+    .app-link {
+        color: #002676 !important;
+        text-decoration: none;
+    }
+    </style>
     """,
         unsafe_allow_html=True,
     )
