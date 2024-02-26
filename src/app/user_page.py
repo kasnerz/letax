@@ -110,7 +110,7 @@ def record_challenge(user):
     # sort by name
     challenges = utils.sort_challenges(challenges)
 
-    with st.form("challenge"):
+    with st.form("challenge", clear_on_submit=True):
         challenge_idx = st.selectbox(
             "Výzva:",
             options=range(len(challenges)),
@@ -143,7 +143,7 @@ def record_checkpoint(user):
     # sort checkpoints alphabetically
     checkpoints = sorted(checkpoints, key=lambda x: unidecode(x["name"].lower()))
 
-    with st.form("checkpoint"):
+    with st.form("checkpoint", clear_on_submit=True):
         checkpoint_idx = st.selectbox(
             "Checkpoint:",
             options=range(len(checkpoints)),
@@ -171,7 +171,7 @@ def record_checkpoint(user):
 
 
 def record_story(user):
-    with st.form("story"):
+    with st.form("story", clear_on_submit=True):
         story_title = st.text_input(
             "Nadpis:",
         )
@@ -210,7 +210,7 @@ def record_location(user, team):
     # with cols[0]:
     st.markdown("#### Sdílení polohy")
 
-    with st.form("location"):
+    with st.form("location", clear_on_submit=True):
         st.caption("Aktuální poloha pomocí GPS pozice.")
         comment = st.text_input(
             "Komentář:",
