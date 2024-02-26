@@ -292,6 +292,8 @@ def page_wrapper():
     # bg_color is set to 0 until the page is loaded, we need to ignore it
     if bg_color:
         st.session_state.bg_color = bg_color
+    if not hasattr(st.session_state, "bg_color"):
+        st.session_state.bg_color = "rgb(255, 255, 255)"
 
     link_color = (
         "#002676" if st.session_state.bg_color == "rgb(255, 255, 255)" else "#6bb6fe"

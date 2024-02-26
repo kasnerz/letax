@@ -39,6 +39,7 @@ def main():
         columns=[
             "team_name",
             "points",
+            "team_id",
             "member1_name",
             "member2_name",
             "challenge",
@@ -52,11 +53,17 @@ def main():
     table.index += 1
     table.index.name = "Pořadí"
 
+    # replace the values in `team_id` with "Týmy?team_id={team_id}"
+    table["team_id"] = table["team_id"].apply(
+        lambda x: f"/Týmy?team_id={x}" if x else ""
+    )
+
     table = table.rename(
         columns={
             "team_name": "Tým",
             "member1_name": "Člen 1",
             "member2_name": "Člen 2",
+            "team_id": "Stránka",
             "points": "Body",
             "challenge": "Výzvy",
             "checkpoint": "Checkpointy",
@@ -68,8 +75,9 @@ def main():
         table,
         column_config={
             "Body": st.column_config.NumberColumn(
-                format="%d ⭐️",
-            )
+                format="%d",
+            ),
+            "Stránka": st.column_config.LinkColumn(display_text="🔗", width="small"),
         },
         use_container_width=True,
         height=600,
