@@ -530,7 +530,7 @@ def show_post_management(user, team):
 
     # keep only the columns we want to display: action_type, action_name, comment, created, files
     for i, post in posts.iterrows():
-        col_type, col_name, col_desc, col_delete = st.columns([1, 3, 5, 2])
+        col_type, col_name, col_desc, col_edit, col_delete = st.columns([1, 3, 5, 2, 2])
         with col_type:
             mapping = {
                 "challenge": "💪",
@@ -542,13 +542,45 @@ def show_post_management(user, team):
         with col_name:
             st.markdown("**" + post["action_name"] + "**")
 
+        edit_btn = False
+
+        # hack: https://discuss.streamlit.io/t/button-inside-button/12046/7
+        # we need to display save button after the edit button
+        if st.session_state.get(f"{post['post_id']}-edit-state") != True:
+            st.session_state[f"{post['post_id']}-edit-state"] = edit_btn
+
+        elif edit_btn:
+            # If the edit button is clicked when the edit state is already True,
+            # then it means the user wants to cancel the edit (by clicking on the edit button again)
+            st.session_state[f"{post['post_id']}-edit-state"] = False
+            st.rerun()
+
         with col_desc:
             comment = post["comment"]
-            # crop comment if too long
-            if len(comment) > 100:
-                comment = comment[:100] + "..."
 
-            st.write(comment)
+            if st.session_state[f"{post['post_id']}-edit-state"] == True:
+                edit_txt_area = st.text_area(
+                    "Komentář:", value=comment, key=f"edit-area-{post['post_id']}"
+                )
+            else:
+                # crop comment if too long
+                if len(comment) > 100:
+                    comment = comment[:100] + "..."
+
+                st.write(comment)
+
+        with col_edit:
+            if st.session_state[f"{post['post_id']}-edit-state"] == True:
+                if st.button("💾 Uložit", key=f"save-{post['post_id']}"):
+                    db.update_post_comment(post["post_id"], edit_txt_area)
+                    st.success("Komentář upraven.")
+                    st.session_state[f"{post['post_id']}-edit-state"] = False
+                    time.sleep(2)
+                    st.rerun()
+            else:
+                if st.button("📝 Upravit", key=f"edit-{post['post_id']}"):
+                    st.session_state[f"{post['post_id']}-edit-state"] = True
+                    st.rerun()
 
         with col_delete:
             if st.button("❌ Smazat", key=f"delete-{post['post_id']}"):
