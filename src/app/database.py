@@ -1074,7 +1074,9 @@ class Database:
 
         gpx = GPX()
 
-        route = GPXRoute()
+        xc_year = _self.get_settings_value("xchallenge_year")
+        team_name = team["team_name"]
+        route = GPXRoute(name=f"{team_name} na Letní X-Challenge {xc_year}")
         gpx.routes.append(route)
 
         for i, location in df.iterrows():
@@ -1085,13 +1087,13 @@ class Database:
             route.points.append(gpx_routepoint)
 
             date = dateutil.parser.parse(location["date"])
-            date_text = date.strftime("%Y-%m-%d %H:%M:%S")
+            date_text = date.strftime("%d.%m. %H:%M")
 
             waypoint = GPXWaypoint(
                 latitude=location["latitude"],
                 longitude=location["longitude"],
                 time=date,
-                name=f"Bod #{i}: {date_text}",
+                name=f"{date_text}",
                 description=location["comment"],
             )
             gpx.waypoints.append(waypoint)
