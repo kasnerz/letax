@@ -8,14 +8,14 @@ import random
 
 def back_btn():
     # delete query params
-    params = st.experimental_get_query_params()
+    params = st.query_params
 
     if params.get("page"):
         page = params["page"][0]
     else:
         page = 0
 
-    st.experimental_set_query_params(page=page)
+    st.query_params.page = page
 
 
 def load_posts(team_filter=None, challenge_filter=None, checkpoint_filter=None):
@@ -189,7 +189,6 @@ def main():
 
     utils.page_wrapper()
 
-    params = st.experimental_get_query_params()
     show_overview()
 
 
