@@ -607,7 +607,7 @@ class Database:
             level="success",
         )
 
-    def generate_post_html(self, post, output_dir):
+    def generate_post_html(self, post, output_dir, aws_prefix=None):
         photos_html = ""
 
         post_title = post["action_name"]
@@ -641,24 +641,26 @@ class Database:
 
         photos_html = "<div class='container'><div class='row'>"
         for file in files:
-            filename = os.path.join("files", os.path.basename(file["path"]))
             file_type = "image" if file["type"].startswith("image") else "video"
+            if not aws_prefix:
+                # copy files locally
+                filename = os.path.join("files", os.path.basename(file["path"]))
+
+                if file_type == "image":
+                    file = self.read_image(file["path"], thumbnail="1000")
+                    file.save(os.path.join(output_dir, filename))
+                else:
+                    file = self.read_video(file["path"])
+                    with open(os.path.join(output_dir, filename), "wb") as f:
+                        f.write(file)
+                href = filename
+            else:
+                href = f"{aws_prefix}/{file['path']}"
 
             if file_type == "image":
-                file = self.read_image(file["path"])
+                photos_html += f'<div class="col-3"><a href="{href}" data-toggle="lightbox" data-gallery="{post["post_id"]}"><img src="{href}" class="image img-thumbnail"></a></div>'
             else:
-                file = self.read_video(file["path"])
-
-            if file is None:
-                continue
-
-            if file_type == "image":
-                file.save(os.path.join(output_dir, filename))
-                photos_html += f'<div class="col-3"><a href="{filename}" data-toggle="lightbox" data-gallery="{post["post_id"]}"><img src="{filename}" class="image img-thumbnail"></a></div>'
-            else:
-                with open(os.path.join(output_dir, filename), "wb") as f:
-                    f.write(file)
-                photos_html += f'<div class="col-3"><a href="{filename}" data-toggle="lightbox" data-gallery="{post["post_id"]}"><video src="{filename}" controls class="video"></video></a></div>'
+                photos_html += f'<div class="col-3"><a href="{href}" data-toggle="lightbox" data-gallery="{post["post_id"]}"><video src="{href}" controls class="video"></video></a></div>'
 
         photos_html += "</div></div>"
 
@@ -675,34 +677,19 @@ class Database:
                 </div>
                 """
 
-    def export_team_posts(self, posts, team, output_dir, xc_year, folder_name):
+    def generate_team_posts_html(self, team, output_dir, xc_year, aws_prefix=None):
         utils.log(f"Exporting posts for team {team['team_name']}", level="info")
         posts = self.get_posts_by_team(team["team_id"])
 
         title = f"{team['team_name']} – Letní X-Challenge {xc_year}"
         post_html = ""
         for _, post in posts.iterrows():
-            post_html += self.generate_post_html(post, output_dir)
+            post_html += self.generate_post_html(
+                post, output_dir, aws_prefix=aws_prefix
+            )
 
-        css = """
-        <style>
-        body {
-            font-family: "Source Sans Pro", sans-serif;
-            max-width: 800px;
-            margin: auto;
-        }
-        h1, h2 {
-            font-weight: 700;
-        }
-        h3, h4, h5, h6 {
-            font-weight: 600;
-        }
-        .video {
-            max-height: 300px;
-            overflow: hidden;
-        }
-        </style>
-        """
+        with open("static/website_export/custom.css") as f:
+            css = f.read()
 
         # use Source Sans Pro font, bold for headings
         html = f"""
@@ -716,7 +703,7 @@ class Database:
             <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&display=swap">
         </head>
         <body>
-            {css}
+            <style>{css}</style>
             <div class="container mt-3">
             <h1>{title}</h1>
             {post_html}
@@ -729,20 +716,154 @@ class Database:
         with open(os.path.join(output_dir, "index.html"), "w") as f:
             f.write(html)
 
-        with ZipFile(os.path.join(output_dir, f"{folder_name}.zip"), "w") as zip_file:
+    def export_team_posts(self, team, output_dir, xc_year, folder_name):
+        tmp_filename = f"post_{team['team_id']}.zip"
+
+        with ZipFile(os.path.join(output_dir, tmp_filename), "w") as zip_file:
             for root, _, files in os.walk(output_dir):
                 for file in files:
-                    if file != f"{folder_name}.zip":  # Exclude the zip file itself
+                    if file != tmp_filename:  # Exclude the zip file itself
                         file_path = os.path.join(root, file)
                         archive_name = os.path.relpath(file_path, output_dir)
                         archive_name = os.path.join(folder_name, archive_name)
                         zip_file.write(file_path, archive_name)
 
         utils.log(
-            f"Exported posts for team {team['team_name']} to {output_dir}/{folder_name}.zip",
+            f"Exported posts for team {team['team_name']} to {output_dir}/{tmp_filename}",
             level="success",
         )
-        return os.path.join(output_dir, f"{folder_name}.zip")
+        return os.path.join(output_dir, tmp_filename)
+
+    def generate_static_page(self, output_dir, teams, xc_year):
+        title = f"Letní X-Challenge {xc_year}"
+
+        for i, team in enumerate(teams):
+            posts = team["posts"]
+            posts["action_type"].value_counts()
+            for action_type in ["challenge", "checkpoint", "story"]:
+                teams[i][action_type] = (
+                    posts["action_type"].value_counts().get(action_type, 0)
+                )
+        table = pd.DataFrame(
+            teams,
+            columns=[
+                "team_name",
+                "points",
+                "team_id",
+                "member1_name",
+                "member2_name",
+                "challenge",
+                "checkpoint",
+                "story",
+            ],
+        )
+        table = table.sort_values(by="points", ascending=False)
+        table = table.reset_index(drop=True)
+
+        # Round points to integers
+        table["points"] = table["points"].astype(int)
+        table = table.rename(
+            columns={
+                "team_name": "Tým",
+                "member1_name": "Člen 1",
+                "member2_name": "Člen 2",
+                "points": "Body",
+                "challenge": "Výzvy",
+                "checkpoint": "Checkpointy",
+                "story": "Příspěvky",
+            }
+        )
+
+        # table.index += 1
+        # table.index.name = "Pořadí"
+        # Generate HTML code for the table
+
+        with open("static/website_export/custom.css") as f:
+            css = f.read()
+
+        html_code = f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>{title}</title>
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" crossorigin="anonymous">
+            <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&display=swap">
+        </head>
+        <body>
+            <style>{css}</style>
+            <div class="container">
+                <h1>{title}</h1>
+                <p>{title} je za námi! Zde si můžeš prohlédnout výsledky a příspěvky týmů.</p>
+                <table class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th>Pořadí</th>
+                            """
+
+        # Add table headers
+        for col in table.columns:
+            if col == "team_id":
+                continue
+            html_code += f"<th>{col}</th>"
+
+        html_code += """
+                        </tr>
+                    </thead>
+                    <tbody>
+                        """
+
+        # Add table rows
+        for index, row in table.iterrows():
+            html_code += f"<tr>\n<td>{index+1}</td>"
+            for col in table.columns:
+                if col == "Tým":
+                    # Add link according to the team_id
+                    html_code += f"<td><a href='teams/{row['team_id']}/index.html'>{row[col]}</a></td>"
+                elif col == "team_id":
+                    continue
+                else:
+                    html_code += f"<td>{row[col]}</td>"
+            html_code += "</tr>\n"
+
+        html_code += """
+                    </tbody>
+                </table>
+            </div>
+            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+        </body>
+        </html>
+        """
+
+        with open(os.path.join(output_dir, "index.html"), "w") as f:
+            f.write(html_code)
+
+    def export_static_website(self, output_dir, xc_year):
+        aws_prefix = "https://s3.eu-west-3.amazonaws.com/xchallengecz"
+        teams = self.get_teams_overview()
+        os.makedirs(os.path.join(output_dir, xc_year, "teams"), exist_ok=True)
+
+        with open("static/website_export/base.html") as f:
+            base_html = f.read()
+
+        # copy logo.png
+        shutil.copy("static/logo.png", os.path.join(output_dir, "logo.png"))
+
+        with open(os.path.join(output_dir, "index.html"), "w") as f:
+            f.write(base_html)
+
+        for i, team in enumerate(teams):
+            team_out_dir = os.path.join(output_dir, xc_year, "teams", team["team_id"])
+            os.makedirs(team_out_dir, exist_ok=True)
+
+            self.generate_team_posts_html(
+                team, team_out_dir, xc_year, aws_prefix=aws_prefix
+            )
+
+        self.generate_static_page(os.path.join(output_dir, xc_year), teams, xc_year)
+        utils.log(f"Exported static website to {output_dir}", level="success")
+        return output_dir
 
     def get_team_by_id(self, team_id):
         # retrieve team from the database, return a single Python object or None
@@ -1536,6 +1657,7 @@ if __name__ == "__main__":
     parser.add_argument("--fill_addresses", action="store_true")
     parser.add_argument("--insert_data_2022", action="store_true")
     parser.add_argument("--reslugify", action="store_true")
+    parser.add_argument("--export_static_website", action="store_true")
 
     args = parser.parse_args()
 
@@ -1556,6 +1678,10 @@ if __name__ == "__main__":
         with open(args.load_from_local_file) as f:
             wc_participants = json.load(f)
             db.add_participants(wc_participants)
+
+    elif args.export_static_website:
+        print("Exporting static website...")
+        db.export_static_website("exported_website", "2022")
 
     elif args.fill_addresses:
         print("Filling addresses...")

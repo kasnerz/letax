@@ -1,0 +1,29 @@
+body {
+    font-family: "Source Sans Pro", sans-serif;
+    max-width: 800px;
+    margin: auto;
+}
+
+h1,
+h2 {
+    font-weight: 700;
+    margin-top: 20px;
+    margin-bottom: 30px;
+}
+
+h3,
+h4,
+h5,
+h6 {
+    font-weight: 600;
+}
+
+.video {
+    max-height: 300px;
+    overflow: hidden;
+}
+
+/* make link color #31278F */
+a {
+    color: #31278F;
+}

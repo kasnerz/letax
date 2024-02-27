@@ -637,9 +637,9 @@ def show_post_management(user, team):
         st.info("Tvůj tým zatím nepřidal žádné příspěvky.")
 
     else:
-        with st.expander("Zobrazit příspěvky"):
+        with st.expander(f"Celkem {len(posts)} příspěvků"):
             show_posts(user, team, posts)
-    st.markdown("### Moje polohy")
+    st.markdown("### Moje lokace")
 
     locations = db.get_table_as_df("locations")
     locations = locations[locations["team_id"] == team["team_id"]]
@@ -648,7 +648,7 @@ def show_post_management(user, team):
         st.info("Tvůj tým zatím nenasdílel žádnou polohu.")
 
     else:
-        with st.expander("Zobrazit polohy"):
+        with st.expander(f"Celkem {len(locations)} lokací"):
             show_locations(locations)
 
     st.markdown("### Export dat")
@@ -670,9 +670,8 @@ def show_post_management(user, team):
             folder_name = f"letni_{xc_year}_export"
 
             html_zip = db.export_team_posts(
-                posts, team, output_dir, xc_year=xc_year, folder_name=folder_name
+                team, output_dir, xc_year=xc_year, folder_name=folder_name
             )
-
             with open(html_zip, "rb") as f:
                 st.download_button(
                     "🔽 Stáhnout HTML soubor",
