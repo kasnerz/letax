@@ -8,6 +8,7 @@ import time
 import time
 import traceback
 import utils
+import tempfile
 from unidecode import unidecode
 
 
@@ -135,7 +136,8 @@ def record_challenge(user):
                 comment=comment,
                 files=files,
             )
-            st.rerun()
+            time.sleep(2)
+            # st.rerun()
 
 
 def record_checkpoint(user):
@@ -169,7 +171,7 @@ def record_checkpoint(user):
                 comment=comment,
                 files=files,
             )
-            st.rerun()
+            # st.rerun()
 
 
 def record_story(user):
@@ -204,7 +206,7 @@ def record_story(user):
                 comment=comment,
                 files=files,
             )
-            st.rerun()
+            # st.rerun()
 
 
 def record_location(user, team):
@@ -654,23 +656,36 @@ def show_post_management(user, team):
     gpx = db.get_locations_as_gpx(team)
     # gpx_button = st.button("🗺️ Stáhnout trasu jako GPX")
 
+    st.markdown("#### Příspěvky")
     st.markdown(
-        "Trasu ve formátu GPX si můžeš prohlédnout například například na [Google Maps](https://michaelminn.net/tutorials/google-gpx/) nebo [Mapy.cz](https://napoveda.seznam.cz/cz/mapy/nastroje/import-dat/)."
+        "Zde si můžeš vyexportovat všechny svoje příspěvky z akce (včetně fotek a videí). Pro zobrazení příspěvků ZIP archiv rozbal a otevři soubor `index.html` v prohlížeči."
+    )
+    export_posts_btn = st.button("📔 Exportovat příspěvky")
+
+    if export_posts_btn:
+        st.toast("Vytvářím HTML soubor...")
+
+        with tempfile.TemporaryDirectory() as output_dir:
+            xc_year = db.get_settings_value("xchallenge_year")
+            folder_name = f"letni_{xc_year}_export"
+
+            html_zip = db.export_team_posts(
+                posts, team, output_dir, xc_year=xc_year, folder_name=folder_name
+            )
+
+            with open(html_zip, "rb") as f:
+                st.download_button(
+                    "🔽 Stáhnout HTML soubor",
+                    f,
+                    file_name=f"{folder_name}.zip",
+                    mime="application/zip",
+                )
+
+    st.markdown("#### Trasa")
+    st.markdown(
+        "Zde si můžeš vyexportovat svoji zaznamenanou trasu ve formátu GPX. Trasu si můžeš prohlédnout například na [Google Maps](https://michaelminn.net/tutorials/google-gpx/) nebo [Mapy.cz](https://napoveda.seznam.cz/cz/mapy/nastroje/import-dat/)."
     )
 
     st.download_button(
         "🗺️ Stáhnout trasu jako GPX", gpx, file_name="team_route.gpx", mime="text/xml"
     )
-
-    # export_posts_btn = st.button("🗞️ Exportovat posty")
-
-    # if export_posts_btn:
-    #     html_zip = utils.generate_post_html()
-
-    #     with open(html_zip, "rb") as f:
-    #         st.download_button(
-    #             "🔽 Stáhnout HTML soubor",
-    #             f,
-    #             file_name="posts.zip",
-    #             mime="application/zip",
-    #         )

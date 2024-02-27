@@ -6,6 +6,11 @@ from slugify import slugify
 from unidecode import unidecode
 from woocommerce import API
 from accounts import AccountManager
+
+from zipfile import ZipFile
+from gpxpy.gpx import GPX, GPXRoute, GPXRoutePoint, GPXWaypoint
+from geopy.geocoders import Nominatim
+
 import argparse
 import boto3
 import csv
@@ -24,9 +29,12 @@ import yaml
 import zipfile
 import base64
 import copy
+import locale
+
+import shutil
+import tempfile
+import ast
 import dateutil.parser
-from gpxpy.gpx import GPX, GPXRoute, GPXRoutePoint, GPXWaypoint
-from geopy.geocoders import Nominatim
 
 # logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -252,6 +260,8 @@ class Database:
         if thumbnail:
             filepath = thumbnail_filepath
             img = thumbnail_img
+        else:
+            img = _self.read_file(filepath, mode="b")
 
         # read image using PIL
         try:
@@ -596,6 +606,143 @@ class Database:
             f"{user['username']} ({team['team_name']}) added post '{title}'",
             level="success",
         )
+
+    def generate_post_html(self, post, output_dir):
+        photos_html = ""
+
+        post_title = post["action_name"]
+        description = post["comment"]
+        files = ast.literal_eval(post["files"])
+
+        if post["action_type"] == "challenge":
+            post_title = f"🏆 {post_title}"
+        elif post["action_type"] == "checkpoint":
+            post_title = f"📍 {post_title}"
+        else:
+            post_title = f"✍️ {post_title}"
+
+        post_datetime = utils.convert_to_local_timezone(post["created"])
+        post_datetime = dateutil.parser.parse(post_datetime)
+
+        # convert to the format "26. srpna 2023, 15:00"
+        current_locale = locale.getlocale()
+        locale.setlocale(locale.LC_TIME, "cs_CZ.UTF-8")
+        post_datetime = post_datetime.strftime("%x %X")
+        locale.setlocale(locale.LC_TIME, current_locale)
+
+        if description:
+            # escape html
+            description = utils.escape_html(description)
+
+        # images = [f for f in files if f["type"].startswith("image")]
+        # videos = [f for f in files if f["type"].startswith("video")]
+
+        os.makedirs(os.path.join(output_dir, "files"), exist_ok=True)
+
+        photos_html = "<div class='container'><div class='row'>"
+        for file in files:
+            filename = os.path.join("files", os.path.basename(file["path"]))
+            file_type = "image" if file["type"].startswith("image") else "video"
+
+            if file_type == "image":
+                file = self.read_image(file["path"])
+            else:
+                file = self.read_video(file["path"])
+
+            if file is None:
+                continue
+
+            if file_type == "image":
+                file.save(os.path.join(output_dir, filename))
+                photos_html += f'<div class="col-3"><a href="{filename}" data-toggle="lightbox" data-gallery="{post["post_id"]}"><img src="{filename}" class="image img-thumbnail"></a></div>'
+            else:
+                with open(os.path.join(output_dir, filename), "wb") as f:
+                    f.write(file)
+                photos_html += f'<div class="col-3"><a href="{filename}" data-toggle="lightbox" data-gallery="{post["post_id"]}"><video src="{filename}" controls class="video"></video></a></div>'
+
+        photos_html += "</div></div>"
+
+        return f"""
+                <div class="card mb-3">
+                    <div class="card-header">
+                    <h3>{post_title}</h3>
+                    <h6>{post_datetime}</h6>
+                    </div>
+                    <div class="card-body">
+                    <p class="card-text">{description}</p>
+                    {photos_html}
+                    </div>
+                </div>
+                """
+
+    def export_team_posts(self, posts, team, output_dir, xc_year, folder_name):
+        utils.log(f"Exporting posts for team {team['team_name']}", level="info")
+        posts = self.get_posts_by_team(team["team_id"])
+
+        title = f"{team['team_name']} – Letní X-Challenge {xc_year}"
+        post_html = ""
+        for _, post in posts.iterrows():
+            post_html += self.generate_post_html(post, output_dir)
+
+        css = """
+        <style>
+        body {
+            font-family: "Source Sans Pro", sans-serif;
+            max-width: 800px;
+            margin: auto;
+        }
+        h1, h2 {
+            font-weight: 700;
+        }
+        h3, h4, h5, h6 {
+            font-weight: 600;
+        }
+        .video {
+            max-height: 300px;
+            overflow: hidden;
+        }
+        </style>
+        """
+
+        # use Source Sans Pro font, bold for headings
+        html = f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>{title}</title>
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css">
+            <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&display=swap">
+        </head>
+        <body>
+            {css}
+            <div class="container mt-3">
+            <h1>{title}</h1>
+            {post_html}
+            </div>
+            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/bs5-lightbox@1.8.3/dist/index.bundle.min.js"></script>
+        </body>
+        </html>
+        """
+        with open(os.path.join(output_dir, "index.html"), "w") as f:
+            f.write(html)
+
+        with ZipFile(os.path.join(output_dir, f"{folder_name}.zip"), "w") as zip_file:
+            for root, _, files in os.walk(output_dir):
+                for file in files:
+                    if file != f"{folder_name}.zip":  # Exclude the zip file itself
+                        file_path = os.path.join(root, file)
+                        archive_name = os.path.relpath(file_path, output_dir)
+                        archive_name = os.path.join(folder_name, archive_name)
+                        zip_file.write(file_path, archive_name)
+
+        utils.log(
+            f"Exported posts for team {team['team_name']} to {output_dir}/{folder_name}.zip",
+            level="success",
+        )
+        return os.path.join(output_dir, f"{folder_name}.zip")
 
     def get_team_by_id(self, team_id):
         # retrieve team from the database, return a single Python object or None
@@ -1076,7 +1223,7 @@ class Database:
 
         xc_year = _self.get_settings_value("xchallenge_year")
         team_name = team["team_name"]
-        route = GPXRoute(name=f"{team_name} na Letní X-Challenge {xc_year}")
+        route = GPXRoute(name=f"{team_name} – Letní X-Challenge {xc_year}")
         gpx.routes.append(route)
 
         for i, location in df.iterrows():
