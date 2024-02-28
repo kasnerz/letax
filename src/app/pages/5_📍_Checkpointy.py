@@ -20,13 +20,14 @@ utils.page_wrapper()
 
 from authenticator import login_page
 
-db = get_database()
+event_id = st.session_state.event.get("id") if st.session_state.get("event") else None
+db = get_database(event_id=event_id)
 
 
 def main():
     st.title("Checkpointy")
 
-    gmaps_url = db.get_settings_value("map_embed_url")
+    gmaps_url = db.get_gmaps_url(event_id)
 
     with st.expander("🗺️ Google mapy"):
         st.markdown(
@@ -47,9 +48,6 @@ def main():
     if checkpoints.empty:
         st.info("Na tento ročník zatím checkpointy nejsou. Ale budou!")
         st.stop()
-
-    embed_url = db.get_settings_value("map_embed_url")
-    # st.components.v1.iframe(embed_url, height=480, scrolling=True)
 
     # sort by name
     checkpoints = checkpoints.sort_values(

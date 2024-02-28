@@ -14,7 +14,8 @@ import utils
 
 st.set_page_config(page_title="Výzvy", page_icon="static/favicon.png", layout="wide")
 utils.page_wrapper()
-db = get_database()
+event_id = st.session_state.event.get("id") if st.session_state.get("event") else None
+db = get_database(event_id=event_id)
 
 from authenticator import login_page
 
@@ -45,8 +46,7 @@ def main():
 
     # sort by name: letter case insensitive, interpunction before numbers
     challenges = utils.sort_challenges(challenges)
-
-    categories = db.get_settings_value("challenge_categories")
+    categories = list(challenges.category.unique())
     tab_list = ["💪 vše"] + categories
     tabs = st.tabs(tab_list)
 

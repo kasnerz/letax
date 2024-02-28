@@ -14,12 +14,7 @@ def text_bubble(text, color):
 def back_btn():
     # delete query params
     params = st.query_params
-
-    if params.get("page"):
-        page = params["page"][0]
-    else:
-        page = 0
-
+    page = params.get("page", 0)
     st.query_params.page = page
 
 
@@ -37,7 +32,7 @@ def set_page():
     st.query_params.page = page - 1
 
 
-def show_post(post_id):
+def show_post(db, post_id):
     st.markdown(
         """
         <style>
@@ -59,7 +54,6 @@ def show_post(post_id):
 
     st.button("← Příspěvky", on_click=back_btn)
 
-    db = get_database()
     post = db.get_post_by_id(post_id)
 
     if not post:
@@ -107,8 +101,7 @@ def show_post(post_id):
             st.video(video_file)
 
 
-def load_posts(team_filter=None, challenge_filter=None, checkpoint_filter=None):
-    db = get_database()
+def load_posts(db, team_filter=None, challenge_filter=None, checkpoint_filter=None):
     posts = db.get_posts(team_filter, challenge_filter, checkpoint_filter)
 
     if not posts:
@@ -130,10 +123,7 @@ def shorten(s, post_id, page, max_len=250):
     return s
 
 
-def show_overview(page):
-    db = get_database()
-    year = db.get_settings_value("xchallenge_year")
-
+def show_overview(db, page):
     team_options = [""] + sorted(list(db.get_teams()["team_name"]), key=str.lower)
     challenge_options = [""] + sorted(
         list(db.get_table_as_df("challenges")["name"]), key=str.lower
@@ -170,6 +160,7 @@ def show_overview(page):
     cols = st.columns([1, 3, 1])
 
     posts = load_posts(
+        db=db,
         team_filter=team_filter,
         challenge_filter=challenge_filter,
         checkpoint_filter=checkpoint_filter,
@@ -208,7 +199,12 @@ def show_overview(page):
 
         if action_type == "challenge":
             action = db.get_action(action_type, action_name)
-            action_type_icon = action["category"][0] if action.get("category") else "💪"
+            category = action.get("category")
+            action_type_icon = action["category"][0] if category else "💪"
+
+            if action_type_icon.isalpha():
+                action_type_icon = "💪"
+
         elif action_type == "checkpoint":
             action_type_icon = "📍"
         else:
@@ -258,18 +254,25 @@ def main():
         # initial_sidebar_state="expanded",
     )
 
-    utils.page_wrapper()
     params = st.query_params
+    # event_id = params.get("event_id")
+    event_id = (
+        st.session_state.event.get("id") if st.session_state.get("event") else None
+    )
+    db = get_database(event_id=event_id)
+
+    event = db.get_event()
+    utils.page_wrapper(event)
 
     if params.get("post"):
-        post = params["post"][0]
-        show_post(post)
+        post = params["post"]
+        show_post(db, post)
     else:
         if params.get("page"):
-            page = params["page"][0]
+            page = params["page"]
         else:
             page = 0
-        show_overview(int(page))
+        show_overview(db=db, page=int(page))
 
 
 if __name__ == "__main__":

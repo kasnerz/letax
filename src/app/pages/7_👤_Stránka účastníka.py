@@ -10,6 +10,11 @@ from administration import show_admin_page
 from user_page import show_user_page
 from authenticator import login_page
 
+from database import get_database
+
+event_id = st.session_state.event.get("id") if st.session_state.get("event") else None
+db = get_database(event_id=event_id)
+
 if __name__ == "__main__":
     user, team = login_page()
 
