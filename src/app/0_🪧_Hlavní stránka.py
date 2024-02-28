@@ -9,17 +9,11 @@ import random
 def back_btn():
     # delete query params
     params = st.query_params
-
-    if params.get("page"):
-        page = params["page"][0]
-    else:
-        page = 0
-
+    page = params.get("page", 0)
     st.query_params.page = page
 
 
-def load_posts(team_filter=None, challenge_filter=None, checkpoint_filter=None):
-    db = get_database()
+def load_posts(db, team_filter=None, challenge_filter=None, checkpoint_filter=None):
     posts = db.get_posts(team_filter, challenge_filter, checkpoint_filter)
 
     if not posts:
@@ -46,10 +40,14 @@ def get_member_link(member_id, member_name):
 
 
 def show_overview():
-    db = get_database()
-    year = db.get_settings_value("xchallenge_year")
+    event_id = (
+        st.session_state.event.get("id") if st.session_state.get("event") else None
+    )
+    db = get_database(event_id=event_id)
+    event = db.get_event()
+    year = db.get_year()
 
-    posts = load_posts()
+    posts = load_posts(db)
 
     # select 5 random posts
 
@@ -75,7 +73,11 @@ def show_overview():
         unsafe_allow_html=True,
     )
     st.title(f"Letní X-Challenge {year}")
-    st.caption("Letní X-Challenge 2023 je za námi! Prohlédni si, jak akce probíhala.")
+
+    if event["status"] == "past":
+        st.caption(
+            f"Letní X-Challenge {year} je za námi! Prohlédni si, jak akce probíhala."
+        )
     st.divider()
     st.markdown(
         f"<h2><a href='/Příspěvky' target='_self' class='app-link'>Příspěvky</a></h2>",
@@ -92,7 +94,11 @@ def show_overview():
 
         if action_type == "challenge":
             action = db.get_action(action_type, action_name)
-            action_type_icon = action["category"][0] if action.get("category") else "💪"
+            category = action.get("category")
+            action_type_icon = action["category"][0] if category else "💪"
+
+            if action_type_icon.isalpha():
+                action_type_icon = "💪"
         elif action_type == "checkpoint":
             action_type_icon = "📍"
         else:
@@ -175,7 +181,7 @@ def show_overview():
 
     from map import show_positions, render_map
 
-    m, _ = show_positions()
+    m, _ = show_positions(db)
     render_map(m)
 
 

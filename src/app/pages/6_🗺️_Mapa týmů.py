@@ -12,7 +12,8 @@ st.set_page_config(
     page_title="Mapa týmů", page_icon="static/favicon.png", layout="wide"
 )
 utils.page_wrapper()
-db = get_database()
+event_id = st.session_state.event.get("id") if st.session_state.get("event") else None
+db = get_database(event_id=event_id)
 
 from map import show_last_shared_locations, show_positions, show_checkpoints, render_map
 
@@ -32,12 +33,12 @@ def main():
         # st.caption(
         #     "Na mapě je zobrazena poslední poloha týmů, které svou polohu zaznamenaly. Historii konkrétního týmu najdeš na jejich stránce."
         # )
-        m, last_locations = show_positions()
-        show_checkpoints(m)
+        m, last_locations = show_positions(db)
+        show_checkpoints(db, m)
         render_map(m)
 
     with cols[1]:
-        show_last_shared_locations(last_locations)
+        show_last_shared_locations(last_locations, db)
 
 
 if __name__ == "__main__":

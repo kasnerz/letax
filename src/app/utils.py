@@ -285,7 +285,10 @@ def check_ram_limit():
         gc.collect()
 
 
-def page_wrapper():
+def page_wrapper(event=None):
+    if event is None:
+        event = st.session_state.get("event")
+
     # currently the only way to detect streamlit theme
     bg_color = st_javascript(
         """window.getComputedStyle(window.parent.document.getElementsByClassName("stApp")[0]).getPropertyValue("background-color")"""
@@ -313,6 +316,25 @@ def page_wrapper():
     """,
         unsafe_allow_html=True,
     )
+
+    if event and event["status"] != "active":
+        st.markdown(
+            """
+        <style>
+        div[data-testid='stSidebarNav'] {
+            filter: grayscale(100%);
+        }
+        </style>
+        """,
+            unsafe_allow_html=True,
+        )
+        st.sidebar.info(f"Prohlížíš si archiv ročníku {event['year']}.")
+        show_active_btn = st.sidebar.button("Zobrazit aktuální ročník")
+
+        if show_active_btn:
+            st.session_state.event = None
+            st.rerun()
+
     app_logo.add_logo("static/letax.png", height=40)
 
     # it is useful to run it here since this gets called every time

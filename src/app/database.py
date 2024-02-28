@@ -47,12 +47,13 @@ TTL = 3600 * 24
 
 
 @st.cache_resource
-def get_database():
-    return Database()
+def get_database(event_id=None):
+    # if event_id is none, the active event is used
+    return Database(event_id)
 
 
 class Database:
-    def __init__(self):
+    def __init__(self, event_id=None):
         self.settings_path = os.path.join(current_dir, "settings.yaml")
         self.load_settings()
 
@@ -63,9 +64,8 @@ class Database:
             version="wc/v3",
             timeout=30,
         )
-        self.xchallenge_year = str(self.get_settings_value("xchallenge_year"))
-        os.makedirs(os.path.join("db", self.xchallenge_year), exist_ok=True)
-        self.db_path = os.path.join("db", self.xchallenge_year, "database.db")
+        self.event = self.get_event_by_id(event_id)
+        self.conn = self.get_db_for_event(self.event["id"])
 
         if self.get_settings_value("file_system") == "s3":
             # S3 bucket
@@ -78,23 +78,84 @@ class Database:
                 aws_access_key_id=st.secrets["AWS_ACCESS_KEY_ID"],
                 aws_secret_access_key=st.secrets["AWS_SECRET_ACCESS_KEY"],
             )
-        self.top_dir = f"files/{self.xchallenge_year}"
-        self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
-        self.conn.row_factory = sqlite3.Row
-        self.create_tables()
-
+        self.top_dir = f"files/{self.event['id']}"
         self.am = AccountManager()
         self.preauthorized_emails = self.load_preauthorized_emails()
-
         self.static_imgs = self.load_static_images()
         self.fa_icons = self.load_fa_icons()
-
         self.geoloc = Nominatim(user_agent="GetLoc")
 
         utils.log("Database initialized")
 
     def __del__(self):
         self.conn.close()
+
+    def get_events(self):
+        return sorted(
+            self.get_settings_value("events"), key=lambda x: x["year"], reverse=True
+        )
+
+    def get_event_by_id(self, event_id):
+        events = self.get_events()
+
+        if event_id:
+            events = [e for e in events if e["id"] == event_id]
+        else:
+            events = [e for e in events if e["status"] == "active"]
+
+        if not events:
+            raise ValueError(f"Event {event_id} not found")
+
+        return events[0]
+
+    def get_db_for_event(self, event_id):
+        os.makedirs(os.path.join("db", event_id), exist_ok=True)
+        self.db_path = os.path.join("db", event_id, "database.db")
+
+        self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
+        self.conn.row_factory = sqlite3.Row
+        self.create_tables()
+
+        return self.conn
+
+    def get_year(self, event_id=None):
+        if event_id:
+            event = self.get_event_by_id(event_id)
+            return event["year"]
+
+        return self.event["year"]
+
+    def get_gmaps_url(self, event_id=None):
+        event = self.get_event_by_id(event_id)
+        return event["gmaps_url"]
+
+    def get_event(self):
+        return self.event
+
+    def create_new_event(self, year):
+        events = self.get_events()
+        new_event_id = utils.generate_uuid()
+        events.append(
+            {
+                "id": new_event_id,
+                "year": year,
+                "status": "draft",
+                "gmaps_url": "",
+                "product_id": "",
+            }
+        )
+        self.set_settings_value("events", events)
+
+    def set_event_info(self, event_id, status, gmaps_url, product_id):
+        events = self.get_events()
+        for event in events:
+            if event["id"] == event_id:
+                event["status"] = status
+                event["gmaps_url"] = gmaps_url
+                event["product_id"] = product_id
+                break
+
+        self.set_settings_value("events", events)
 
     def load_settings(self):
         with open(self.settings_path) as f:
@@ -317,7 +378,8 @@ class Database:
 
         return orders
 
-    def wc_fetch_participants(self, product_id, log_area=None, limit=None):
+    def wc_fetch_participants(self, log_area=None, limit=None):
+        product_id = self.event["product_id"]
         new_participants = []
         logger.info("Fetching participants from WooCommerce...")
 
@@ -1342,7 +1404,7 @@ class Database:
 
         gpx = GPX()
 
-        xc_year = _self.get_settings_value("xchallenge_year")
+        xc_year = _self.event["year"]
         team_name = team["team_name"]
         route = GPXRoute(name=f"{team_name} – Letní X-Challenge {xc_year}")
         gpx.routes.append(route)
@@ -1517,10 +1579,10 @@ class Database:
                     (?, ?, ?, ?);
                     """,
                     (
-                        i + 1,
+                        f"2022_team_{i + 1}",
                         row["Název týmu"],
-                        row["Člen #1: Jméno a příjmení"],
-                        row["Člen #2: Jméno a příjmení"],
+                        "2022_" + slugify(row["Člen #1: Jméno a příjmení"]),
+                        "2022_" + slugify(row["Člen #2: Jméno a příjmení"]),
                     ),
                 )
                 self.conn.execute(
@@ -1530,7 +1592,7 @@ class Database:
                     (?, ?, ?);
                     """,
                     (
-                        row["Člen #1: Jméno a příjmení"],
+                        "2022_" + slugify(row["Člen #1: Jméno a příjmení"]),
                         utils.generate_uuid() + "@xc-test.cz",
                         row["Člen #1: Jméno a příjmení"],
                     ),
@@ -1542,7 +1604,7 @@ class Database:
                     (?, ?, ?);
                     """,
                     (
-                        row["Člen #2: Jméno a příjmení"],
+                        "2022_" + slugify(row["Člen #2: Jméno a příjmení"]),
                         utils.generate_uuid() + "@xc-test.cz",
                         row["Člen #2: Jméno a příjmení"],
                     ),
@@ -1553,10 +1615,13 @@ class Database:
             reader = csv.DictReader(f, delimiter=",")
             for i, row in enumerate(reader):
                 username = "xc-bot"
-                team_id = row["ID týmu"]
+                team_id = "2022_team_" + row["ID týmu"]
 
                 # format from %d/%m/%Y %H:%M:%S to %Y-%m-%d %H:%M:%S")
                 timestamp = row["Timestamp"]
+                timestamp = datetime.strptime(timestamp, "%d/%m/%Y %H:%M:%S").strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                )
 
                 action_type_dict = {
                     "⭐ splněnou výzvu": "challenge",
@@ -1580,12 +1645,12 @@ class Database:
 
                 self.conn.execute(
                     """INSERT OR IGNORE INTO posts
-                    (post_id, username, team_id, action_type, action_name, comment, created, files)
+                    (post_id, pax_id, team_id, action_type, action_name, comment, created, files)
                     VALUES
                     (?, ?, ?, ?, ?, ?, ?, ?);
                     """,
                     (
-                        utils.generate_uuid(),
+                        "2022_" + utils.generate_uuid(),
                         username,
                         team_id,
                         action_type,
@@ -1662,13 +1727,16 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     print(args)
-
     print("Creating database...")
-    db = Database()
-    db.create_tables()
 
     if args.insert_data_2022:
+        db = Database(event_id="2022")
+        db.create_tables()
         db.insert_data_2022()
+        exit()
+
+    db = Database()
+    db.create_tables()
 
     if args.load_from_wc_product:
         print("Fetching participants from Woocommerce...")

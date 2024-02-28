@@ -19,7 +19,8 @@ st.set_page_config(
     page_title="Účastníci", page_icon="static/favicon.png", layout="wide"
 )
 utils.page_wrapper()
-db = get_database()
+event_id = st.session_state.event.get("id") if st.session_state.get("event") else None
+db = get_database(event_id=event_id)
 
 
 def backbtn():
@@ -155,7 +156,6 @@ def show_participants():
 
 def main():
     params = st.query_params
-    xchallenge_year = db.get_settings_value("xchallenge_year")
 
     if params.get("id"):
         pax_id = params["id"][0]

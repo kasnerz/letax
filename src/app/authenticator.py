@@ -135,7 +135,7 @@ def login_page():
     tabs = None
 
     # delete query parameters
-    st.query_params.clear
+    st.query_params.clear()
 
     if st.session_state["authentication_status"] == None:
         _, center_column, _ = st.columns([1, 3, 1])

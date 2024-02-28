@@ -10,7 +10,8 @@ import utils
 import re
 from user_page import show_account_info
 
-db = get_database()
+event_id = st.session_state.event.get("id") if st.session_state.get("event") else None
+db = get_database(event_id=event_id)
 
 
 def show_admin_page(user):
@@ -37,7 +38,6 @@ def show_admin_page(user):
 
     with tab_db:
         st.markdown("#### Databáze")
-        st.caption("Databáze aktuálního ročníku X-Challenge.")
         show_db()
 
     with tab_actions:
@@ -114,14 +114,11 @@ def show_db_data_editor(table, column_config=None):
 
 
 def action_fetch_users():
-    st.caption("Načte seznam účastníků z WooCommerce")
+    st.caption(
+        "Automaticky načte seznam přihlášených účastníků přes WooCommerce API. Účastníky lze přidat i manuálně přes Přidat extra účastníka."
+    )
 
     with st.form("fetch_wc_users"):
-        product_id = st.text_input(
-            "product_id",
-            help="Číslo produktu Letní X-Challenge na webu",
-            value=db.get_settings_value("product_id"),
-        )
         limit = st.number_input(
             "limit (0 = bez omezení)",
             help="Maximální počet účastníků (0 = bez omezení)",
@@ -130,15 +127,20 @@ def action_fetch_users():
 
         update_submit_button = st.form_submit_button(label="Aktualizovat účastníky")
 
+    event = db.get_event()
+    if event["product_id"] is None:
+        st.error(
+            "Není nastaven Wordpress product ID. Nastav ho v sekci Spravovaat akce."
+        )
+        st.stop()
+
     if update_submit_button:
         if limit == 0:
             limit = None
 
         with st.spinner("Aktualizuji účastníky"):
             container = st.container()
-            db.wc_fetch_participants(
-                product_id=int(product_id), log_area=container, limit=limit
-            )
+            db.wc_fetch_participants(log_area=container, limit=limit)
 
         return True
 
@@ -169,20 +171,75 @@ def action_add_participant():
         return True
 
 
-def action_change_year():
-    st.caption(
-        "Změna roku založí novou databázi a skryje současné účastníky, týmy a příspěvky. Databáze ze současného roku zůstane zachována a lze se k ní vrátit."
+def action_set_events():
+    events = db.get_events()
+    st.markdown("#### Nastavit akci")
+
+    selected_event = st.selectbox(
+        "Vyber ročník", events, format_func=lambda x: x["year"]
     )
 
-    with st.form("change_year"):
-        year = st.number_input(
-            "Rok", value=int(db.get_settings_value("xchallenge_year"))
+    with st.form("event_form"):
+        event_status_idx = ["active", "draft", "past"].index(selected_event["status"])
+        event_status = st.selectbox(
+            "Status",
+            options=["active", "draft", "past"],
+            key="event_status",
+            help="Aktivní akce se zobrazuje na hlavní stránce. Draft se zobrazuje jen administrátorům. Past se zobrazuje v archivu.",
+            index=event_status_idx,
         )
-        change_year_submit_button = st.form_submit_button(label="Změnit rok")
+        event_gmaps_url = st.text_input(
+            "URL na Google Maps s checkpointy",
+            value=selected_event["gmaps_url"],
+            key="event_map",
+            help="Odkaz na Google mapu s checkpointy ([URL pro vložení na stránky](https://www.google.com/earth/outreach/learn/visualize-your-data-on-a-custom-map-using-google-my-maps/#embed-your-map-5-5)), např. https://www.google.com/maps/d/u/0/embed?mid=1L6EC8E-uNAu4yS_Oxvymjp9FLUoTK94. Tato mapa se zobrazuje na stránce s checkpointy. Je potřeba použít odkaz na vložení mapy na jiné stránky (s klíčovým slovem `embed`). Vlož jen samotnou URL (https://www.google.com/maps/d/u/0/embed?mid=<nějaký kód>) a smaž všechno kolem (včetně dalších parametrů v URL za &).",
+        )
+        event_product_id = st.text_input(
+            "Wordpress product ID",
+            value=selected_event["product_id"],
+            key="event_product_id",
+            help="Číslo produktu Letní X-Challenge na webu, slouží k načtení seznamu účastníků. K nalezení ve Wordpressu na stránce s produkty.",
+        )
+        cols = st.columns([1, 6, 1])
+        btn_save = cols[0].form_submit_button(label="Uložit")
 
-    if change_year_submit_button:
-        db.set_settings_value("xchallenge_year", year)
-        return True
+    selected_event_id = selected_event["id"]
+
+    if btn_save:
+        # refuse to set two active events
+        if event_status == "active":
+            for event in events:
+                if event["status"] == "active" and event["id"] != selected_event_id:
+                    st.error(
+                        "Nelze nastavit dvě aktivní akce. Nejdřív nastav tu starou jako draft nebo past."
+                    )
+                    st.stop()
+
+        db.set_event_info(
+            event_id=selected_event_id,
+            status=event_status,
+            gmaps_url=event_gmaps_url,
+            product_id=event_product_id,
+        )
+
+    st.markdown("#### Založit novou akci")
+
+    with st.form("add_event_form"):
+        new_year = st.text_input("Rok (např. 2024)", key="add_event_year")
+        btn_add = st.form_submit_button(label="Založit akci")
+
+    if btn_add:
+        # refuse to have two events with the same year
+        for event in events:
+            if event["year"] == new_year:
+                st.error("Tento ročník již existuje.")
+                st.stop()
+
+        db.create_new_event(year=new_year)
+        st.success("Akce přidána. Nezapomeň akci nastavit jako aktivní!")
+        st.balloons()
+        time.sleep(2)
+        st.rerun()
 
 
 def action_restore_db():
@@ -238,51 +295,6 @@ def action_set_infotext():
         return True
 
 
-def action_set_map_link():
-    with st.form("Mapa s checkpointy"):
-        st.caption(
-            "Odkaz na Google mapu s checkpointy ([URL pro vložení na stránky](https://www.google.com/earth/outreach/learn/visualize-your-data-on-a-custom-map-using-google-my-maps/#embed-your-map-5-5)), např. https://www.google.com/maps/d/u/0/embed?mid=1L6EC8E-uNAu4yS_Oxvymjp9FLUoTK94. Tato mapa se zobrazuje na stránce s checkpointy."
-        )
-        map_link = st.text_input(
-            "Link:",
-            value=db.get_settings_value("map_embed_url"),
-            key="map_link_area",
-        )
-
-        submit_button = st.form_submit_button(label="Aktualizovat")
-        container = st.empty()
-
-    with st.expander("Náhled", expanded=True):
-        if "iframe" not in map_link and "embed" in map_link:
-            st.markdown(
-                f"""
-                <iframe
-                    width="100%"
-                    height="480"
-                    frameborder="0" style="border:0"
-                    src="{map_link}"
-                    allowfullscreen>
-                </iframe>
-                """,
-                unsafe_allow_html=True,
-            )
-        else:
-            st.write("Mapu nelze zobrazit")
-
-    if submit_button:
-        if "iframe" in map_link:
-            container.warning(
-                "Je potřeba použít odkaz na vložení mapy na jiné stránky (s klíčovým slovem `embed`). Vlož jen samotnou URL (https://www.google.com/maps/d/u/0/embed?mid=<nějaký kód>) a smaž všechno kolem (včetně dalších parametrů v URL za &)."
-            )
-        elif "embed" not in map_link:
-            container.warning(
-                "Je potřeba použít odkaz na vložení mapy na jiné stránky (s klíčovým slovem `embed`). Zkus v odkazu vyměnit `edit` za `embed` a smazat všechny parametry kromě `mid=` a kódu za tím."
-            )
-        else:
-            db.set_settings_value("map_embed_url", map_link)
-            return True
-
-
 def action_set_system_settings():
     with st.form("Kategorie výzev:"):
         challenge_categories = st.text_area(
@@ -322,13 +334,12 @@ def show_actions():
             "Akce:",
             [
                 "➕ Přidat extra účastníka",
-                "👥 Načíst letošní účastníky",
+                "👥 Načíst účastníky z Wordpressu",
                 "ℹ️ Nastavit infotext",
+                "📅 Spravovat akce",
+                "🧹 Vyčistit cache",
                 "📁 Obnovit zálohu databáze",
                 "💻️ Pokročilá nastavení",
-                "🗺️ Upravit mapu s checkpointy",
-                "🧹 Vyčistit cache",
-                "📅 Změnit aktuální ročník",
             ],
             label_visibility="hidden",
         )
@@ -336,23 +347,20 @@ def show_actions():
         if action == "➕ Přidat extra účastníka":
             ret = action_add_participant()
 
-        elif action == "👥 Načíst letošní účastníky":
+        elif action == "👥 Načíst účastníky z Wordpressu":
             ret = action_fetch_users()
 
         elif action == "🧹 Vyčistit cache":
             ret = action_clear_cache()
 
-        elif action == "📅 Změnit aktuální ročník":
-            ret = action_change_year()
+        elif action == "📅 Spravovat akce":
+            ret = action_set_events()
 
         elif action == "📁 Obnovit zálohu databáze":
             ret = action_restore_db()
 
         elif action == "ℹ️ Nastavit infotext":
             ret = action_set_infotext()
-
-        elif action == "🗺️ Upravit mapu s checkpointy":
-            ret = action_set_map_link()
 
         elif action == "💻️ Pokročilá nastavení":
             ret = action_set_system_settings()

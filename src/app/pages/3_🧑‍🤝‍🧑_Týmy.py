@@ -18,7 +18,8 @@ from streamlit_folium import st_folium, folium_static
 
 st.set_page_config(page_title="Týmy", page_icon="static/favicon.png", layout="wide")
 utils.page_wrapper()
-db = get_database()
+event_id = st.session_state.event.get("id") if st.session_state.get("event") else None
+db = get_database(event_id=event_id)
 
 
 def backbtn():
@@ -231,7 +232,6 @@ def show_teams():
 
 def main():
     params = st.query_params
-    xchallenge_year = db.get_settings_value("xchallenge_year")
 
     if params.get("team_id"):
         team_id = params["team_id"][0]

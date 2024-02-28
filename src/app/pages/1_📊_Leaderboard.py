@@ -17,7 +17,8 @@ st.set_page_config(
 )
 utils.page_wrapper()
 
-db = get_database()
+event_id = st.session_state.event.get("id") if st.session_state.get("event") else None
+db = get_database(event_id=event_id)
 
 
 def main():

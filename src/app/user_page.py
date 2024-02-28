@@ -12,7 +12,8 @@ import tempfile
 from unidecode import unidecode
 
 
-db = get_database()
+event_id = st.session_state.event.get("id") if st.session_state.get("event") else None
+db = get_database(event_id=event_id)
 
 
 def show_user_page(user, team):
@@ -666,7 +667,7 @@ def show_post_management(user, team):
         st.toast("Vytvářím HTML soubor...")
 
         with tempfile.TemporaryDirectory() as output_dir:
-            xc_year = db.get_settings_value("xchallenge_year")
+            xc_year = db.get_year()
             folder_name = f"letni_{xc_year}_export"
 
             html_zip = db.export_team_posts(
