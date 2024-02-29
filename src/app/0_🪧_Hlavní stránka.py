@@ -90,11 +90,18 @@ def show_overview():
         st.caption(
             f"Letní X-Challenge {year} je za námi! Prohlédni si, jak akce probíhala."
         )
-    st.divider()
-    st.markdown(
-        f"<h2><a href='/Příspěvky' target='_self' class='app-link'>Příspěvky</a></h2>",
-        unsafe_allow_html=True,
-    )
+        st.divider()
+        st.markdown(
+            f"<h2><a href='/Příspěvky' target='_self' class='app-link'>Příspěvky</a></h2>",
+            unsafe_allow_html=True,
+        )
+    else:
+        st.divider()
+        st.markdown(
+            f"<h2><a href='/Příspěvky' target='_self' class='app-link'>Aktuálně</a></h2>",
+            unsafe_allow_html=True,
+        )
+
     cols = st.columns(post_gallery_cnt, gap="large")
 
     for col, post in zip(cols, posts):

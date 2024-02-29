@@ -13,7 +13,6 @@ from authenticator import login_page
 
 from database import get_database
 
-print("Top")
 utils.page_wrapper()
 
 if __name__ == "__main__":
