@@ -11,13 +11,20 @@ import utils
 import tempfile
 from unidecode import unidecode
 
-
-event_id = st.session_state.event.get("id") if st.session_state.get("event") else None
+print("User top")
+params = st.query_params
+event_id = utils.get_event_id(params)
 db = get_database(event_id=event_id)
-st.session_state["event"] = db.get_event()
+# st.session_state["event"] = db.get_event()
 
 
 def show_user_page(user, team):
+    print("User inner")
+    params = st.query_params
+    event_id = utils.get_event_id(params)
+    db = get_database(event_id=event_id)
+    st.session_state["event"] = db.get_event()
+
     name = user["name"]
     team_name = team["team_name"] if team else "Žádný tým"
 

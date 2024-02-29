@@ -10,12 +10,19 @@ import utils
 import re
 from user_page import show_account_info
 
-event_id = st.session_state.event.get("id") if st.session_state.get("event") else None
+print("Admin top")
+params = st.query_params
+event_id = utils.get_event_id(params)
 db = get_database(event_id=event_id)
-st.session_state["event"] = db.get_event()
 
 
 def show_admin_page(user):
+    print("Admin inner")
+    params = st.query_params
+    event_id = utils.get_event_id(params)
+    db = get_database(event_id=event_id)
+    st.session_state["event"] = db.get_event()
+
     st.title("Administrace")
 
     (tab_notifications, tab_users, tab_db, tab_actions, tab_account) = st.tabs(
@@ -222,6 +229,7 @@ def action_set_events():
             gmaps_url=event_gmaps_url,
             product_id=event_product_id,
         )
+        st.success("Nastavení uloženo.")
 
     st.markdown("#### Založit novou akci")
 
@@ -296,6 +304,38 @@ def action_set_infotext():
         return True
 
 
+def action_set_awards():
+    teams = sorted(
+        db.get_teams().to_dict(orient="records"), key=lambda x: x["team_name"]
+    )
+    st.caption(
+        "Zde můžeš nastavit výherce soutěže, kteří budou vidět na hlavní straně."
+    )
+    teams_select = st.selectbox(
+        "Tým",
+        teams,
+        format_func=lambda x: x["team_name"],
+    )
+    with st.form("Ocenění"):
+        info_text = st.text_input(
+            'Nastavit týmové ocenění (např. "Sebepřekonání")',
+            value=teams_select["award"],
+        )
+
+        submit_button = st.form_submit_button(label="Nastavit")
+
+    if submit_button:
+        db.set_team_award(teams_select["team_id"], info_text)
+        st.balloons()
+        st.success("Ocenění nastaveno")
+
+    st.markdown("#### Aktuální výherci")
+    best_teams = db.get_teams_with_awards()
+    # select only `team_name` and `award` columns
+    best_teams = best_teams[["team_name", "award"]]
+    st.dataframe(best_teams)
+
+
 def action_set_system_settings():
     with st.form("Kategorie výzev:"):
         challenge_categories = st.text_area(
@@ -338,6 +378,7 @@ def show_actions():
                 "👥 Načíst účastníky z Wordpressu",
                 "ℹ️ Nastavit infotext",
                 "📅 Spravovat akce",
+                "🏆️ Nastavit výherce",
                 "🧹 Vyčistit cache",
                 "📁 Obnovit zálohu databáze",
                 "💻️ Pokročilá nastavení",
@@ -350,6 +391,9 @@ def show_actions():
 
         elif action == "👥 Načíst účastníky z Wordpressu":
             ret = action_fetch_users()
+
+        elif action == "🏆️ Nastavit výherce":
+            ret = action_set_awards()
 
         elif action == "🧹 Vyčistit cache":
             ret = action_clear_cache()

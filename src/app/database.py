@@ -100,8 +100,11 @@ class Database:
 
         if event_id:
             events = [e for e in events if e["id"] == event_id]
-        else:
+        elif any(e["status"] == "active" for e in events):
             events = [e for e in events if e["status"] == "active"]
+        else:
+            # find the most recent `past` event
+            events = [e for e in events if e["status"] == "past"]
 
         if not events:
             raise ValueError(f"Event {event_id} not found")
@@ -945,6 +948,19 @@ class Database:
 
         return team
 
+    def get_teams_with_awards(self):
+        # any team that has a non-empty award column (non-empty = NULL or "")
+        return pd.read_sql_query(
+            "SELECT * FROM teams WHERE (award IS NOT NULL AND award != '')", self.conn
+        )
+
+    def set_team_award(self, team_id, award):
+        self.conn.execute(
+            "UPDATE teams SET award = ? WHERE team_id = ?", (award, team_id)
+        )
+        self.conn.commit()
+        utils.log(f"Set award {award} for team {team_id}", level="info")
+
     def get_action(self, action_type, action_name):
         # retrieve action from the database, return a single Python object or None
         table_name = {
@@ -1015,6 +1031,11 @@ class Database:
             "member2_name": member2_name,
             "points": posts_team["points"].sum() if not posts_team.empty else 0,
             "posts": posts_team,
+            "award": team["award"],
+            "is_top_x": team["is_top_x"],
+            "team_photo": team["team_photo"],
+            "team_motto": team["team_motto"],
+            "team_web": team["team_web"],
         }
         return team_info
 
@@ -1242,6 +1263,7 @@ class Database:
                 location_color text,
                 location_icon_color text,
                 location_icon text,
+                award text,
                 primary key(team_id)   
             );"""
         )

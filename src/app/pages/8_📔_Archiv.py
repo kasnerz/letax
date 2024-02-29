@@ -53,26 +53,16 @@ def main():
             index=active_event_idx[0] if active_event_idx else 0,
         )
 
-        # columns_btn = st.columns([1, 1, 1])
-
-        # with columns_btn[0]:
         change_event = st.button("Změnit ročník")
-        # with columns_btn[1]:
-        # back_to_active = st.button("Zpět na aktuální ročník")
 
-        if selected_event["year"] == 2022:
+        if selected_event["year"] == "2022":
             st.warning(
-                "Upozornění: ročník 2022 byl do appky portovaný z webu a příspěvky ani body nemusí být kompletní."
+                "Upozornění: ročník 2022 byl do appky přenesený z původního webu a příspěvky ani body nemusí být kompletní."
             )
 
         if change_event:
             st.session_state.event = selected_event
-            st.cache_data.clear()
             st.rerun()
-
-        # if back_to_active:
-        #     st.session_state.event = None
-        #     st.rerun()
 
     with columns[1]:
         st.image("static/logo.png", width=200)

@@ -48,7 +48,7 @@ Pokud narazíš na nějakou chybu (a že jich ze začátku může být!), dej mi
         st.divider()
         st.markdown(
             """
-*© 2023 X-Challenge*
+*© 2024 X-Challenge*
 """
         )
     with columns[1]:

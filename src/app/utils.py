@@ -328,6 +328,7 @@ def page_wrapper():
             unsafe_allow_html=True,
         )
         st.sidebar.info(f"Prohlížíš si archiv ročníku {event['year']}.")
+
         show_active_btn = st.sidebar.button("Zobrazit aktuální ročník")
 
         if show_active_btn:
