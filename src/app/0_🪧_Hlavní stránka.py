@@ -4,6 +4,7 @@ import streamlit as st
 from database import get_database
 import utils
 import random
+import pandas as pd
 
 st.set_page_config(
     layout="wide",
@@ -57,10 +58,13 @@ def show_overview():
 
     posts = load_posts(db)
 
-    # select 5 random posts
-
     post_gallery_cnt = min(3, len(posts))
-    posts = random.sample(posts, post_gallery_cnt)
+    if event["status"] == "past":
+        # select 3 random posts
+        posts = random.sample(posts, post_gallery_cnt)
+    else:
+        # select 3 last posts (posts is a dataframe)
+        posts = posts[:post_gallery_cnt]
 
     st.markdown(
         """
@@ -140,26 +144,38 @@ def show_overview():
         f"<h2><a href='/Týmy' target='_self' class='app-link'>Nejlepší týmy</a></h2>",
         unsafe_allow_html=True,
     )
-    teams = db.get_teams()
+    best_teams = db.get_teams_with_awards()
+    #         best_teams = {
+    #     "Máslo v Akci!": "🏆️ Body",
+    #     "888": "🏆️ Checkpoint",
+    #     "DivoZeny": "🏆️ Challenge",
+    #     "Banánový dezert": "🏆️ Reporty",
+    #     "Sandálky": "🏆️ Sebepřekonání",
+    # }
+    # # find the best teams by team_name
+    # teams = [teams[teams["team_name"] == team_name].iloc[0] for team_name in best_teams]
 
-    best_teams = {
-        "Máslo v Akci!": "🏆️ Body",
-        "888": "🏆️ Checkpoint",
-        "DivoZeny": "🏆️ Challenge",
-        "Banánový dezert": "🏆️ Reporty",
-        "Sandálky": "🏆️ Sebepřekonání",
-    }
-    # find the best teams by team_name
-    teams = [teams[teams["team_name"] == team_name].iloc[0] for team_name in best_teams]
+    if best_teams.empty:
+        # find the teams with most points
+        teams_overview = db.get_teams_overview()
+        best_teams = (
+            pd.DataFrame(teams_overview).sort_values("points", ascending=False).head(4)
+        )
 
+    best_teams = best_teams.to_dict("records")
     column_cnt = len(best_teams)
     cols = st.columns(column_cnt)
 
-    # display best teams witdh their awards
-    for col, team in zip(cols, teams):
+    # display best teams with their awards
+    for col, team in zip(cols, best_teams):
         with col:
-            category = best_teams[team["team_name"]]
-            st.markdown(f"##### {category}")
+            if team.get("award"):
+                category = team["award"]
+                st.markdown(f"##### 🏆️ {category}")
+            else:
+                points = int(team["points"])
+                st.markdown(f"##### ⭐️ {points} bodů")
+
             team_name = f"<h5>{db.get_team_link(team)}</h5>"
 
             img_path = team["team_photo"] or "static/team.png"
