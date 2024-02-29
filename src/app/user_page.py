@@ -11,7 +11,6 @@ import utils
 import tempfile
 from unidecode import unidecode
 
-print("User top")
 params = st.query_params
 event_id = utils.get_event_id(params)
 db = get_database(event_id=event_id)
@@ -19,7 +18,6 @@ db = get_database(event_id=event_id)
 
 
 def show_user_page(user, team):
-    print("User inner")
     params = st.query_params
     event_id = utils.get_event_id(params)
     db = get_database(event_id=event_id)

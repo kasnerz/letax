@@ -10,17 +10,17 @@ import utils
 import re
 from user_page import show_account_info
 
-print("Admin top")
 params = st.query_params
 event_id = utils.get_event_id(params)
 db = get_database(event_id=event_id)
 
 
 def show_admin_page(user):
-    print("Admin inner")
     params = st.query_params
     event_id = utils.get_event_id(params)
+    print(f"Getting db with event_id={event_id}")
     db = get_database(event_id=event_id)
+    print(f"Setting ss to {db.get_event()}")
     st.session_state["event"] = db.get_event()
 
     st.title("Administrace")
