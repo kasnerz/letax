@@ -285,9 +285,8 @@ def check_ram_limit():
         gc.collect()
 
 
-def page_wrapper(event=None):
-    if event is None:
-        event = st.session_state.get("event")
+def page_wrapper():
+    event = st.session_state.get("event")
 
     # currently the only way to detect streamlit theme
     bg_color = st_javascript(
@@ -339,6 +338,16 @@ def page_wrapper(event=None):
 
     # it is useful to run it here since this gets called every time
     check_ram_limit()
+
+
+def get_event_id(params):
+    if params.get("event_id"):
+        return params["event_id"]
+
+    elif st.session_state.get("event"):
+        return st.session_state["event"]["id"]
+
+    return None
 
 
 def clear_cache():

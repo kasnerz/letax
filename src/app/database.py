@@ -1502,9 +1502,9 @@ class Database:
             data_url = self.get_static_image_base64("topx.png")
 
             top_x_badge = f"<img src='data:image/png;base64,{data_url}' style='margin-top: -5px; margin-left: 5px'>"
-            return f"<a href='/Týmy?team_id={team_id}' target='_self' class='app-link' margin-top: -10px;'>{team_name}</a> {top_x_badge}"
+            return f"<a href='/Týmy?team_id={team_id}&event_id={self.event['id']}' target='_self' class='app-link' margin-top: -10px;'>{team_name}</a> {top_x_badge}"
         else:
-            return f"<a href='/Týmy?team_id={team_id}' target='_self' class='app-link' margin-top: -10px;'>{team_name}</a>"
+            return f"<a href='/Týmy?team_id={team_id}&event_id={self.event['id']}' target='_self' class='app-link' margin-top: -10px;'>{team_name}</a>"
 
     def toggle_team_visibility(self, team):
         team_id = team["team_id"]

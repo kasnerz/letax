@@ -15,14 +15,15 @@ from database import get_database
 st.set_page_config(
     page_title="O aplikaci", page_icon="static/favicon.png", layout="centered"
 )
-utils.page_wrapper()
 
-db = get_database()
+params = st.query_params
+event_id = utils.get_event_id(params)
+db = get_database(event_id=event_id)
+st.session_state["event"] = db.get_event()
+utils.page_wrapper()
 
 
 def main():
-    # st.title("Letní X-Challenge")
-
     st.title("O a(pli)k(a)ci")
 
     columns = st.columns([2, 1], gap="large")
