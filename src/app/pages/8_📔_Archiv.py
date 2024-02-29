@@ -15,9 +15,11 @@ from database import get_database
 st.set_page_config(
     page_title="Archiv", page_icon="static/favicon.png", layout="centered"
 )
+params = st.query_params
+event_id = utils.get_event_id(params)
+db = get_database(event_id=event_id)
+st.session_state["event"] = db.get_event()
 utils.page_wrapper()
-
-db = get_database()
 
 
 def main():
@@ -65,6 +67,7 @@ def main():
 
         if change_event:
             st.session_state.event = selected_event
+            st.cache_data.clear()
             st.rerun()
 
         # if back_to_active:

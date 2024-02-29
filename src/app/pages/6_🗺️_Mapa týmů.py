@@ -11,9 +11,12 @@ from streamlit_folium import folium_static
 st.set_page_config(
     page_title="Mapa týmů", page_icon="static/favicon.png", layout="wide"
 )
-utils.page_wrapper()
-event_id = st.session_state.event.get("id") if st.session_state.get("event") else None
+
+params = st.query_params
+event_id = utils.get_event_id(params)
 db = get_database(event_id=event_id)
+st.session_state["event"] = db.get_event()
+utils.page_wrapper()
 
 from map import show_last_shared_locations, show_positions, show_checkpoints, render_map
 

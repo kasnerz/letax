@@ -14,6 +14,7 @@ from unidecode import unidecode
 
 event_id = st.session_state.event.get("id") if st.session_state.get("event") else None
 db = get_database(event_id=event_id)
+st.session_state["event"] = db.get_event()
 
 
 def show_user_page(user, team):

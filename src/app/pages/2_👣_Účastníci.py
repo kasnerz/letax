@@ -18,9 +18,12 @@ from streamlit_folium import st_folium
 st.set_page_config(
     page_title="Účastníci", page_icon="static/favicon.png", layout="wide"
 )
-utils.page_wrapper()
-event_id = st.session_state.event.get("id") if st.session_state.get("event") else None
+
+params = st.query_params
+event_id = utils.get_event_id(params)
 db = get_database(event_id=event_id)
+st.session_state["event"] = db.get_event()
+utils.page_wrapper()
 
 
 def backbtn():
@@ -78,7 +81,7 @@ def get_participant_name_view(pax):
 
     if pax["registered"]:
         pax_id = pax["id"]
-        link = f"<div><a href='/Účastníci?id={pax_id}'  target='_self' class='app-link'><h5 class='app-link'>{name}</h5></a></div>"
+        link = f"<div><a href='/Účastníci?id={pax_id}&event_id={event_id}'  target='_self' class='app-link'><h5 class='app-link'>{name}</h5></a></div>"
     else:
         link = f"<div><h5>{name}</h5></div>"
 
@@ -113,7 +116,7 @@ def show_participants():
         st.info("Nikdo se zatím nezaregistroval. Přidáš se ty?")
         st.stop()
 
-    test_participants_cnt = 2
+    test_participants_cnt = 0
     pax_total = len(participants) - test_participants_cnt
     pax_registered = (
         len(participants[participants["registered"] == True]) - test_participants_cnt
@@ -147,7 +150,7 @@ def show_participants():
 
             if team_name:
                 st.markdown(
-                    f"<div style='margin-top: -15px; margin-bottom:20px;'><a href='/Týmy?team_id={team_id}' class='app-link' target='_self'>{team_name}</a></div>",
+                    f"<div style='margin-top: -15px; margin-bottom:20px;'><a href='/Týmy?team_id={team_id}&event_id={event_id}' class='app-link' target='_self'>{team_name}</a></div>",
                     unsafe_allow_html=True,
                 )
             else:
@@ -158,7 +161,7 @@ def main():
     params = st.query_params
 
     if params.get("id"):
-        pax_id = params["id"][0]
+        pax_id = params["id"]
 
         show_profile(pax_id)
         st.stop()

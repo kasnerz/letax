@@ -17,9 +17,13 @@ import folium
 from streamlit_folium import st_folium, folium_static
 
 st.set_page_config(page_title="Týmy", page_icon="static/favicon.png", layout="wide")
-utils.page_wrapper()
-event_id = st.session_state.event.get("id") if st.session_state.get("event") else None
+
+params = st.query_params
+event_id = utils.get_event_id(params)
+
 db = get_database(event_id=event_id)
+st.session_state["event"] = db.get_event()
+utils.page_wrapper()
 
 
 def backbtn():
@@ -57,6 +61,7 @@ def show_profile(team_id):
     st.button("← Týmy", on_click=backbtn)
 
     team = db.get_team_by_id(team_id)
+
     if not team:
         st.error("Tým nebyl nalezen.")
         st.stop()
@@ -92,7 +97,7 @@ def show_profile(team_id):
         else:
             for i, post in posts.iterrows():
                 # link to post
-                post_link = f"/Příspěvky?post={post['post_id']}"
+                post_link = f"/Příspěvky?post={post['post_id']}&event_id={event_id}"
                 post_date = pd.to_datetime(post["created"]).strftime("%d.%m.%Y %H:%M")
                 st.markdown(
                     f"{post_date} – <b><a href='{post_link}' target='_self'> {post['action_name']}</a><b>",
@@ -169,7 +174,7 @@ def show_profile(team_id):
 
 
 def get_member_link(member_id, member_name):
-    return f"<a href='/Účastníci?id={member_id}' class='app-link' target='_self'>{member_name}</a>"
+    return f"<a href='/Účastníci?id={member_id}&event_id={event_id}' class='app-link' target='_self'>{member_name}</a>"
 
 
 # @st.cache_data(show_spinner=False)
@@ -234,7 +239,7 @@ def main():
     params = st.query_params
 
     if params.get("team_id"):
-        team_id = params["team_id"][0]
+        team_id = params["team_id"]
 
         show_profile(team_id)
         st.stop()

@@ -12,6 +12,7 @@ from user_page import show_account_info
 
 event_id = st.session_state.event.get("id") if st.session_state.get("event") else None
 db = get_database(event_id=event_id)
+st.session_state["event"] = db.get_event()
 
 
 def show_admin_page(user):

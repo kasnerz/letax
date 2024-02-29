@@ -5,6 +5,18 @@ from database import get_database
 import utils
 
 CACHE_TTL = 60 * 60 * 24
+st.set_page_config(
+    layout="centered",
+    page_title=f"Letní X-Challenge",
+    page_icon="static/favicon.png",
+    # initial_sidebar_state="expanded",
+)
+
+params = st.query_params
+event_id = utils.get_event_id(params)
+db = get_database(event_id=event_id)
+st.session_state["event"] = db.get_event()
+utils.page_wrapper()
 
 
 def text_bubble(text, color):
@@ -16,6 +28,7 @@ def back_btn():
     params = st.query_params
     page = params.get("page", 0)
     st.query_params.page = page
+    del st.query_params["post"]
 
 
 def prev_page(page):
@@ -118,7 +131,7 @@ def shorten(s, post_id, page, max_len=250):
     if len(s) > max_len:
         return (
             s[:max_len]
-            + f"<b><a href='/Příspěvky?post={post_id}&page={page}' target='_self' class='app-link'> (...)</a></b>"
+            + f"<b><a href='/Příspěvky?post={post_id}&event_id={event_id}&page={page}' target='_self' class='app-link'> (...)</a></b>"
         )
     return s
 
@@ -213,7 +226,7 @@ def show_overview(db, page):
         post_id = post["post_id"]
         team_link = db.get_team_link(team)
 
-        link = f"<div style='margin-bottom:-10px; display:inline-block;'><h4><a href='/Příspěvky?post={post_id}&page={page}' target='_self' class='app-link'>{action_type_icon} {action_name} – {team['team_name']}</a></div>"
+        link = f"<div style='margin-bottom:-10px; display:inline-block;'><h4><a href='/Příspěvky?post={post_id}&page={page}&event_id={event_id}' target='_self' class='app-link'>{action_type_icon} {action_name} – {team['team_name']}</a></div>"
 
         st.markdown(link, unsafe_allow_html=True)
         cols = st.columns(col_layout)
@@ -247,23 +260,6 @@ def show_overview(db, page):
 
 
 def main():
-    st.set_page_config(
-        layout="centered",
-        page_title=f"Letní X-Challenge",
-        page_icon="static/favicon.png",
-        # initial_sidebar_state="expanded",
-    )
-
-    params = st.query_params
-    # event_id = params.get("event_id")
-    event_id = (
-        st.session_state.event.get("id") if st.session_state.get("event") else None
-    )
-    db = get_database(event_id=event_id)
-
-    event = db.get_event()
-    utils.page_wrapper(event)
-
     if params.get("post"):
         post = params["post"]
         show_post(db, post)

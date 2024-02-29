@@ -5,6 +5,18 @@ from database import get_database
 import utils
 import random
 
+st.set_page_config(
+    layout="wide",
+    page_title=f"Letní X-Challenge",
+    page_icon="static/favicon.png",
+    # initial_sidebar_state="expanded",
+)
+params = st.query_params
+
+event_id = utils.get_event_id(params)
+db = get_database(event_id=event_id)
+st.session_state["event"] = db.get_event()
+
 
 def back_btn():
     # delete query params
@@ -40,10 +52,6 @@ def get_member_link(member_id, member_name):
 
 
 def show_overview():
-    event_id = (
-        st.session_state.event.get("id") if st.session_state.get("event") else None
-    )
-    db = get_database(event_id=event_id)
     event = db.get_event()
     year = db.get_year()
 
@@ -186,13 +194,6 @@ def show_overview():
 
 
 def main():
-    st.set_page_config(
-        layout="wide",
-        page_title=f"Letní X-Challenge",
-        page_icon="static/favicon.png",
-        # initial_sidebar_state="expanded",
-    )
-
     utils.page_wrapper()
 
     show_overview()
