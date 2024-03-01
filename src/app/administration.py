@@ -8,7 +8,10 @@ import time
 import time
 import utils
 import re
+import shutil
+from zipfile import ZipFile
 from user_page import show_account_info
+import lxml, lxml.etree, lxml.html
 
 
 def show_admin_page(db, user):
@@ -250,6 +253,102 @@ def action_set_events(db):
         st.rerun()
 
 
+def export_full_website(events, output_dir):
+    with open("static/website_export/base.html") as f:
+        base_html = f.read()
+
+    base_html = lxml.html.fromstring(base_html)
+    event_list_element = base_html.xpath('//div[@id="event-list"]')[0]
+    # event_list_element.clear()
+    for i, event in enumerate(events):
+        if event["status"] == "draft":
+            continue
+        a = lxml.etree.Element("a", href=f"{event['year']}/index.html")
+        a.text = event["year"]
+        event_list_element.append(a)
+
+        if i < len(events) - 1:
+            # insert br
+            event_list_element.append(lxml.etree.Element("br"))
+
+    base_html = lxml.html.tostring(base_html).decode("utf-8")
+    shutil.copy("static/logo.png", os.path.join(output_dir, "logo.png"))
+
+    with open(os.path.join(output_dir, "index.html"), "w") as f:
+        f.write(base_html)
+
+    for event in events:
+        if event["status"] == "draft":
+            continue
+
+        st.write(f"Exportuji {event['year']}")
+        db_event = get_database(event_id=event["id"])
+        db_event.export_static_website(output_dir=output_dir)
+
+
+def action_export(db):
+    events = db.get_events()
+    st.caption(
+        "Zde je možné stáhnout statickou verzi webu a aktualizovat web na [letni.x-challenge.cz](https://letni.x-challenge.cz)."
+    )
+    btn_export = st.button(label="Stáhnout export lokálně")
+    btn_ftp = st.button(
+        label="Aktualizovat web na FTP",
+        help="Nahraje web na letni.x-challenge.cz",
+    )
+
+    if btn_ftp:
+        output_dir = "static/website_export/export"
+        os.makedirs(output_dir, exist_ok=True)
+        with st.status("Exportuji web"):
+            export_full_website(events=events, output_dir=output_dir)
+
+        with st.spinner("Aktualizuji web na FTP"):
+            # upload to FTP
+            utils.upload_to_ftp(
+                local_dir=output_dir,
+                remote_dir="www/subdom/letni",
+            )
+
+        utils.log(
+            f"Exported static website to HTML and uploaded to FTP",
+            level="success",
+        )
+        st.success("Web aktualizován.")
+        st.balloons()
+
+    if btn_export:
+        output_dir = "static/website_export/export"
+        os.makedirs(output_dir, exist_ok=True)
+
+        with st.status("Exportuji web"):
+            export_full_website(events=events, output_dir=output_dir)
+            tmp_filename = f"xc_export.zip"
+
+            with ZipFile(os.path.join(output_dir, tmp_filename), "w") as zip_file:
+                for root, _, files in os.walk(output_dir):
+                    for file in files:
+                        if file != tmp_filename:  # Exclude the zip file itself
+                            file_path = os.path.join(root, file)
+                            archive_name = os.path.relpath(file_path, output_dir)
+                            archive_name = os.path.join(f"web", archive_name)
+                            zip_file.write(file_path, archive_name)
+
+        utils.log(
+            f"Exported static website to HTML",
+            level="success",
+        )
+        with open(os.path.join(output_dir, tmp_filename), "rb") as f:
+            st.download_button(
+                "🔽 Stáhnout export webu",
+                f,
+                file_name=tmp_filename,
+                mime="application/zip",
+            )
+        # remove temporary folder
+        shutil.rmtree(output_dir)
+
+
 def action_restore_db(db):
     # list all the files in the "backups" folder
     backup_files = [
@@ -376,8 +475,9 @@ def show_actions(db):
                 "➕ Přidat extra účastníka",
                 "👥 Načíst účastníky z Wordpressu",
                 "ℹ️ Nastavit infotext",
-                "📅 Spravovat akce",
                 "🏆️ Nastavit výherce",
+                "📅 Spravovat akce",
+                "📤 Exportovat web",
                 "🧹 Vyčistit cache",
                 "📁 Obnovit zálohu databáze",
                 "💻️ Pokročilá nastavení",
@@ -399,6 +499,9 @@ def show_actions(db):
 
         elif action == "📅 Spravovat akce":
             ret = action_set_events(db)
+
+        elif action == "📤 Exportovat web":
+            ret = action_export(db)
 
         elif action == "📁 Obnovit zálohu databáze":
             ret = action_restore_db(db)

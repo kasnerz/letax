@@ -18,7 +18,7 @@ import pytz
 import psutil
 import gc
 from streamlit_javascript import st_javascript
-
+import paramiko
 
 TTL = 600
 
@@ -339,6 +339,51 @@ def page_wrapper():
 
     # it is useful to run it here since this gets called every time
     check_ram_limit()
+
+
+def upload_to_ftp(local_dir, remote_dir):
+    ssh = paramiko.SSHClient()
+    ssh.connect(
+        st.secrets["ftp"]["host"],
+        username=st.secrets["ftp"]["login"],
+        password=st.secrets["ftp"]["password"],
+        timeout=15,
+        allow_agent=False,
+    )
+    breakpoint()
+    # or
+
+    sftp = ssh.open_sftp()
+
+    # sftp.get(remotepath, localpath)
+    # # or
+    # sftp.put(localpath, remotepath)
+
+    # # # connect to the server
+    # transport = paramiko.Transport(
+    #     (st.secrets["ftp"]["host"], st.secrets["ftp"]["port"])
+    # )
+    # transport.banner_timeout = 60
+    # transport.connect(
+    #     username=st.secrets["ftp"]["login"], password=st.secrets["ftp"]["password"]
+    # )
+    # sftp = paramiko.SFTPClient.from_transport(transport)
+
+    # upload all the files from local_dir to remote_dir
+    progress_text = "Nahrávám soubory"
+    my_bar = st.progress(0, text=progress_text)
+
+    for root, dirs, files in os.walk(local_dir):
+        for file in files:
+            local_path = os.path.join(root, file)
+            remote_path = os.path.join(
+                remote_dir, os.path.relpath(local_path, local_dir)
+            )
+            sftp.put(local_path, remote_path)
+            my_bar.progress(0, text=f"{progress_text} {file}")
+
+    st.progress(100)
+    sftp.close()
 
 
 def get_event_id(params):
