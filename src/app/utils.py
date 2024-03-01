@@ -329,11 +329,11 @@ def page_wrapper():
         )
         st.sidebar.info(f"Prohlížíš si archiv ročníku {event['year']}.")
 
-        show_active_btn = st.sidebar.button("Zobrazit aktuální ročník")
+        # show_active_btn = st.sidebar.button("Zobrazit aktuální ročník")
 
-        if show_active_btn:
-            st.session_state.event = None
-            st.rerun()
+        # if show_active_btn:
+        #     st.session_state.event = None
+        #     st.rerun()
 
     app_logo.add_logo("static/letax.png", height=40)
 

@@ -63,10 +63,8 @@ def main():
         if change_event:
             st.session_state.event = selected_event
 
-            # clean all keys "st.session_state["{table}_data"]"
-            for key in st.session_state.keys():
-                if "_data" in key:
-                    del st.session_state[key]
+            st.success("Změna ročníku byla úspěšná.")
+            time.sleep(2)
             utils.clear_cache()
             st.rerun()
 
