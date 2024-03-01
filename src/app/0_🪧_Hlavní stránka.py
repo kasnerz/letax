@@ -43,13 +43,13 @@ def shorten(s, post_id, max_len=250):
     if len(s) > max_len:
         return (
             s[:max_len]
-            + f"<b><a href='/Příspěvky?post={post_id}' class='app-link' target='_self'> (...)</a></b>"
+            + f"<b><a href='/Příspěvky?post={post_id}&event_id={event_id}' class='app-link' target='_self'> (...)</a></b>"
         )
     return s
 
 
 def get_member_link(member_id, member_name):
-    return f"<a href='/Účastníci?id={member_id}' class='app-link' target='_self'>{member_name}</a>"
+    return f"<a href='/Účastníci?id={member_id}&event_id={event_id}' class='app-link' target='_self'>{member_name}</a>"
 
 
 def show_overview():
@@ -92,13 +92,13 @@ def show_overview():
         )
         st.divider()
         st.markdown(
-            f"<h2><a href='/Příspěvky' target='_self' class='app-link'>Příspěvky</a></h2>",
+            f"<h2><a href='/Příspěvky?event_id={event_id}' target='_self' class='app-link'>Příspěvky</a></h2>",
             unsafe_allow_html=True,
         )
     else:
         st.divider()
         st.markdown(
-            f"<h2><a href='/Příspěvky' target='_self' class='app-link'>Aktuálně</a></h2>",
+            f"<h2><a href='/Příspěvky?event_id={event_id}' target='_self' class='app-link'>Aktuálně</a></h2>",
             unsafe_allow_html=True,
         )
 
@@ -124,7 +124,7 @@ def show_overview():
             action_type_icon = "✍️"
 
         post_id = post["post_id"]
-        link = f"<div style='margin-bottom:-10px; display:inline-block;'><h4><a href='/Příspěvky?post={post_id}' target='_self' class='app-link'>{action_type_icon} {action_name} – {team['team_name']}</a></div>"
+        link = f"<div style='margin-bottom:-10px; display:inline-block;'><h4><a href='/Příspěvky?post={post_id}&event_id={event_id}' target='_self' class='app-link'>{action_type_icon} {action_name} – {team['team_name']}</a></div>"
 
         with col:
             st.markdown(link, unsafe_allow_html=True)
@@ -148,19 +148,10 @@ def show_overview():
 
     st.divider()
     st.markdown(
-        f"<h2><a href='/Týmy' target='_self' class='app-link'>Nejlepší týmy</a></h2>",
+        f"<h2><a href='/Týmy?event_id={event_id}' target='_self' class='app-link'>Nejlepší týmy</a></h2>",
         unsafe_allow_html=True,
     )
     best_teams = db.get_teams_with_awards()
-    #         best_teams = {
-    #     "Máslo v Akci!": "🏆️ Body",
-    #     "888": "🏆️ Checkpoint",
-    #     "DivoZeny": "🏆️ Challenge",
-    #     "Banánový dezert": "🏆️ Reporty",
-    #     "Sandálky": "🏆️ Sebepřekonání",
-    # }
-    # # find the best teams by team_name
-    # teams = [teams[teams["team_name"] == team_name].iloc[0] for team_name in best_teams]
 
     if best_teams.empty:
         # find the teams with most points
@@ -206,7 +197,7 @@ def show_overview():
 
     st.divider()
     st.markdown(
-        f"<h2><a href='/Mapa_týmů' target='_self' class='app-link'>Mapa týmů</a></h2>",
+        f"<h2><a href='/Mapa_týmů?event_id={event_id}' target='_self' class='app-link'>Mapa týmů</a></h2>",
         unsafe_allow_html=True,
     )
 

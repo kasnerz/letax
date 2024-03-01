@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-from database import get_database
 from datetime import datetime
 from streamlit_js_eval import get_geolocation
 import streamlit as st
@@ -11,18 +10,8 @@ import utils
 import tempfile
 from unidecode import unidecode
 
-params = st.query_params
-event_id = utils.get_event_id(params)
-db = get_database(event_id=event_id)
-# st.session_state["event"] = db.get_event()
 
-
-def show_user_page(user, team):
-    params = st.query_params
-    event_id = utils.get_event_id(params)
-    db = get_database(event_id=event_id)
-    st.session_state["event"] = db.get_event()
-
+def show_user_page(db, user, team):
     name = user["name"]
     team_name = team["team_name"] if team else "Žádný tým"
 
@@ -39,7 +28,7 @@ def show_user_page(user, team):
         )
         st.markdown("### Vytvořit tým")
 
-        show_team_info(user=user, team=team)
+        show_team_info(db=db, user=user, team=team)
         st.stop()
 
     tab_list = [
@@ -65,37 +54,37 @@ def show_user_page(user, team):
 
     if not notifications.empty:
         with tabs[0]:
-            show_notifications(notifications)
+            show_notifications(db, notifications)
 
     with tabs[0 + tab_idx]:
-        record_challenge(user)
+        record_challenge(db, user)
 
     with tabs[1 + tab_idx]:
-        record_checkpoint(user)
+        record_checkpoint(db, user)
 
     with tabs[2 + tab_idx]:
-        record_story(user)
+        record_story(db, user)
 
     with tabs[3 + tab_idx]:
-        record_location(user, team)
+        record_location(db, user, team)
 
     with tabs[4 + tab_idx]:
-        show_post_management(user, team)
+        show_post_management(db, user, team)
 
     with tabs[5 + tab_idx]:
-        show_team_info(user, team)
+        show_team_info(db, user, team)
 
     with tabs[6 + tab_idx]:
-        show_user_info(user)
+        show_user_info(db, user)
 
     with tabs[7 + tab_idx]:
-        show_account_info(user)
+        show_account_info(db, user)
 
     with tabs[8 + tab_idx]:
-        show_info_info()
+        show_info_info(db)
 
 
-def create_post(user, action_type, action, comment, files):
+def create_post(db, user, action_type, action, comment, files):
     try:
         db.save_post(
             user=user,
@@ -112,7 +101,15 @@ def create_post(user, action_type, action, comment, files):
         traceback.print_exc()
 
 
-def record_challenge(user):
+def record_challenge(db, user):
+    event = db.get_event()
+
+    if event["status"] != "active":
+        st.info(
+            f"Pro Letní X-Challenge {event['year']} momentálně nelze vkládat příspěvky."
+        )
+        return
+
     challenges = db.get_available_actions(user=user, action_type="challenge")
 
     # sort by name
@@ -137,6 +134,7 @@ def record_challenge(user):
     if submit_button:
         with st.spinner("Ukládám příspěvek..."):
             create_post(
+                db=db,
                 user=user,
                 action_type="challenge",
                 action=challenges[challenge_idx],
@@ -147,7 +145,15 @@ def record_challenge(user):
             # st.rerun()
 
 
-def record_checkpoint(user):
+def record_checkpoint(db, user):
+    event = db.get_event()
+
+    if event["status"] != "active":
+        st.info(
+            f"Pro Letní X-Challenge {event['year']} momentálně nelze vkládat příspěvky."
+        )
+        return
+
     checkpoints = db.get_available_actions(user=user, action_type="checkpoint")
 
     # sort checkpoints alphabetically
@@ -172,6 +178,7 @@ def record_checkpoint(user):
     if submit_button:
         with st.spinner("Ukládám příspěvek..."):
             create_post(
+                db=db,
                 user=user,
                 action_type="checkpoint",
                 action=checkpoints[checkpoint_idx],
@@ -181,7 +188,14 @@ def record_checkpoint(user):
             # st.rerun()
 
 
-def record_story(user):
+def record_story(db, user):
+    event = db.get_event()
+    if event["status"] != "active":
+        st.info(
+            f"Pro Letní X-Challenge {event['year']} momentálně nelze vkládat příspěvky."
+        )
+        return
+
     with st.form("story", clear_on_submit=True):
         story_title = st.text_input(
             "Nadpis:",
@@ -207,6 +221,7 @@ def record_story(user):
 
         with st.spinner("Ukládám příspěvek..."):
             create_post(
+                db=db,
                 user=user,
                 action_type="story",
                 action=story_title,
@@ -216,7 +231,14 @@ def record_story(user):
             # st.rerun()
 
 
-def record_location(user, team):
+def record_location(db, user, team):
+    event = db.get_event()
+    if event["status"] != "active":
+        st.info(
+            f"Pro Letní X-Challenge {event['year']} momentálně nelze sdílet lokaci."
+        )
+        return
+
     # cols = st.columns(3)
 
     # with cols[0]:
@@ -389,7 +411,10 @@ def record_location(user, team):
         container3.success("Nastavení uloženo!")
 
 
-def show_team_info(user, team):
+def show_team_info(db, user, team):
+    event = db.get_event()
+    fields_disabled = event["status"] != "active"
+
     team_name = team["team_name"] if team else ""
     motto = team["team_motto"] if team else ""
     web = team["team_web"] if team else ""
@@ -399,23 +424,34 @@ def show_team_info(user, team):
 
     with st.form("team_info"):
         # team name
-        team_name = st.text_input("Název týmu:", value=team_name)
+        team_name = st.text_input(
+            "Název týmu:", value=team_name, disabled=fields_disabled
+        )
 
         second_member = st.selectbox(
             "Další člen:",
             options=range(len(available_paxes)),
             format_func=lambda x: available_paxes.iloc[x]["name"],
+            disabled=fields_disabled,
         )
-        team_motto = st.text_input("Motto týmu (nepovinné):", value=motto)
-        team_web = st.text_input("Instagram, web, apod. (nepovinné):", value=web)
+        team_motto = st.text_input(
+            "Motto týmu (nepovinné):", value=motto, disabled=fields_disabled
+        )
+        team_web = st.text_input(
+            "Instagram, web, apod. (nepovinné):", value=web, disabled=fields_disabled
+        )
 
         cols = st.columns([4, 1])
         with cols[0]:
-            team_photo = st.file_uploader("Týmové foto (nepovinné):")
+            team_photo = st.file_uploader(
+                "Týmové foto (nepovinné):", disabled=fields_disabled
+            )
         with cols[1]:
             if team and team["team_photo"]:
                 st.image(db.read_image(team["team_photo"], thumbnail="150_square"))
-        submit_button = st.form_submit_button(label="Uložit tým")
+        submit_button = st.form_submit_button(
+            label="Uložit tým", disabled=fields_disabled
+        )
 
     # When the submit button is clicked
     if submit_button:
@@ -441,7 +477,7 @@ def show_team_info(user, team):
         st.rerun()
 
 
-def show_user_info(user):
+def show_user_info(db, user):
     with st.form("user_info"):
         participant = db.get_participant_by_email(user["email"])
 
@@ -480,7 +516,7 @@ def show_user_info(user):
         st.rerun()
 
 
-def show_account_info(user):
+def show_account_info(db, user):
     with st.form("account_info"):
         participant = db.am.get_user_by_email(user["email"])
         username = participant["username"]
@@ -511,12 +547,12 @@ def show_account_info(user):
         st.rerun()
 
 
-def show_info_info():
+def show_info_info(db):
     info_text = db.get_settings_value("info_text")
     st.markdown(info_text)
 
 
-def show_notifications(notifications):
+def show_notifications(db, notifications):
     for _, notification in notifications.iterrows():
         if notification.type == "varování":
             st.warning(notification.text)
@@ -526,8 +562,10 @@ def show_notifications(notifications):
             st.info(notification.text)
 
 
-def show_posts(user, team, posts):
+def show_posts(db, user, team, posts):
     # keep only the columns we want to display: action_type, action_name, comment, created, files
+    event = db.get_event()
+
     for i, post in posts.iterrows():
         col_type, col_name, col_desc, col_edit, col_delete = st.columns([1, 3, 5, 2, 2])
         with col_type:
@@ -578,8 +616,13 @@ def show_posts(user, team, posts):
                     st.rerun()
             else:
                 if st.button("📝 Upravit", key=f"edit-{post['post_id']}"):
-                    st.session_state[f"{post['post_id']}-edit-state"] = True
-                    st.rerun()
+                    if event["status"] != "active":
+                        st.toast(
+                            f"Pro Letní X-Challenge {event['year']} momentálně nelze upravovat příspěvky."
+                        )
+                    else:
+                        st.session_state[f"{post['post_id']}-edit-state"] = True
+                        st.rerun()
 
         with col_delete:
             if st.session_state.get(f"delete-{post['post_id']}-confirm") == True:
@@ -599,13 +642,18 @@ def show_posts(user, team, posts):
                     st.rerun()
             else:
                 if st.button("❌ Smazat", key=f"delete-{post['post_id']}"):
-                    st.session_state[f"delete-{post['post_id']}-confirm"] = True
-                    st.rerun()
+                    if event["status"] != "active":
+                        st.toast(
+                            f"Pro Letní X-Challenge {event['year']} momentálně nelze upravovat příspěvky."
+                        )
+                    else:
+                        st.session_state[f"delete-{post['post_id']}-confirm"] = True
+                        st.rerun()
 
         st.divider()
 
 
-def show_locations(locations):
+def show_locations(db, locations):
     # sort
     locations = locations.sort_values(by="date", ascending=False)
     for i, location in locations.iterrows():
@@ -635,7 +683,7 @@ def show_locations(locations):
         st.divider()
 
 
-def show_post_management(user, team):
+def show_post_management(db, user, team):
     st.markdown("### Moje příspěvky")
     # display the list of all the posts the team posted and a "delete" button for each of them
     posts = db.get_posts_by_team(team["team_id"])
@@ -645,7 +693,7 @@ def show_post_management(user, team):
 
     else:
         with st.expander(f"Celkem {len(posts)} příspěvků"):
-            show_posts(user, team, posts)
+            show_posts(db, user, team, posts)
     st.markdown("### Moje lokace")
 
     locations = db.get_table_as_df("locations")
@@ -656,7 +704,7 @@ def show_post_management(user, team):
 
     else:
         with st.expander(f"Celkem {len(locations)} lokací"):
-            show_locations(locations)
+            show_locations(db, locations)
 
     st.markdown("### Export dat")
 

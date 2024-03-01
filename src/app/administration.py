@@ -10,19 +10,8 @@ import utils
 import re
 from user_page import show_account_info
 
-params = st.query_params
-event_id = utils.get_event_id(params)
-db = get_database(event_id=event_id)
 
-
-def show_admin_page(user):
-    params = st.query_params
-    event_id = utils.get_event_id(params)
-    print(f"Getting db with event_id={event_id}")
-    db = get_database(event_id=event_id)
-    print(f"Setting ss to {db.get_event()}")
-    st.session_state["event"] = db.get_event()
-
+def show_admin_page(db, user):
     st.title("Administrace")
 
     (tab_notifications, tab_users, tab_db, tab_actions, tab_account) = st.tabs(
@@ -36,26 +25,26 @@ def show_admin_page(user):
     )
 
     with tab_notifications:
-        show_notification_manager()
+        show_notification_manager(db)
 
     with tab_users:
         st.markdown("#### Uživatelé")
-        show_users_editor()
+        show_users_editor(db)
         st.markdown("#### Preautorizované e-maily")
-        show_preauthorized_editor()
+        show_preauthorized_editor(db)
 
     with tab_db:
         st.markdown("#### Databáze")
-        show_db()
+        show_db(db)
 
     with tab_actions:
-        show_actions()
+        show_actions(db)
 
     with tab_account:
-        show_account_info(user)
+        show_account_info(db, user)
 
 
-def show_users_editor():
+def show_users_editor(db):
     if st.session_state.get(f"users_data") is None:
         st.session_state[f"users_data"] = db.am.get_accounts_as_df()
 
@@ -76,7 +65,7 @@ def show_users_editor():
         db.am.save_accounts_from_df(edited_df)
 
 
-def show_preauthorized_editor():
+def show_preauthorized_editor(db):
     if st.session_state.get(f"preauthorized_data") is None:
         st.session_state[f"preauthorized_data"] = db.am.get_preauthorized_emails_as_df()
 
@@ -96,7 +85,7 @@ def show_preauthorized_editor():
         db.am.save_preauthorized_emails_from_df(edited_df)
 
 
-def show_db_data_editor(table, column_config=None):
+def show_db_data_editor(db, table, column_config=None):
     if (
         st.session_state.get(f"{table}_data") is None
         or st.session_state.get(f"{table}_data_editor") is None
@@ -121,7 +110,7 @@ def show_db_data_editor(table, column_config=None):
         db.save_df_as_table(edited_df, f"{table}")
 
 
-def action_fetch_users():
+def action_fetch_users(db):
     st.caption(
         "Automaticky načte seznam přihlášených účastníků přes WooCommerce API. Účastníky lze přidat i manuálně přes Přidat extra účastníka."
     )
@@ -153,14 +142,14 @@ def action_fetch_users():
         return True
 
 
-def action_clear_cache():
+def action_clear_cache(db):
     cache_btn = st.button("Vyčistit cache", on_click=utils.clear_cache)
 
     if cache_btn:
         return True
 
 
-def action_add_participant():
+def action_add_participant(db):
     with st.form("add_extra_participant"):
         name = st.text_input("Jméno a příjmení", help="Celé jméno účastníka")
         email = st.text_input("email", help="Email účastníka")
@@ -179,22 +168,29 @@ def action_add_participant():
         return True
 
 
-def action_set_events():
+def action_set_events(db):
     events = db.get_events()
     st.markdown("#### Nastavit akci")
+
+    event_status = [
+        ("active", "Aktivní"),
+        ("draft", "Draft"),
+        ("past", "Proběhlá"),
+    ]
 
     selected_event = st.selectbox(
         "Vyber ročník", events, format_func=lambda x: x["year"]
     )
 
     with st.form("event_form"):
-        event_status_idx = ["active", "draft", "past"].index(selected_event["status"])
+        event_status_idx = [x[0] for x in event_status].index(selected_event["status"])
         event_status = st.selectbox(
             "Status",
-            options=["active", "draft", "past"],
+            options=event_status,
             key="event_status",
-            help="Aktivní akce se zobrazuje na hlavní stránce. Draft se zobrazuje jen administrátorům. Past se zobrazuje v archivu.",
+            help="Aktivní akce se zobrazuje na hlavní stránce. Akce ve stavu Draft se zobrazuje jen administrátorům. Proběhlou akci je možné zobrazit v archivu.",
             index=event_status_idx,
+            format_func=lambda x: x[1],
         )
         event_gmaps_url = st.text_input(
             "URL na Google Maps s checkpointy",
@@ -214,6 +210,7 @@ def action_set_events():
     selected_event_id = selected_event["id"]
 
     if btn_save:
+        event_status = event_status[0]
         # refuse to set two active events
         if event_status == "active":
             for event in events:
@@ -229,6 +226,7 @@ def action_set_events():
             gmaps_url=event_gmaps_url,
             product_id=event_product_id,
         )
+        utils.clear_cache()
         st.success("Nastavení uloženo.")
 
     st.markdown("#### Založit novou akci")
@@ -248,10 +246,11 @@ def action_set_events():
         st.success("Akce přidána. Nezapomeň akci nastavit jako aktivní!")
         st.balloons()
         time.sleep(2)
+        utils.clear_cache()
         st.rerun()
 
 
-def action_restore_db():
+def action_restore_db(db):
     # list all the files in the "backups" folder
     backup_files = [
         f for f in os.listdir("backups") if os.path.isfile(os.path.join("backups", f))
@@ -287,7 +286,7 @@ def action_restore_db():
         return True
 
 
-def action_set_infotext():
+def action_set_infotext(db):
     with st.form("Info stránka"):
         info_text = st.text_area(
             "Text na info stránce (pro zvýraznění můžeš využít [Markdown](https://www.markdownguide.org/cheat-sheet/)):",
@@ -304,7 +303,7 @@ def action_set_infotext():
         return True
 
 
-def action_set_awards():
+def action_set_awards(db):
     teams = sorted(
         db.get_teams().to_dict(orient="records"), key=lambda x: x["team_name"]
     )
@@ -336,7 +335,7 @@ def action_set_awards():
     st.dataframe(best_teams)
 
 
-def action_set_system_settings():
+def action_set_system_settings(db):
     with st.form("Kategorie výzev:"):
         challenge_categories = st.text_area(
             "Kategorie výzev (1 kategorie na řádek):",
@@ -367,7 +366,7 @@ def action_set_system_settings():
         return True
 
 
-def show_actions():
+def show_actions(db):
     cols = st.columns([2, 1])
 
     with cols[0]:
@@ -387,28 +386,28 @@ def show_actions():
         )
 
         if action == "➕ Přidat extra účastníka":
-            ret = action_add_participant()
+            ret = action_add_participant(db)
 
         elif action == "👥 Načíst účastníky z Wordpressu":
-            ret = action_fetch_users()
+            ret = action_fetch_users(db)
 
         elif action == "🏆️ Nastavit výherce":
-            ret = action_set_awards()
+            ret = action_set_awards(db)
 
         elif action == "🧹 Vyčistit cache":
-            ret = action_clear_cache()
+            ret = action_clear_cache(db)
 
         elif action == "📅 Spravovat akce":
-            ret = action_set_events()
+            ret = action_set_events(db)
 
         elif action == "📁 Obnovit zálohu databáze":
-            ret = action_restore_db()
+            ret = action_restore_db(db)
 
         elif action == "ℹ️ Nastavit infotext":
-            ret = action_set_infotext()
+            ret = action_set_infotext(db)
 
         elif action == "💻️ Pokročilá nastavení":
-            ret = action_set_system_settings()
+            ret = action_set_system_settings(db)
 
     if ret is True:
         utils.clear_cache()
@@ -417,7 +416,7 @@ def show_actions():
         st.rerun()
 
 
-def show_db():
+def show_db(db):
     # selectbox
     table = st.selectbox(
         "Tabulka",
@@ -434,6 +433,7 @@ def show_db():
 
     if table == "🧒 Účastníci":
         show_db_data_editor(
+            db=db,
             table="participants",
             column_config={
                 "id": st.column_config.Column(width="small"),
@@ -441,10 +441,11 @@ def show_db():
             },
         )
     elif table == "🧑‍🤝‍🧑 Týmy":
-        show_db_data_editor(table="teams")
+        show_db_data_editor(db=db, table="teams")
 
     elif table == "🏆 Výzvy":
         show_db_data_editor(
+            db=db,
             table="challenges",
             column_config={
                 "points": st.column_config.NumberColumn(min_value=0),
@@ -456,6 +457,7 @@ def show_db():
 
     elif table == "📍 Checkpointy":
         show_db_data_editor(
+            db=db,
             table="checkpoints",
             column_config={
                 "points": st.column_config.NumberColumn(min_value=0),
@@ -464,6 +466,7 @@ def show_db():
 
     elif table == "📝 Příspěvky":
         show_db_data_editor(
+            db=db,
             table="posts",
             column_config={
                 "action_type": st.column_config.SelectboxColumn(
@@ -473,10 +476,10 @@ def show_db():
         )
 
     elif table == "🗺️ Lokace":
-        show_db_data_editor(table="locations")
+        show_db_data_editor(db=db, table="locations")
 
 
-def show_notification_manager():
+def show_notification_manager(db):
     # TODO more user friendly
     st.markdown("#### Oznámení")
 
@@ -485,6 +488,7 @@ def show_notification_manager():
     )
 
     show_db_data_editor(
+        db=db,
         table="notifications",
         column_config={
             "type": st.column_config.SelectboxColumn(

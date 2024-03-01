@@ -83,6 +83,10 @@ def show_positions(db):
 
 def show_last_shared_locations(db, last_locations):
     # show 5 last shared locations
+    if last_locations.empty:
+        st.info("Žádný tým nezaznamenal svoji polohu")
+        st.stop()
+
     last_locations = last_locations.sort_values(by="date", ascending=False)
 
     st.subheader("Nedávné aktualizace")

@@ -27,7 +27,8 @@ def back_btn():
     # delete query params
     params = st.query_params
     page = params.get("page", 0)
-    st.query_params.page = page
+    st.query_params["page"] = page
+    st.query_params["event_id"] = event_id
     del st.query_params["post"]
 
 
