@@ -51,6 +51,19 @@
         a {
             color: #31278F;
         }
+
+        .event-list {
+            max-width: 500px;
+            word-wrap: break-word;
+        }
+
+        .event-list a {
+            color: #31278F;
+            margin-right: 10px;
+            margin-left: 10px;
+            font-size: 30px;
+            font-weight: 700;
+        }
     </style>
     <div class="container">
         <!-- show logo.png -->
@@ -58,13 +71,12 @@
         <h1>Letní X-Challenge</h1>
 
         <p>Zde najdeš archiv příspěvků z předešlých ročníků <a href="https://x-challenge.cz/letni/">Letní
-                X-Challenge</a> od roku 2023.</p>
+                X-Challenge</a> od roku 2022.</p>
 
-        <a>
-            <a href="2023/index.html">
-                <h2>2023</h2>
-            </a>
-        </a>
+        <p>
+        <div class="event-list" id="event-list">
+        </div>
+        </p>
 
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"

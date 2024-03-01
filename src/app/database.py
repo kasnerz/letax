@@ -723,19 +723,19 @@ class Database:
                 href = f"{aws_prefix}/{file['path']}"
 
             if file_type == "image":
-                photos_html += f'<div class="col-3"><a href="{href}" data-toggle="lightbox" data-gallery="{post["post_id"]}"><img src="{href}" class="image img-thumbnail"></a></div>'
+                photos_html += f'<div class="col-3"><a href="{href}" data-toggle="lightbox" data-gallery="{post["post_id"]}"><img data-src="{href}" class="image img-thumbnail lazyload"></a></div>'
             else:
-                photos_html += f'<div class="col-3"><a href="{href}" data-toggle="lightbox" data-gallery="{post["post_id"]}"><video src="{href}" controls class="video"></video></a></div>'
+                photos_html += f'<div class="col-3"><a href="{href}" data-toggle="lightbox" data-gallery="{post["post_id"]}"><video src="{href}" preload="none" controls class="video"></video></a></div>'
 
         photos_html += "</div></div>"
 
         return f"""
-                <div class="card mb-3">
+                <div class="card mb-3 lazyload">
                     <div class="card-header">
                     <h3>{post_title}</h3>
                     <h6>{post_datetime}</h6>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body ">
                     <p class="card-text">{description}</p>
                     {photos_html}
                     </div>
@@ -763,6 +763,8 @@ class Database:
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <!-- Back button -->
+            <a href="../../index.html" class="btn btn-outline-dark" style="margin-top: 20px;">← Zpět na výsledky</a>
             <title>{title}</title>
             <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css">
             <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&display=swap">
@@ -775,6 +777,10 @@ class Database:
             </div>
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
             <script src="https://cdn.jsdelivr.net/npm/bs5-lightbox@1.8.3/dist/index.bundle.min.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/lazyload@2.0.0-rc.2/lazyload.js"></script>
+            <script>
+            lazyload();
+            </script>
         </body>
         </html>
         """
@@ -852,6 +858,7 @@ class Database:
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <a href="../index.html" class="btn btn-outline-dark" style="margin-top: 20px;">← Zpět na seznam akcí</a>
             <title>{title}</title>
             <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" crossorigin="anonymous">
             <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&display=swap">
@@ -904,31 +911,25 @@ class Database:
         with open(os.path.join(output_dir, "index.html"), "w") as f:
             f.write(html_code)
 
-    def export_static_website(self, output_dir, xc_year):
+    def export_static_website(self, output_dir):
         aws_prefix = "https://s3.eu-west-3.amazonaws.com/xchallengecz"
         teams = self.get_teams_overview()
-        os.makedirs(os.path.join(output_dir, xc_year, "teams"), exist_ok=True)
 
-        with open("static/website_export/base.html") as f:
-            base_html = f.read()
+        event_id = self.event["id"]
+        xc_year = self.event["year"]
 
-        # copy logo.png
-        shutil.copy("static/logo.png", os.path.join(output_dir, "logo.png"))
-
-        with open(os.path.join(output_dir, "index.html"), "w") as f:
-            f.write(base_html)
+        os.makedirs(os.path.join(output_dir, event_id, "teams"), exist_ok=True)
 
         for i, team in enumerate(teams):
-            team_out_dir = os.path.join(output_dir, xc_year, "teams", team["team_id"])
+            team_out_dir = os.path.join(output_dir, event_id, "teams", team["team_id"])
             os.makedirs(team_out_dir, exist_ok=True)
 
             self.generate_team_posts_html(
-                team, team_out_dir, xc_year, aws_prefix=aws_prefix
+                team, team_out_dir, event_id, aws_prefix=aws_prefix
             )
 
-        self.generate_static_page(os.path.join(output_dir, xc_year), teams, xc_year)
+        self.generate_static_page(os.path.join(output_dir, event_id), teams, xc_year)
         utils.log(f"Exported static website to {output_dir}", level="success")
-        return output_dir
 
     def get_team_by_id(self, team_id):
         # retrieve team from the database, return a single Python object or None
@@ -1744,7 +1745,7 @@ if __name__ == "__main__":
     parser.add_argument("--fill_addresses", action="store_true")
     parser.add_argument("--insert_data_2022", action="store_true")
     parser.add_argument("--reslugify", action="store_true")
-    parser.add_argument("--export_static_website", action="store_true")
+    # parser.add_argument("--export_static_website", action="store_true")
 
     args = parser.parse_args()
 
@@ -1769,9 +1770,10 @@ if __name__ == "__main__":
             wc_participants = json.load(f)
             db.add_participants(wc_participants)
 
-    elif args.export_static_website:
-        print("Exporting static website...")
-        db.export_static_website("exported_website", "2022")
+    # elif args.export_static_website:
+    #     print("Exporting static website...")
+    #     db = Database(event_id="2022")
+    #     db.export_static_website("exported_website", "2022")
 
     elif args.fill_addresses:
         print("Filling addresses...")
