@@ -12,23 +12,26 @@ import shutil
 from zipfile import ZipFile
 from user_page import show_account_info
 import lxml, lxml.etree, lxml.html
+from slugify import slugify
 
 
 def show_admin_page(db, user):
     st.title("Administrace")
 
-    (tab_notifications, tab_users, tab_db, tab_actions, tab_account) = st.tabs(
+    (tab_actions, tab_users, tab_account) = st.tabs(
         [
-            "🍍 Oznámení",
+            "👨‍🔧 Nastavení",
             "👤 Uživatelé",
-            "✏️ Databáze",
-            "⚙️ Akce a nastavení",
+            # "✏️ Databáze",
             "🔑 Účet",
         ]
     )
 
-    with tab_notifications:
-        show_notification_manager(db)
+    # with tab_notifications:
+    #     show_notification_manager(db)
+
+    with tab_actions:
+        show_actions(db)
 
     with tab_users:
         st.markdown("#### Uživatelé")
@@ -36,12 +39,9 @@ def show_admin_page(db, user):
         st.markdown("#### Preautorizované e-maily")
         show_preauthorized_editor(db)
 
-    with tab_db:
-        st.markdown("#### Databáze")
-        show_db(db)
-
-    with tab_actions:
-        show_actions(db)
+    # with tab_db:
+    #     st.markdown("#### Databáze")
+    #     show_db(db)
 
     with tab_account:
         show_account_info(db, user)
@@ -113,9 +113,32 @@ def show_db_data_editor(db, table, column_config=None):
         db.save_df_as_table(edited_df, f"{table}")
 
 
-def action_fetch_users(db):
+def action_manage_users(db):
+    st.markdown("#### Přidat extra účastníka")
     st.caption(
-        "Automaticky načte seznam přihlášených účastníků přes WooCommerce API. Účastníky lze přidat i manuálně přes Přidat extra účastníka."
+        "Zde můžeš přidat do letošní soutěže účastníka, který se nenahrál automaticky z webu."
+    )
+
+    with st.form("add_extra_participant"):
+        name = st.text_input("Jméno a příjmení", help="Celé jméno účastníka")
+        email = st.text_input("email", help="Email účastníka")
+        add_pax_submit_button = st.form_submit_button(label="Přidat účastníka")
+
+    if add_pax_submit_button:
+        if not email or not name:
+            st.error("Musíš vyplnit email i jméno")
+            st.stop()
+
+        with st.spinner("Přidávám účastníka"):
+            db.add_extra_participant(email=email, name=name)
+            utils.clear_cache()
+
+        st.success("Účastník přidán")
+        return True
+
+    st.markdown("#### Načíst účastníky z WooCommerce")
+    st.caption(
+        "Zde můžeš načíst seznam přihlášených účastníků přes WooCommerce API. Zkontroluj předtím, že je u letošní akce správně nastavené product ID."
     )
 
     with st.form("fetch_wc_users"):
@@ -145,37 +168,397 @@ def action_fetch_users(db):
         return True
 
 
-def action_clear_cache(db):
-    st.caption(
-        "Vyčistit cache může pomoci v případě, že se některé údaje v appce (například uživatelské účty) nedaří aktualizovat."
+def action_manage_notifications(db):
+    notifications = db.get_table_as_df("notifications")
+
+    st.markdown("#### Upravit oznámení")
+
+    notification_list = notifications.to_dict(orient="records")
+    notification_categories = ["info", "varování", "důležité", "skryté"]
+    default_name = "[nové oznámení]"
+
+    new_checkpoint = {
+        "id": utils.generate_uuid(),
+        "name": default_name,
+        "text": "",
+        "type": notification_categories[0],
+    }
+    notification_list.insert(0, new_checkpoint)
+
+    for i, notification in enumerate(notification_list):
+        if notification.get("name") is None:
+            notification_list[i]["name"] = f"Oznámení #{i+1}"
+
+    notification = st.selectbox(
+        "Vyber oznámení",
+        notification_list,
+        format_func=lambda x: f"{x['name']}",
     )
-    cache_btn = st.button("Vyčistit cache", on_click=utils.clear_cache)
+    with st.form("notification_form"):
+        name = st.text_input("Název", value=notification.get("name", ""))
+        text = st.text_area("Text oznámení", value=notification["text"])
+        category = st.selectbox(
+            "Kategorie",
+            notification_categories,
+            index=notification_categories.index(notification["type"]),
+        )
+        cols = st.columns([1, 6, 1])
+        submit_button = cols[0].form_submit_button(label="Uložit")
+        delete_button = cols[2].form_submit_button(label="Smazat")
 
-    if cache_btn:
-        return True
-
-
-def action_add_participant(db):
-    st.caption(
-        "Zde můžeš přidat do letošní soutěže účastníka, který se nenahrál automaticky z webu."
-    )
-
-    with st.form("add_extra_participant"):
-        name = st.text_input("Jméno a příjmení", help="Celé jméno účastníka")
-        email = st.text_input("email", help="Email účastníka")
-        add_pax_submit_button = st.form_submit_button(label="Přidat účastníka")
-
-    if add_pax_submit_button:
-        if not email or not name:
-            st.error("Musíš vyplnit email i jméno")
+    if submit_button:
+        if name == default_name:
+            st.error(f"Název oznámení nesmí být {default_name}")
             st.stop()
 
-        with st.spinner("Přidávám účastníka"):
-            db.add_extra_participant(email=email, name=name)
-            utils.clear_cache()
-
-        st.success("Účastník přidán")
+        db.update_or_create_notification(
+            notification_id=notification["id"],
+            name=name,
+            text=text,
+            category=category,
+        )
+        st.success("Oznámení uloženo")
         return True
+
+    if delete_button:
+        if name == default_name:
+            st.error("Vyber nejprve nějaké oznámení.")
+            st.stop()
+
+        db.delete_notification(notification["id"])
+        st.success("Oznámení smazáno")
+        return True
+
+    st.markdown("#### Aktuální oznámení")
+    st.dataframe(notifications)
+
+
+def action_manage_challenges(db):
+    challenges = db.get_table_as_df("challenges")
+    challenges = challenges.sort_values(by="name")
+    default_name = "[založit novou]"
+
+    categories = db.get_challenge_categories()
+
+    required_columns = [
+        "name",
+        "description",
+        "category",
+        "points",
+    ]
+    required_columns_str = ", ".join([f"`{col}`" for col in required_columns])
+    st.markdown("#### Importovat výzvy")
+
+    with st.form("import_checkpoints"):
+        st.caption(
+            f"Importovat můžeš výzvy ze souboru CSV nebo XLSX. Připrav soubor, který bude obsahovat sloupce: {required_columns_str}. V souboru by neměly být žádné přebytečné řádky ani sloupce. Importem se **přepíší existující výzvy**!"
+        )
+        uploaded_file = st.file_uploader(
+            "Vyber soubor s výzvami (CSV / XLSX)",
+            type=["csv", "xlsx"],
+            help=f"Soubor musí obsahovat sloupce: {required_columns_str}.",
+        )
+        import_button = st.form_submit_button(label="Importovat")
+
+    if import_button:
+        if uploaded_file is None:
+            st.error("Vyber soubor s výzvami")
+            st.stop()
+
+        if uploaded_file.type == "text/csv":
+            df = pd.read_csv(uploaded_file)
+        else:
+            df = pd.read_excel(uploaded_file)
+
+        for col in required_columns:
+            if col not in df.columns:
+                st.error(
+                    f"Soubor musí obsahovat sloupec `{col}`. Nalezeno: {df.columns}"
+                )
+                st.stop()
+
+        # drop all rows that are completely empty
+        df = df.dropna(how="all")
+
+        # strip all whitespace for name, desciption and challenge
+        df["name"] = df["name"].str.strip()
+        df["description"] = df["description"].str.strip()
+
+        for i, row in df.iterrows():
+            # name, description must not be empty
+            if pd.isna(row["name"]) or pd.isna(row["description"]):
+                st.error(
+                    f"Řádek {i+2}: Sloupce `name` a `description` nesmí být prázdné."
+                )
+                st.stop()
+
+            # try to map the category to existing ones
+            row_category_minimal = row["category"].lower().strip()
+            for j, cat in enumerate(categories):
+                cat = cat.lower()
+                if row_category_minimal in cat:
+                    df.at[i, "category"] = categories[j]
+                    break
+            else:
+                st.warning(
+                    f"Řádek {i+2}: Kategorii `{row['category']}` nemáme v databázi. Zkontroluj, zda je vše správně."
+                )
+
+            # if any column is empty, warn
+            for col in required_columns:
+                if pd.isna(row[col]):
+                    st.warning(f"Řádek {i+2}: Sloupec `{col}` je prázdný, je to záměr?")
+
+        try:
+            # for points replace all NaNs with zeros
+            df["points"] = df["points"].fillna(0)
+            # convert all points to floats
+            df["points"] = df["points"].astype(float)
+        except:
+            st.error(
+                "Něco se nepovedlo při konverzi bodů na čísla. Zkontroluj, že všechny buňky s body obsahují platná čísla nebo jsou prázdné."
+            )
+            st.stop()
+
+        with st.spinner("Importuji výzvy"):
+            db.import_challenges(df)
+
+        st.success("Výzvy importovány")
+        time.sleep(2)
+        st.rerun()
+
+    st.markdown("#### Upravit výzvu")
+
+    challenge_list = challenges.to_dict(orient="records")
+
+    new_checkpoint = {
+        "name": default_name,
+        "description": "",
+        "category": categories[0],
+        "points": 0,
+    }
+    challenge_list.insert(0, new_checkpoint)
+
+    challenge = st.selectbox(
+        "Vyber výzvu",
+        challenge_list,
+        format_func=lambda x: f"{x['name']}",
+    )
+    with st.form("challenge_form"):
+        name = st.text_input("Název", value=challenge["name"])
+        description = st.text_area("Popis", value=challenge["description"])
+        category = st.selectbox(
+            "Kategorie",
+            categories,
+            index=categories.index(challenge["category"])
+            if challenge["category"] in categories
+            else 0,
+        )
+        points = st.number_input("Body", value=challenge["points"])
+
+        cols = st.columns([1, 6, 1])
+        submit_button = cols[0].form_submit_button(label="Uložit")
+        delete_button = cols[2].form_submit_button(label="Smazat")
+
+    if submit_button:
+        if name == default_name:
+            st.error(f'Název výzvy nesmí být "{default_name}"')
+            st.stop()
+
+        db.update_or_create_challenge(
+            challenge_id=slugify(name),
+            name=name,
+            description=description,
+            category=category,
+            points=points,
+        )
+        st.success("Výzva uložena")
+        return True
+
+    if delete_button:
+        if name == default_name:
+            st.error("Vyber nejprve nějakou z výzev.")
+            st.stop()
+
+        db.delete_challenge(challenge["id"])
+        st.success("Výzva smazána")
+        return True
+
+    st.markdown("#### Aktuální výzvy")
+    st.dataframe(challenges)
+
+
+def action_manage_checkpoints(db):
+    checkpoints = db.get_table_as_df("checkpoints")
+    checkpoints = checkpoints.sort_values(by="name")
+    default_name = "[založit nový]"
+
+    required_columns = [
+        "name",
+        "description",
+        "challenge",
+        "gps",
+        "points",
+        "points_challenge",
+    ]
+    required_columns_str = ", ".join([f"`{col}`" for col in required_columns])
+    st.markdown("#### Importovat checkpointy")
+
+    with st.form("import_checkpoints"):
+        st.caption(
+            f'Importovat můžeš checkpointy ze souboru CSV nebo XLSX. Připrav soubor, který bude obsahovat sloupce: {required_columns_str}. Sloupec `gps` by měl obsahovat souřadnice ve tvaru "50.123, 15.456" (s libovolným počtem desetinných míst). V souboru by neměly být žádné přebytečné řádky ani sloupce. Importem se **přepíší existující checkpointy**!'
+        )
+
+        uploaded_file = st.file_uploader(
+            "Vyber soubor s checkpointy (CSV / XLSX)",
+            type=["csv", "xlsx"],
+            help=f"Soubor musí obsahovat sloupce: {required_columns_str}.",
+        )
+        import_button = st.form_submit_button(label="Importovat")
+
+    if import_button:
+        if uploaded_file is None:
+            st.error("Vyber soubor s checkpointy")
+            st.stop()
+
+        if uploaded_file.type == "text/csv":
+            df = pd.read_csv(uploaded_file)
+        else:
+            df = pd.read_excel(uploaded_file)
+
+        for col in required_columns:
+            if col not in df.columns:
+                st.error(f"Soubor musí obsahovat sloupec `{col}`.")
+                st.stop()
+
+        # drop all rows that are completely empty
+        df = df.dropna(how="all")
+
+        # remove any spaces in the `gps` column
+        df["gps"] = df["gps"].str.replace(" ", "")
+
+        # if any GPS coordinates are in the format "12.34N, 56.78E", convert them to "12.34, 56.78" (for W and S we need to prefix the number with a minus sign)
+        df["gps"] = df["gps"].str.replace(r"(\d+\.\d+)N", r"\1", regex=True)
+        df["gps"] = df["gps"].str.replace(r"(\d+\.\d+)E", r"\1", regex=True)
+        df["gps"] = df["gps"].str.replace(r"(\d+\.\d+)W", r"-\1", regex=True)
+        df["gps"] = df["gps"].str.replace(r"(\d+\.\d+)S", r"-\1", regex=True)
+
+        # strip all whitespace for name, desciption and challenge
+        df["name"] = df["name"].str.strip()
+        df["description"] = df["description"].str.strip()
+        df["challenge"] = df["challenge"].str.strip()
+
+        for i, row in df.iterrows():
+            # name, description and GPS must not be empty
+            if (
+                pd.isna(row["name"])
+                or pd.isna(row["description"])
+                or pd.isna(row["gps"])
+            ):
+                st.error(
+                    f"Řádek {i+2}: Sloupce `name`, `description` a `gps` nesmí být prázdné."
+                )
+                st.stop()
+
+            if not re.match(r"^-?\d+\.\d+,-?\d+\.\d+$", row["gps"]):
+                st.error(
+                    f"Řádek {i+2}: Sloupec `gps` musí obsahovat souřadnice ve tvaru '50.123, 15.456'. Nalezeno: {row['gps']}"
+                )
+                st.stop()
+
+            # if any column is empty, warn
+            for col in required_columns:
+                if pd.isna(row[col]):
+                    st.warning(f"Řádek {i+2}: Sloupec `{col}` je prázdný, je to záměr?")
+        try:
+            # for points replace all NaNs with zeros
+            df["points"] = df["points"].fillna(0)
+            df["points_challenge"] = df["points_challenge"].fillna(0)
+
+            # convert all points and points_challenge to floats
+            df["points"] = df["points"].astype(float)
+            df["points_challenge"] = df["points_challenge"].astype(float)
+        except:
+            st.error(
+                "Něco se nepovedlo při konverzi bodů na čísla. Zkontroluj, že všechny buňky s body obsahují platná čísla nebo jsou prázdné."
+            )
+            st.stop()
+
+        with st.spinner("Importuji checkpointy"):
+            db.import_checkpoints(df)
+
+        st.success("Checkpointy importovány")
+        time.sleep(2)
+        st.rerun()
+
+    st.markdown("#### Upravit checkpoint")
+
+    checkpoint_list = checkpoints.to_dict(orient="records")
+
+    new_checkpoint = {
+        "id": utils.generate_uuid(),
+        "name": default_name,
+        "description": "",
+        "challenge": "",
+        "latitude": "",
+        "longitude": "",
+        "points": 0,
+        "points_challenge": 0,
+    }
+    checkpoint_list.insert(0, new_checkpoint)
+
+    checkpoint = st.selectbox(
+        "Vyber checkpoint",
+        checkpoint_list,
+        format_func=lambda x: f"{x['name']}",
+    )
+    with st.form("checkpoint_form"):
+        name = st.text_input("Název", value=checkpoint["name"])
+        description = st.text_area("Popis", value=checkpoint["description"])
+        challenge = st.text_area("Výzva", value=checkpoint["challenge"])
+        lat = st.text_input("Zeměpisná šířka", value=checkpoint["latitude"])
+        lon = st.text_input("Zeměpisná délka", value=checkpoint["longitude"])
+        points = st.number_input("Body", value=checkpoint["points"])
+
+        points_challenge = st.number_input(
+            "Body za výzvu", value=checkpoint.get("points_challenge", 0)
+        )
+        cols = st.columns([1, 6, 1])
+        submit_button = cols[0].form_submit_button(label="Uložit")
+        delete_button = cols[2].form_submit_button(label="Smazat")
+
+    if submit_button:
+        if name == default_name:
+            st.error(f'Název checkpointu nesmí být "{default_name}"')
+            st.stop()
+        if not re.match(r"^\d+\.\d+$", lat) or not re.match(r"^\d+\.\d+$", lon):
+            st.error("Zeměpisná šířka a délka musí být ve formátu 49.123456")
+            st.stop()
+
+        db.update_or_create_checkpoint(
+            checkpoint_id=checkpoint["id"],
+            name=name,
+            description=description,
+            challenge=challenge,
+            lat=lat,
+            lon=lon,
+            points=points,
+            points_challenge=points_challenge,
+        )
+        st.success("Checkpoint uložen")
+        return True
+
+    if delete_button:
+        if name == default_name:
+            st.error("Vyber nejprve nějaký z checkpointů.")
+            st.stop()
+
+        db.delete_checkpoint(checkpoint["id"])
+        st.success("Checkpoint smazán")
+        return True
+
+    st.markdown("#### Aktuální checkpointy")
+    st.dataframe(checkpoints)
 
 
 def action_set_events(db):
@@ -269,7 +652,9 @@ def action_set_events(db):
                 st.stop()
 
         db.create_new_event(year=new_year)
-        st.success("Akce přidána. Nezapomeň akci nastavit jako aktivní!")
+        st.success(
+            "Akce přidána jako připravovaná. Nezapomeň akci nastavit jako probíhající!"
+        )
         st.balloons()
         time.sleep(2)
         utils.clear_cache()
@@ -457,18 +842,26 @@ def action_set_awards(db):
 
 
 def action_set_system_settings(db):
-    with st.form("Kategorie výzev:"):
-        challenge_categories = st.text_area(
-            "Kategorie výzev (1 kategorie na řádek):",
-            value="\n".join(db.get_settings_value("challenge_categories")),
-        )
-        submit_button_categories = st.form_submit_button(label="Nastavit")
+    st.markdown("#### Exportovat web")
+    action_export(db)
 
-    if submit_button_categories:
-        challenge_categories = challenge_categories.split("\n")
-        db.set_settings_value("challenge_categories", challenge_categories)
+    st.markdown("#### Vyčistit cache")
+    st.caption(
+        "Vyčistit cache může pomoci v případě, že se některé údaje v appce (například uživatelské účty) nedaří aktualizovat."
+    )
+    cache_btn = st.button("Vyčistit cache", on_click=utils.clear_cache)
+
+    if cache_btn:
         return True
 
+    st.markdown("#### Obnovit databázi ze zálohy")
+    action_restore_db(db)
+
+    st.markdown("#### Nastavení souborového systému")
+
+    st.caption(
+        "Zde můžeš nastavit, zda se mají soubory ukládat na lokální disk nebo do AWS S3."
+    )
     with st.form("Filesystem:"):
         filesystem = st.selectbox(
             "Filesystém",
@@ -494,41 +887,37 @@ def show_actions(db):
         action = st.selectbox(
             "Akce:",
             [
-                "➕ Přidat extra účastníka",
-                "👥 Načíst účastníky z Wordpressu",
-                "ℹ️ Nastavit infotext",
-                "🏆️ Nastavit výherce",
-                "📅 Spravovat akce",
-                "📤 Exportovat web",
-                "🧹 Vyčistit cache",
-                "📁 Obnovit zálohu databáze",
+                "🍍 Oznámení",
+                "💪 Výzvy",
+                "📌 Checkpointy",
+                "📅 Akce",
+                "👥 Účastníci",
+                "ℹ️ Infotext",
+                "🏆️ Výherci",
                 "💻️ Pokročilá nastavení",
             ],
             label_visibility="hidden",
         )
 
-        if action == "➕ Přidat extra účastníka":
-            ret = action_add_participant(db)
-
-        elif action == "👥 Načíst účastníky z Wordpressu":
-            ret = action_fetch_users(db)
-
-        elif action == "🏆️ Nastavit výherce":
-            ret = action_set_awards(db)
-
-        elif action == "🧹 Vyčistit cache":
-            ret = action_clear_cache(db)
-
-        elif action == "📅 Spravovat akce":
+        if action == "📅 Akce":
             ret = action_set_events(db)
 
-        elif action == "📤 Exportovat web":
-            ret = action_export(db)
+        elif action == "💪 Výzvy":
+            ret = action_manage_challenges(db)
 
-        elif action == "📁 Obnovit zálohu databáze":
-            ret = action_restore_db(db)
+        elif action == "📌 Checkpointy":
+            ret = action_manage_checkpoints(db)
 
-        elif action == "ℹ️ Nastavit infotext":
+        elif action == "🍍 Oznámení":
+            ret = action_manage_notifications(db)
+
+        elif action == "👥 Účastníci":
+            ret = action_manage_users(db)
+
+        elif action == "🏆️ Výherci":
+            ret = action_set_awards(db)
+
+        elif action == "ℹ️ Infotext":
             ret = action_set_infotext(db)
 
         elif action == "💻️ Pokročilá nastavení":
@@ -541,83 +930,91 @@ def show_actions(db):
         st.rerun()
 
 
-def show_db(db):
-    # selectbox
-    table = st.selectbox(
-        "Tabulka",
-        [
-            "🧒 Účastníci",
-            "🧑‍🤝‍🧑 Týmy",
-            "🏆 Výzvy",
-            "📍 Checkpointy",
-            "📝 Příspěvky",
-            "🗺️ Lokace",
-            "🍍 Oznámení",
-        ],
-    )
+# def show_db(db):
+#     # selectbox
+#     table = st.selectbox(
+#         "Tabulka",
+#         [
+#             "🧒 Účastníci",
+#             "🧑‍🤝‍🧑 Týmy",
+#             "🏆 Výzvy",
+#             "📍 Checkpointy",
+#             "📝 Příspěvky",
+#             "🗺️ Lokace",
+#             "🍍 Oznámení",
+#         ],
+#     )
 
-    if table == "🧒 Účastníci":
-        show_db_data_editor(
-            db=db,
-            table="participants",
-            column_config={
-                "id": st.column_config.Column(width="small"),
-                "email": st.column_config.Column(width="large"),
-            },
-        )
-    elif table == "🧑‍🤝‍🧑 Týmy":
-        show_db_data_editor(db=db, table="teams")
+#     if table == "🧒 Účastníci":
+#         show_db_data_editor(
+#             db=db,
+#             table="participants",
+#             column_config={
+#                 "id": st.column_config.Column(width="small"),
+#                 "email": st.column_config.Column(width="large"),
+#             },
+#         )
+#     elif table == "🧑‍🤝‍🧑 Týmy":
+#         show_db_data_editor(db=db, table="teams")
 
-    elif table == "🏆 Výzvy":
-        show_db_data_editor(
-            db=db,
-            table="challenges",
-            column_config={
-                "points": st.column_config.NumberColumn(min_value=0),
-                "category": st.column_config.SelectboxColumn(
-                    options=db.get_settings_value("challenge_categories"),
-                ),
-            },
-        )
+#     elif table == "🏆 Výzvy":
+#         pass
+#         # 🌞 denní výzva
+#         # 🤗 lidská interakce
+#         # 💙 zlepšení světa
+#         # 👣 dobrodružství
+#         # 🏋️ fyzické překonání
+#         # 📝 reportování
+#         # 🧘 nitrozpyt
+#         # show_db_data_editor(
+#         #     db=db,
+#         #     table="challenges",
+#         #     column_config={
+#         #         "points": st.column_config.NumberColumn(min_value=0),
+#         #         "category": st.column_config.SelectboxColumn(
+#         #             options=db.get_settings_value("challenge_categories"),
+#         #         ),
+#         #     },
+#         # )
 
-    elif table == "📍 Checkpointy":
-        show_db_data_editor(
-            db=db,
-            table="checkpoints",
-            column_config={
-                "points": st.column_config.NumberColumn(min_value=0),
-            },
-        )
+#     elif table == "📍 Checkpointy":
+#         show_db_data_editor(
+#             db=db,
+#             table="checkpoints",
+#             column_config={
+#                 "points": st.column_config.NumberColumn(min_value=0),
+#             },
+#         )
 
-    elif table == "📝 Příspěvky":
-        show_db_data_editor(
-            db=db,
-            table="posts",
-            column_config={
-                "action_type": st.column_config.SelectboxColumn(
-                    options=["challenge", "checkpoint", "note"]
-                ),
-            },
-        )
+#     elif table == "📝 Příspěvky":
+#         show_db_data_editor(
+#             db=db,
+#             table="posts",
+#             column_config={
+#                 "action_type": st.column_config.SelectboxColumn(
+#                     options=["challenge", "checkpoint", "note"]
+#                 ),
+#             },
+#         )
 
-    elif table == "🗺️ Lokace":
-        show_db_data_editor(db=db, table="locations")
+#     elif table == "🗺️ Lokace":
+#         show_db_data_editor(db=db, table="locations")
 
 
-def show_notification_manager(db):
-    # TODO more user friendly
-    st.markdown("#### Oznámení")
+# def show_notification_manager(db):
+#     # TODO more user friendly
+#     st.markdown("#### Oznámení")
 
-    st.caption(
-        "Tato oznámení se zobrazí účastníkům na jejich stránce účastníka. Typy oznámení: info, varování, důležité, skryté."
-    )
+#     st.caption(
+#         "Tato oznámení se zobrazí účastníkům na jejich stránce účastníka. Typy oznámení: info, varování, důležité, skryté."
+#     )
 
-    show_db_data_editor(
-        db=db,
-        table="notifications",
-        column_config={
-            "type": st.column_config.SelectboxColumn(
-                options=["info", "varování", "důležité", "skryté"]
-            ),
-        },
-    )
+#     show_db_data_editor(
+#         db=db,
+#         table="notifications",
+#         column_config={
+#             "type": st.column_config.SelectboxColumn(
+#                 options=["info", "varování", "důležité", "skryté"]
+#             ),
+#         },
+#     )

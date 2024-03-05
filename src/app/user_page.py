@@ -147,7 +147,7 @@ def record_challenge(db, user):
                 files=files,
             )
             time.sleep(2)
-            # st.rerun()
+            st.rerun()
 
 
 def record_checkpoint(db, user):
@@ -163,6 +163,8 @@ def record_checkpoint(db, user):
 
     # sort checkpoints alphabetically
     checkpoints = sorted(checkpoints, key=lambda x: unidecode(x["name"].lower()))
+
+    print(checkpoints[0])
 
     with st.form("checkpoint", clear_on_submit=True):
         checkpoint_idx = st.selectbox(
@@ -190,7 +192,8 @@ def record_checkpoint(db, user):
                 comment=comment,
                 files=files,
             )
-            # st.rerun()
+            time.sleep(2)
+            st.rerun()
 
 
 def record_story(db, user):
@@ -233,7 +236,8 @@ def record_story(db, user):
                 comment=comment,
                 files=files,
             )
-            # st.rerun()
+            time.sleep(2)
+            st.rerun()
 
 
 def record_location(db, user, team):
@@ -636,12 +640,17 @@ def show_info_info(db):
 
 def show_notifications(db, notifications):
     for _, notification in notifications.iterrows():
+        if notification.get("name"):
+            txt = f"##### {notification['name']}\n{notification['text']}"
+        else:
+            txt = notification["text"]
+
         if notification.type == "varování":
-            st.warning(notification.text)
+            st.warning(txt)
         elif notification.type == "důležité":
-            st.error(notification.text)
+            st.error(txt)
         elif notification.type == "info" or not notification.type:
-            st.info(notification.text)
+            st.info(txt)
 
 
 def show_posts(db, user, team, posts):
@@ -732,8 +741,7 @@ def show_posts(db, user, team, posts):
                         st.session_state[f"delete-{post['post_id']}-confirm"] = True
                         st.rerun()
 
-        if i < len(posts) - 1:
-            st.divider()
+        st.divider()
 
 
 def show_locations(db, locations):
@@ -763,8 +771,7 @@ def show_locations(db, locations):
                 time.sleep(2)
                 st.rerun()
 
-        if i < len(locations) - 1:
-            st.divider()
+        st.divider()
 
 
 def show_spendings(db, spendings):
@@ -796,8 +803,7 @@ def show_spendings(db, spendings):
                 time.sleep(2)
                 st.rerun()
 
-        if i < len(spendings) - 1:
-            st.divider()
+        st.divider()
 
 
 def show_post_management(db, user, team):
@@ -871,5 +877,8 @@ def show_post_management(db, user, team):
             st.info("Tvůj tým zatím nenasdílel žádnou polohu.")
         else:
             st.download_button(
-                "🔽 Stáhnout GPX soubor", gpx, file_name="team_route.gpx", mime="text/xml"
+                "🔽 Stáhnout GPX soubor",
+                gpx,
+                file_name="team_route.gpx",
+                mime="text/xml",
             )

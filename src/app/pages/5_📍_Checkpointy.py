@@ -30,6 +30,8 @@ def main():
         st.info("Na tento ročník zatím checkpointy nejsou. Ale budou!")
         st.stop()
 
+    available_actions = [x["id"] for x in db.get_available_actions(user, "checkpoint")]
+
     # sort by name
     checkpoints = checkpoints.sort_values(
         by="name", key=lambda x: [unidecode(a) for a in x]
@@ -39,6 +41,9 @@ def main():
     checkpoints["url"] = checkpoints.apply(
         lambda x: f"http://www.google.com/maps/place/{x['latitude']},{x['longitude']}",
         axis=1,
+    )
+    checkpoints["Splněno"] = checkpoints.apply(
+        lambda x: "✔️" if x["id"] not in available_actions else "-", axis=1
     )
 
     checkpoints["link"] = checkpoints.apply(
@@ -54,11 +59,22 @@ def main():
             columns={"link": "Název", "points": "Body"}
         )
         checkpoints_table = checkpoints_table.reset_index(drop=True)
-        checkpoints_table = checkpoints_table[["Název", "Body"]]
+        if "points_challenge" in checkpoints_table.columns:
+            # change the "Body" column to include challenge points
+            checkpoints_table["Body"] = checkpoints_table.apply(
+                lambda x: f"{x['Body']} + {x['points_challenge']}"
+                if pd.notna(x["points_challenge"]) and x["points_challenge"] > 0
+                else x["Body"],
+                axis=1,
+            )
+        checkpoints_table = checkpoints_table[["Název", "Body", "Splněno"]]
+        # checkpoints_table.style.set_table_attributes('class="full-width"')
 
         # set max width
         st.write(
-            checkpoints_table.to_html(escape=False),
+            checkpoints_table.to_html(
+                escape=False, classes="table-display", index=False
+            ),
             unsafe_allow_html=True,
         )
 
@@ -67,7 +83,12 @@ def main():
             checkpoint_url = checkpoint["url"]
             # slug = slugify(checkpoint["name"])
 
-            link = f"<div style='margin-bottom:-10px; display:inline-block;'><a  href='{checkpoint_url}' style='text-decoration: none;'><h4 class='app-link'>{checkpoint['name']}</b></h4></a></div>"
+            if checkpoint.get("points_challenge"):
+                points = f"{checkpoint['points']} + {checkpoint['points_challenge']}"
+            else:
+                points = checkpoint["points"]
+
+            link = f"<div style='margin-bottom:-10px; display:inline-block;'><a  href='{checkpoint_url}' style='text-decoration: none;'><h4 class='app-link'>{checkpoint['name']} ({points})</b></h4></a></div>"
             st.markdown(link, unsafe_allow_html=True)
             # st.caption(f", ")
             st.markdown(f"{checkpoint['description']}")

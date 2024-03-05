@@ -48,6 +48,7 @@ def main():
             "challenge",
             "checkpoint",
             "story",
+            "spent",
         ],
     )
 
@@ -71,6 +72,7 @@ def main():
             "challenge": "Výzvy",
             "checkpoint": "Checkpointy",
             "story": "Příspěvky",
+            "spent": "Utraceno (Kč)",
         }
     )
 
@@ -81,6 +83,9 @@ def main():
                 format="%d",
             ),
             "Stránka": st.column_config.LinkColumn(display_text="🔗", width="small"),
+            "Utraceno (Kč)": st.column_config.NumberColumn(
+                format="%d",
+            ),
         },
         use_container_width=True,
         height=600,

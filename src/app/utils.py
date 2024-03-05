@@ -325,7 +325,12 @@ def page_wrapper():
         + """ !important;
         text-decoration: none;
     }
-    
+    .table-display {
+        width: 100%;
+    }
+    .table-display > thead > tr > th {
+        text-align: left;
+    }
     </style>
     """,
         unsafe_allow_html=True,
