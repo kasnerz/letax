@@ -9,6 +9,7 @@ import traceback
 import utils
 import tempfile
 from unidecode import unidecode
+from currency_converter import CurrencyConverter
 
 
 def show_user_page(db, user, team):
@@ -36,6 +37,7 @@ def show_user_page(db, user, team):
         "📍 Checkpoint",
         "✍️  Příspěvek",
         "🗺️ Poloha",
+        "🪙 Rozpočet",
         "🪂 Moje aktivita",
         "🧑‍🤝‍🧑 Tým",
         "👤 O mně",
@@ -69,18 +71,21 @@ def show_user_page(db, user, team):
         record_location(db, user, team)
 
     with tabs[4 + tab_idx]:
-        show_post_management(db, user, team)
+        show_budget_management(db, user, team)
 
     with tabs[5 + tab_idx]:
-        show_team_info(db, user, team)
+        show_post_management(db, user, team)
 
     with tabs[6 + tab_idx]:
-        show_user_info(db, user)
+        show_team_info(db, user, team)
 
     with tabs[7 + tab_idx]:
-        show_account_info(db, user)
+        show_user_info(db, user)
 
     with tabs[8 + tab_idx]:
+        show_account_info(db, user)
+
+    with tabs[9 + tab_idx]:
         show_info_info(db)
 
 
@@ -411,6 +416,79 @@ def record_location(db, user, team):
         container3.success("Nastavení uloženo!")
 
 
+def show_budget_management(db, user, team):
+    event = db.get_event()
+    if event["status"] != "ongoing":
+        st.info(
+            f"Pro Letní X-Challenge {event['year']} momentálně nelze upravovat rozpočet."
+        )
+        return
+
+    budget = event.get("budget_per_person")
+
+    if budget is None:
+        st.info("Pro tento ročník Letní X-Challenge není vedený rozpočet týmů.")
+        return
+
+    spending_for_team = db.get_spendings_by_team(team)
+    team_members_cnt = len(db.get_team_members(team["team_id"]))
+
+    if spending_for_team.empty:
+        spent = 0
+    else:
+        spent = spending_for_team["amount_czk"].sum()
+
+    remaining = int(budget * team_members_cnt - spent)
+
+    if remaining > 0:
+        st.warning(f"#### 🪙 Zbývá {remaining} Kč z {budget * team_members_cnt} Kč")
+    else:
+        st.error(f"#### 🪙 Zbývá {remaining} Kč z {budget * team_members_cnt} Kč")
+
+    st.markdown("#### Přidat útratu")
+
+    categories = db.get_spending_categories()
+    currency_list = db.get_currency_list()
+
+    with st.form("spending", clear_on_submit=True):
+        amount = st.number_input(
+            "Částka",
+            min_value=0.0,
+            step=0.01,
+            help="Zadej částku v původní měně. Částku můžeš zadat s přesností až na dvě desetinná místa.",
+        )
+        currency = st.selectbox(
+            "Měna",
+            options=currency_list,
+            help="Pokud měna není v seznamu, přepočítej prosím částku na některou z podporovaných měn",
+        )
+        date = st.date_input("Datum:", value=datetime.now())
+        comment = st.text_input(
+            "Komentář (nepovinný):",
+        )
+        category = st.selectbox(
+            "Kategorie",
+            options=categories.keys(),
+            format_func=lambda x: categories[x],
+        )
+        btn_submit = st.form_submit_button("Přidat útratu")
+
+    if btn_submit:
+        db.save_spending(
+            team=team,
+            amount=amount,
+            currency=currency,
+            category=category,
+            date=date,
+            comment=comment,
+        )
+        st.success("Útrata přidána.")
+        utils.log(
+            f"{team['team_name']} saved spending: {amount} {currency}",
+            "success",
+        )
+
+
 def show_team_info(db, user, team):
     event = db.get_event()
     fields_disabled = event["status"] != "ongoing"
@@ -478,15 +556,19 @@ def show_team_info(db, user, team):
 
 
 def show_user_info(db, user):
+    event = db.get_event()
+    fields_disabled = event["status"] != "ongoing"
+
     with st.form("user_info"):
         participant = db.get_participant_by_email(user["email"])
 
         emergency_contact_val = participant["emergency_contact"] or ""
         bio_val = participant["bio"] or ""
-        bio = st.text_area("Pár slov o mně:", value=bio_val)
+        bio = st.text_area("Pár slov o mně:", value=bio_val, disabled=fields_disabled)
         emergency_contact = st.text_input(
             "Nouzový kontakt (kdo + tel. číslo; neveřejné):",
             value=emergency_contact_val,
+            disabled=fields_disabled,
         )
 
         cols = st.columns([4, 1])
@@ -650,7 +732,8 @@ def show_posts(db, user, team, posts):
                         st.session_state[f"delete-{post['post_id']}-confirm"] = True
                         st.rerun()
 
-        st.divider()
+        if i < len(posts) - 1:
+            st.divider()
 
 
 def show_locations(db, locations):
@@ -680,7 +763,41 @@ def show_locations(db, locations):
                 time.sleep(2)
                 st.rerun()
 
-        st.divider()
+        if i < len(locations) - 1:
+            st.divider()
+
+
+def show_spendings(db, spendings):
+    # sort
+    spending_categories = db.get_spending_categories()
+    spendings = spendings.sort_values(by="date", ascending=False)
+    for i, spending in spendings.iterrows():
+        col_date, col_comment, col_delete = st.columns([3, 5, 3])
+        with col_date:
+            # date = utils.get_readable_datetime()
+            st.markdown("**" + spending["date"] + "**")
+
+            st.write(spending_categories[spending["category"]])
+
+        with col_comment:
+            st.markdown(
+                f"**{int(spending['amount'])} {spending['currency']} ({int(spending['amount_czk'])} Kč)**"
+            )
+            comment = spending["description"]
+            # crop comment if too long
+            if len(comment) > 100:
+                comment = comment[:100] + "..."
+            st.write(comment)
+
+        with col_delete:
+            if st.button("❌ Smazat", key=f"delete-spending-{i}"):
+                db.delete_spending(spending["id"])
+                st.success("Útrata smazána.")
+                time.sleep(2)
+                st.rerun()
+
+        if i < len(spendings) - 1:
+            st.divider()
 
 
 def show_post_management(db, user, team):
@@ -706,10 +823,16 @@ def show_post_management(db, user, team):
         with st.expander(f"Celkem {len(locations)} lokací"):
             show_locations(db, locations)
 
-    st.markdown("### Export dat")
+    st.markdown("### Moje útraty")
 
-    gpx = db.get_locations_as_gpx(team)
-    # gpx_button = st.button("🗺️ Stáhnout trasu jako GPX")
+    spendings = db.get_spendings_by_team(team)
+    if (spendings is not None) and (not spendings.empty):
+        with st.expander(f"Celkem {len(spendings)} útrat"):
+            show_spendings(db, spendings)
+    else:
+        st.info("Útraty tvého týmu nejsou k dispozici")
+
+    st.markdown("### Export dat")
 
     st.markdown("#### Příspěvky")
     st.markdown(
@@ -740,6 +863,13 @@ def show_post_management(db, user, team):
         "Zde si můžeš vyexportovat svoji zaznamenanou trasu ve formátu GPX. Trasu si můžeš prohlédnout například na [Google Maps](https://michaelminn.net/tutorials/google-gpx/) nebo [Mapy.cz](https://napoveda.seznam.cz/cz/mapy/nastroje/import-dat/)."
     )
 
-    st.download_button(
-        "🗺️ Stáhnout trasu jako GPX", gpx, file_name="team_route.gpx", mime="text/xml"
-    )
+    gpx_button = st.button("🗺️ Exportovat trasu")
+
+    if gpx_button:
+        gpx = db.get_locations_as_gpx(team)
+        if gpx is None:
+            st.info("Tvůj tým zatím nenasdílel žádnou polohu.")
+        else:
+            st.download_button(
+                "🔽 Stáhnout GPX soubor", gpx, file_name="team_route.gpx", mime="text/xml"
+            )

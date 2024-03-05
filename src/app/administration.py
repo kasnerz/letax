@@ -212,11 +212,20 @@ def action_set_events(db):
     with st.form("event_form"):
         event_status = st.selectbox(
             "Stav",
-            list(event_status.values()),
-            format_func=lambda x: list(event_status.keys())[
-                list(event_status.values()).index(x)
-            ],
+            list(event_status.keys()),
+            format_func=lambda x: event_status[x],
+            index=list(event_status.keys()).index(selected_event["status"]),
             key="event_status",
+            help="Ovlivňuje zobrazení na webu.",
+        )
+        budget_per_person = st.number_input(
+            "Rozpočet na osobu (CZK)",
+            value=selected_event["budget_per_person"]
+            if selected_event.get("budget_per_person")
+            else 0,
+            key="event_budget",
+            help="Rozpočet na osobu na akci v CZK.",
+            disabled=selected_event.get("budget_per_person") is None,
         )
         event_gmaps_url = st.text_input(
             "URL na Google Maps s checkpointy",
@@ -236,13 +245,12 @@ def action_set_events(db):
     selected_event_id = selected_event["year"]
 
     if btn_save:
-        event_status = event_status[0]
-
         db.set_event_info(
             event_id=selected_event_id,
             status=event_status,
             gmaps_url=event_gmaps_url,
             product_id=event_product_id,
+            budget_per_person=budget_per_person,
         )
         utils.clear_cache()
         st.success("Nastavení uloženo.")

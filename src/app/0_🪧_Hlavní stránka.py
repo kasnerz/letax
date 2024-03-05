@@ -101,7 +101,7 @@ def show_overview():
     else:
         st.divider()
         st.markdown(
-            f"<h2><a href='/Příspěvky?event_id={event_id}' target='_self' class='app-link'>Aktuálně</a></h2>",
+            f"<h2><a href='/Příspěvky?event_id={event_id}' target='_self' class='app-link'>Poslední příspěvky</a></h2>",
             unsafe_allow_html=True,
         )
 

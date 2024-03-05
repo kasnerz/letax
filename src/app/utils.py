@@ -18,7 +18,7 @@ import pytz
 import psutil
 import gc
 from streamlit_javascript import st_javascript
-from ftplib import FTP, all_errors
+from ftplib import FTP
 
 TTL = 600
 
@@ -285,6 +285,19 @@ def check_ram_limit():
         gc.collect()
 
 
+def get_active_event_id():
+    # this needs to be outside db so that we can initialize the db for the first time
+    current_dir = os.path.dirname(os.path.realpath(__file__))
+    settings_path = os.path.join(current_dir, "settings.yaml")
+
+    with open(settings_path) as f:
+        settings = yaml.safe_load(f)
+
+    active_event_id = settings.get("active_event_id")
+
+    return active_event_id
+
+
 def page_wrapper():
     event = st.session_state.get("event")
 
@@ -301,21 +314,7 @@ def page_wrapper():
     link_color = (
         "#002676" if st.session_state.bg_color == "rgb(255, 255, 255)" else "#6bb6fe"
     )
-    # st.markdown(
-    #     """
-    #     <style>
-    #     [data-testid="stSidebarNav"]::before {{
-    #             content: "Letní X-Challenge 2024";
-    #             margin-left: 20px;
-    #             margin-top: 20px;
-    #             font-size: 30px;
-    #             position: relative;
-    #             top: 100px;
-    #         }}
-    #         </style>
-    #     """,
-    #     unsafe_allow_html=True,
-    # )
+
     st.markdown(
         """
     <style>
@@ -356,7 +355,6 @@ def page_wrapper():
         app_logo.add_logo("static/logo_icon.png", year="", height=40)
     else:
         app_logo.add_logo("static/logo_icon.png", year=event["year"], height=40)
-    # app_logo.add_logo("static/letax.png", height=40)
 
     # it is useful to run it here since this gets called every time
     check_ram_limit()
@@ -405,6 +403,9 @@ def get_event_id(params):
 
     elif st.session_state.get("event"):
         return st.session_state["event"]["year"]
+
+    else:
+        return get_active_event_id()
 
     return None
 

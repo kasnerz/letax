@@ -9,7 +9,9 @@ import time
 import time
 import utils
 
-db = get_database()
+params = st.query_params
+event_id = utils.get_event_id(params)
+db = get_database(event_id=event_id)
 
 
 def get_logged_info():
