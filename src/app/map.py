@@ -6,10 +6,8 @@ import datetime
 from folium.plugins import BeautifyIcon
 from streamlit_folium import folium_static
 
-db = get_database()
 
-
-def show_positions():
+def show_positions(db):
     # container = st.empty()
 
     # slider for selecting the date and time in range of the challenge
@@ -73,15 +71,22 @@ def show_positions():
             popup=popup,
             tooltip=text,
             icon=folium.Icon(
-                color=team_color, icon=f"{icon_type} fa-{team_icon}", icon_color=team_icon_color, prefix="fa"
+                color=team_color,
+                icon=f"{icon_type} fa-{team_icon}",
+                icon_color=team_icon_color,
+                prefix="fa",
             ),
         ).add_to(m)
 
     return m, last_locations
 
 
-def show_last_shared_locations(last_locations):
+def show_last_shared_locations(db, last_locations):
     # show 5 last shared locations
+    if last_locations.empty:
+        st.info("Žádný tým nezaznamenal svoji polohu")
+        st.stop()
+
     last_locations = last_locations.sort_values(by="date", ascending=False)
 
     st.subheader("Nedávné aktualizace")
@@ -119,7 +124,7 @@ def show_last_shared_locations(last_locations):
         st.markdown(text, unsafe_allow_html=True)
 
 
-def show_checkpoints(m):
+def show_checkpoints(db, m):
     checkpoints = db.get_table_as_df("checkpoints")
 
     for _, checkpoint in checkpoints.iterrows():
@@ -133,7 +138,9 @@ def show_checkpoints(m):
             border_width=3,
         )
         folium.Marker(
-            [checkpoint["latitude"], checkpoint["longitude"]], tooltip=checkpoint["name"], icon=icon_dot
+            [checkpoint["latitude"], checkpoint["longitude"]],
+            tooltip=checkpoint["name"],
+            icon=icon_dot,
         ).add_to(m)
 
 

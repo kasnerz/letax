@@ -5,6 +5,18 @@ from database import get_database
 import utils
 
 CACHE_TTL = 60 * 60 * 24
+st.set_page_config(
+    layout="centered",
+    page_title=f"Letní X-Challenge",
+    page_icon="static/favicon.png",
+    # initial_sidebar_state="expanded",
+)
+
+params = st.query_params
+event_id = utils.get_event_id(params)
+db = get_database(event_id=event_id)
+st.session_state["event"] = db.get_event()
+utils.page_wrapper()
 
 
 def text_bubble(text, color):
@@ -13,31 +25,28 @@ def text_bubble(text, color):
 
 def back_btn():
     # delete query params
-    params = st.experimental_get_query_params()
-
-    if params.get("page"):
-        page = params["page"][0]
-    else:
-        page = 0
-
-    st.experimental_set_query_params(page=page)
+    params = st.query_params
+    page = params.get("page", 0)
+    st.query_params["page"] = page
+    st.query_params["event_id"] = event_id
+    del st.query_params["post"]
 
 
 def prev_page(page):
-    st.experimental_set_query_params(page=page - 1)
+    st.query_params.page = page - 1
 
 
 def next_page(page):
-    st.experimental_set_query_params(page=page + 1)
+    st.query_params.page = page + 1
 
 
 def set_page():
     # get value of the slider `page_slider`
     page = st.session_state.page_slider
-    st.experimental_set_query_params(page=page - 1)
+    st.query_params.page = page - 1
 
 
-def show_post(post_id):
+def show_post(db, post_id):
     st.markdown(
         """
         <style>
@@ -59,7 +68,6 @@ def show_post(post_id):
 
     st.button("← Příspěvky", on_click=back_btn)
 
-    db = get_database()
     post = db.get_post_by_id(post_id)
 
     if not post:
@@ -70,8 +78,6 @@ def show_post(post_id):
     action = post["action_name"]
     description = post["comment"]
     files = post["files"]
-
-    link_color = db.get_settings_value("link_color")
 
     st.markdown(
         f"## {action}",
@@ -90,7 +96,11 @@ def show_post(post_id):
         st.markdown(description, unsafe_allow_html=True)
         st.divider()
 
-    images = [db.read_image(f["path"], thumbnail="1000") for f in files if f["type"].startswith("image")]
+    images = [
+        db.read_image(f["path"], thumbnail="1000")
+        for f in files
+        if f["type"].startswith("image")
+    ]
 
     if images:
         cols = st.columns(min(3, len(images)))
@@ -105,8 +115,7 @@ def show_post(post_id):
             st.video(video_file)
 
 
-def load_posts(team_filter=None, challenge_filter=None, checkpoint_filter=None):
-    db = get_database()
+def load_posts(db, team_filter=None, challenge_filter=None, checkpoint_filter=None):
     posts = db.get_posts(team_filter, challenge_filter, checkpoint_filter)
 
     if not posts:
@@ -119,23 +128,24 @@ def load_posts(team_filter=None, challenge_filter=None, checkpoint_filter=None):
     return posts
 
 
-def shorten(s, post_id, page, link_color, max_len=250):
+def shorten(s, post_id, page, max_len=250):
     if len(s) > max_len:
         return (
             s[:max_len]
-            + f"<b><a href='/Příspěvky?post={post_id}&page={page}' target='_self' style='text-decoration: none; color: {link_color};'> (...)</a></b>"
+            + f"<b><a href='/Příspěvky?post={post_id}&event_id={event_id}&page={page}' target='_self' class='app-link'> (...)</a></b>"
         )
     return s
 
 
-def show_overview(page):
-    db = get_database()
-    year = db.get_settings_value("xchallenge_year")
-
+def show_overview(db, page):
     team_options = [""] + sorted(list(db.get_teams()["team_name"]), key=str.lower)
-    challenge_options = [""] + sorted(list(db.get_table_as_df("challenges")["name"]), key=str.lower)
+    challenge_options = [""] + sorted(
+        list(db.get_table_as_df("challenges")["name"]), key=str.lower
+    )
 
-    checkpoint_options = [""] + sorted(list(db.get_table_as_df("checkpoints")["name"]), key=str.lower)
+    checkpoint_options = [""] + sorted(
+        list(db.get_table_as_df("checkpoints")["name"]), key=str.lower
+    )
 
     # include css
     st.markdown(
@@ -150,8 +160,12 @@ def show_overview(page):
     )
     st.sidebar.caption("Filtrovat feed")
     # st.sidebar.markdown("**Filtrovat**")
-    team_filter = st.sidebar.selectbox("Tým:", options=team_options, key="team_filter_selector")
-    challenge_filter = st.sidebar.selectbox("Výzvy:", options=challenge_options, key="challenge_filter_selector")
+    team_filter = st.sidebar.selectbox(
+        "Tým:", options=team_options, key="team_filter_selector"
+    )
+    challenge_filter = st.sidebar.selectbox(
+        "Výzvy:", options=challenge_options, key="challenge_filter_selector"
+    )
 
     checkpoint_filter = st.sidebar.selectbox(
         "Checkpointy:", options=checkpoint_options, key="checkpoint_filter_selector"
@@ -159,7 +173,12 @@ def show_overview(page):
 
     cols = st.columns([1, 3, 1])
 
-    posts = load_posts(team_filter=team_filter, challenge_filter=challenge_filter, checkpoint_filter=checkpoint_filter)
+    posts = load_posts(
+        db=db,
+        team_filter=team_filter,
+        challenge_filter=challenge_filter,
+        checkpoint_filter=checkpoint_filter,
+    )
 
     col_layout = [5, 2]
     cols = st.columns(col_layout)
@@ -194,7 +213,12 @@ def show_overview(page):
 
         if action_type == "challenge":
             action = db.get_action(action_type, action_name)
-            action_type_icon = action["category"][0] if action.get("category") else "💪"
+            category = action.get("category")
+            action_type_icon = action["category"][0] if category else "💪"
+
+            if action_type_icon.isalpha():
+                action_type_icon = "💪"
+
         elif action_type == "checkpoint":
             action_type_icon = "📍"
         else:
@@ -203,8 +227,7 @@ def show_overview(page):
         post_id = post["post_id"]
         team_link = db.get_team_link(team)
 
-        link_color = db.get_settings_value("link_color")
-        link = f"<div style='margin-bottom:-10px; display:inline-block;'><h4><a href='/Příspěvky?post={post_id}&page={page}' target='_self' style='text-decoration: none; color: {link_color};'>{action_type_icon} {action_name} – {team['team_name']}</a></div>"
+        link = f"<div style='margin-bottom:-10px; display:inline-block;'><h4><a href='/Příspěvky?post={post_id}&page={page}&event_id={event_id}' target='_self' class='app-link'>{action_type_icon} {action_name} – {team['team_name']}</a></div>"
 
         st.markdown(link, unsafe_allow_html=True)
         cols = st.columns(col_layout)
@@ -212,7 +235,7 @@ def show_overview(page):
             post_datetime = utils.convert_to_local_timezone(post["created"])
             st.caption(f"*{post_datetime}*")
             st.markdown(
-                shorten(utils.escape_html(description), post_id, page, link_color),
+                shorten(utils.escape_html(description), post_id, page),
                 unsafe_allow_html=True,
             )
         with cols[1]:
@@ -238,25 +261,15 @@ def show_overview(page):
 
 
 def main():
-    st.set_page_config(
-        layout="centered",
-        page_title=f"Letní X-Challenge",
-        page_icon="static/favicon.png",
-        # initial_sidebar_state="expanded",
-    )
-
-    utils.style_sidebar()
-    params = st.experimental_get_query_params()
-
     if params.get("post"):
-        post = params["post"][0]
-        show_post(post)
+        post = params["post"]
+        show_post(db, post)
     else:
         if params.get("page"):
-            page = params["page"][0]
+            page = params["page"]
         else:
             page = 0
-        show_overview(int(page))
+        show_overview(db=db, page=int(page))
 
 
 if __name__ == "__main__":

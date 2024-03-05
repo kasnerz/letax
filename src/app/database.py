@@ -6,6 +6,12 @@ from slugify import slugify
 from unidecode import unidecode
 from woocommerce import API
 from accounts import AccountManager
+
+from zipfile import ZipFile
+from gpxpy.gpx import GPX, GPXRoute, GPXRoutePoint, GPXWaypoint
+from geopy.geocoders import Nominatim
+from currency_converter import CurrencyConverter, SINGLE_DAY_ECB_URL
+
 import argparse
 import boto3
 import csv
@@ -24,7 +30,14 @@ import yaml
 import zipfile
 import base64
 import copy
-from geopy.geocoders import Nominatim
+import locale
+
+
+import shutil
+import tempfile
+import ast
+import urllib.request
+import dateutil.parser
 
 # logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -37,12 +50,12 @@ TTL = 3600 * 24
 
 
 @st.cache_resource
-def get_database():
-    return Database()
+def get_database(event_id):
+    return Database(event_id)
 
 
 class Database:
-    def __init__(self):
+    def __init__(self, event_id=None):
         self.settings_path = os.path.join(current_dir, "settings.yaml")
         self.load_settings()
 
@@ -53,9 +66,8 @@ class Database:
             version="wc/v3",
             timeout=30,
         )
-        self.xchallenge_year = str(self.get_settings_value("xchallenge_year"))
-        os.makedirs(os.path.join("db", self.xchallenge_year), exist_ok=True)
-        self.db_path = os.path.join("db", self.xchallenge_year, "database.db")
+        self.event = self.get_event_by_id(event_id)
+        self.conn = self.get_db_for_event(self.event["year"])
 
         if self.get_settings_value("file_system") == "s3":
             # S3 bucket
@@ -68,23 +80,103 @@ class Database:
                 aws_access_key_id=st.secrets["AWS_ACCESS_KEY_ID"],
                 aws_secret_access_key=st.secrets["AWS_SECRET_ACCESS_KEY"],
             )
-        self.top_dir = f"files/{self.xchallenge_year}"
+        self.top_dir = f"files/{self.event['year']}"
+        self.am = AccountManager()
+        self.preauthorized_emails = self.load_preauthorized_emails()
+        self.static_imgs = self.load_static_images()
+        self.fa_icons = self.load_fa_icons()
+        self.geoloc = Nominatim(user_agent="GetLoc")
+
+        # download the currency rates
+        currency_rates_file = os.path.join(
+            os.path.dirname(self.db_path), "currency_rates.zip"
+        )
+        if not os.path.exists(currency_rates_file):
+            utils.log("Downloading currency rates", level="info")
+            urllib.request.urlretrieve(SINGLE_DAY_ECB_URL, currency_rates_file)
+
+        self.currency_converter = CurrencyConverter(currency_rates_file)
+
+        utils.log(f"Database `{self.get_year()}` initialized")
+
+    def __del__(self):
+        self.conn.close()
+
+    def get_events(self):
+        return sorted(
+            self.get_settings_value("events"), key=lambda x: x["year"], reverse=True
+        )
+
+    def get_event_by_id(self, event_id):
+        events = self.get_events()
+
+        if event_id:
+            events = [e for e in events if e["year"] == event_id]
+
+        if not events:
+            raise ValueError(f"Event {event_id} not found")
+
+        return events[0]
+
+    def get_db_for_event(self, event_id):
+        os.makedirs(os.path.join("db", event_id), exist_ok=True)
+        self.db_path = os.path.join("db", event_id, "database.db")
+
         self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
         self.create_tables()
 
-        self.am = AccountManager()
-        self.preauthorized_emails = self.load_preauthorized_emails()
+        return self.conn
 
-        self.static_imgs = self.load_static_images()
-        self.fa_icons = self.load_fa_icons()
+    def get_year(self, event_id=None):
+        if event_id:
+            event = self.get_event_by_id(event_id)
+            return event["year"]
 
-        self.geoloc = Nominatim(user_agent="GetLoc")
+        return self.event["year"]
 
-        utils.log("Database initialized")
+    def get_gmaps_url(self, event_id=None):
+        event = self.get_event_by_id(event_id)
+        return event["gmaps_url"]
 
-    def __del__(self):
-        self.conn.close()
+    def get_event(self):
+        return self.event
+
+    def get_active_event(self):
+        events = self.get_events()
+        active_event_id = self.get_settings_value("active_event_id")
+
+        return [e for e in events if e["year"] == active_event_id][0]
+
+    def create_new_event(self, year):
+        events = self.get_events()
+        events.append(
+            {
+                "year": year,
+                "status": "draft",
+                "gmaps_url": "",
+                "product_id": "",
+                "display": False,
+            }
+        )
+        self.set_settings_value("events", events)
+
+    def set_event_info(
+        self, event_id, status, gmaps_url, product_id, budget_per_person
+    ):
+        events = self.get_events()
+        for event in events:
+            if event["year"] == event_id:
+                event["status"] = status
+                event["gmaps_url"] = gmaps_url
+                event["product_id"] = product_id
+                event["budget_per_person"] = budget_per_person
+                break
+        self.set_settings_value("events", events)
+
+    def set_active_event(self, event_id):
+        self.set_settings_value("active_event_id", event_id)
+        st.session_state["event"] = self.get_active_event()
 
     def load_settings(self):
         with open(self.settings_path) as f:
@@ -250,6 +342,8 @@ class Database:
         if thumbnail:
             filepath = thumbnail_filepath
             img = thumbnail_img
+        else:
+            img = _self.read_file(filepath, mode="b")
 
         # read image using PIL
         try:
@@ -305,7 +399,8 @@ class Database:
 
         return orders
 
-    def wc_fetch_participants(self, product_id, log_area=None, limit=None):
+    def wc_fetch_participants(self, log_area=None, limit=None):
+        product_id = self.event["product_id"]
         new_participants = []
         logger.info("Fetching participants from WooCommerce...")
 
@@ -334,7 +429,10 @@ class Database:
                 if limit:
                     total_paxes = min(limit, total_paxes)
 
-                pb.progress(i / float(len(user_ids)), f"Načítám info o účastnících ({i}/{total_paxes})")
+                pb.progress(
+                    i / float(len(user_ids)),
+                    f"Načítám info o účastnících ({i}/{total_paxes})",
+                )
 
         with open("wc_participants.json", "w") as f:
             json.dump(new_participants, f)
@@ -393,7 +491,9 @@ class Database:
         query = "SELECT * FROM participants WHERE email = ?"
         return self.conn.execute(query, (email,)).fetchone()
 
-    def get_participants(self, sort_by_name=True, include_non_registered=False, fetch_teams=False):
+    def get_participants(
+        self, sort_by_name=True, include_non_registered=False, fetch_teams=False
+    ):
         # the table `participants` include only emails
         # we need to join this with the user accounts
 
@@ -420,13 +520,25 @@ class Database:
 
         if not participants.empty and sort_by_name:
             # considering unicode characters in Czech alphabet
-            participants = participants.sort_values(by="name", key=lambda x: [unidecode(a).lower() for a in x])
+            participants = participants.sort_values(
+                by="name", key=lambda x: [unidecode(a).lower() for a in x]
+            )
 
         if fetch_teams and not participants.empty:
             teams = self.get_table_as_df("teams")
             # participant is either member1 or member2, if not - no team
-            pax_id_to_team = {str(row["member1"]): row for _, row in teams.iterrows() if row["member1"]}
-            pax_id_to_team.update({str(row["member2"]): row for _, row in teams.iterrows() if row["member2"]})
+            pax_id_to_team = {
+                str(row["member1"]): row
+                for _, row in teams.iterrows()
+                if row["member1"]
+            }
+            pax_id_to_team.update(
+                {
+                    str(row["member2"]): row
+                    for _, row in teams.iterrows()
+                    if row["member2"]
+                }
+            )
 
             participants["team_name"] = participants.apply(
                 lambda x: pax_id_to_team.get(str(x["id"]), {}).get("team_name"), axis=1
@@ -467,7 +579,9 @@ class Database:
 
     def update_participant(self, username, email, bio, emergency_contact, photo=None):
         if photo is None:
-            query = "UPDATE participants SET bio = ?, emergency_contact = ? WHERE email = ?"
+            query = (
+                "UPDATE participants SET bio = ?, emergency_contact = ? WHERE email = ?"
+            )
             self.conn.execute(query, (bio, emergency_contact, email))
             self.conn.commit()
 
@@ -480,7 +594,9 @@ class Database:
 
             photo_path = os.path.join(dir_path, photo_name)
 
-            self.write_file(filepath=os.path.join(dir_path, photo_name), content=photo_content)
+            self.write_file(
+                filepath=os.path.join(dir_path, photo_name), content=photo_content
+            )
 
             self.conn.execute(query, (bio, emergency_contact, photo_path, email))
             self.conn.commit()
@@ -509,7 +625,9 @@ class Database:
         return post
 
     def get_posts_by_team(self, team_id):
-        df = pd.read_sql_query(f"SELECT * FROM posts WHERE team_id = ?", self.conn, params=(team_id,))
+        df = pd.read_sql_query(
+            f"SELECT * FROM posts WHERE team_id = ?", self.conn, params=(team_id,)
+        )
         return df
 
     def save_post(self, user, action_type, action, comment, files):
@@ -518,7 +636,9 @@ class Database:
 
         title = action if action_type == "story" else action["name"]
 
-        dir_path = os.path.join(self.top_dir, action_type, slugify(title), slugify(team["team_name"]))
+        dir_path = os.path.join(
+            self.top_dir, action_type, slugify(title), slugify(team["team_name"])
+        )
 
         files_json = []
 
@@ -552,11 +672,290 @@ class Database:
 
         self.conn.execute(
             f"INSERT INTO posts (post_id, pax_id, team_id, action_type, action_name, comment, files, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (post_id, pax_id, team_id, action_type, title, comment, files_json, created),
+            (
+                post_id,
+                pax_id,
+                team_id,
+                action_type,
+                title,
+                comment,
+                files_json,
+                created,
+            ),
         )
         self.conn.commit()
 
-        utils.log(f"{user['username']} ({team['team_name']}) added post '{title}'", level="success")
+        utils.log(
+            f"{user['username']} ({team['team_name']}) added post '{title}'",
+            level="success",
+        )
+
+    def generate_post_html(self, post, output_dir, aws_prefix=None):
+        photos_html = ""
+
+        post_title = post["action_name"]
+        description = post["comment"]
+        files = ast.literal_eval(post["files"])
+
+        if post["action_type"] == "challenge":
+            post_title = f"🏆 {post_title}"
+        elif post["action_type"] == "checkpoint":
+            post_title = f"📍 {post_title}"
+        else:
+            post_title = f"✍️ {post_title}"
+
+        post_datetime = utils.convert_to_local_timezone(post["created"])
+        post_datetime = dateutil.parser.parse(post_datetime)
+
+        # convert to the format "26. srpna 2023, 15:00"
+        current_locale = locale.getlocale()
+        locale.setlocale(locale.LC_TIME, "cs_CZ.UTF-8")
+        post_datetime = post_datetime.strftime("%x %X")
+        locale.setlocale(locale.LC_TIME, current_locale)
+
+        if description:
+            # escape html
+            description = utils.escape_html(description)
+
+        # images = [f for f in files if f["type"].startswith("image")]
+        # videos = [f for f in files if f["type"].startswith("video")]
+
+        os.makedirs(os.path.join(output_dir, "files"), exist_ok=True)
+
+        photos_html = "<div class='container'><div class='row'>"
+
+        for file in files:
+            file_type = "image" if file["type"].startswith("image") else "video"
+            if not aws_prefix:
+                # copy files locally
+                filename = os.path.join("files", os.path.basename(file["path"]))
+
+                if file_type == "image":
+                    file = self.read_image(file["path"], thumbnail="1000")
+                    file.save(os.path.join(output_dir, filename))
+                else:
+                    file = self.read_video(file["path"])
+                    with open(os.path.join(output_dir, filename), "wb") as f:
+                        f.write(file)
+                href = filename
+            else:
+                href = f"{aws_prefix}/{file['path']}"
+
+            if file_type == "image":
+                photos_html += f'<div class="col-3"><a href="{href}" data-toggle="lightbox" data-gallery="{post["post_id"]}"><img data-src="{href}" class="image img-thumbnail lazyload"></a></div>'
+            else:
+                photos_html += f'<div class="col-3"><a href="{href}" data-toggle="lightbox" data-gallery="{post["post_id"]}"><video src="{href}" preload="none" controls class="video"></video></a></div>'
+
+        photos_html += "</div></div>"
+
+        return f"""
+                <div class="card mb-3 lazyload">
+                    <div class="card-header">
+                    <h3>{post_title}</h3>
+                    <h6>{post_datetime}</h6>
+                    </div>
+                    <div class="card-body ">
+                    <p class="card-text">{description}</p>
+                    {photos_html}
+                    </div>
+                </div>
+                """
+
+    def generate_team_posts_html(self, team, output_dir, xc_year, aws_prefix=None):
+        utils.log(f"Exporting posts for team {team['team_name']}", level="info")
+        posts = self.get_posts_by_team(team["team_id"])
+
+        title = f"{team['team_name']} – Letní X-Challenge {xc_year}"
+        post_html = ""
+        for _, post in posts.iterrows():
+            post_html += self.generate_post_html(
+                post, output_dir, aws_prefix=aws_prefix
+            )
+
+        with open("static/website_export/custom.css") as f:
+            css = f.read()
+
+        # we are exporting locally for a user
+        if aws_prefix is None:
+            back_btn = ""
+        else:
+            back_btn = '<a href="../../index.html" class="btn btn-outline-dark" style="margin-top: 20px;">← Zpět na výsledky</a>'
+
+        # use Source Sans Pro font, bold for headings
+        html = f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <!-- Back button -->
+            {back_btn}
+            <title>{title}</title>
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css">
+            <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&display=swap">
+        </head>
+        <body>
+            <style>{css}</style>
+            <div class="container mt-3">
+            <h1>{title}</h1>
+            {post_html}
+            </div>
+            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/bs5-lightbox@1.8.3/dist/index.bundle.min.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/lazyload@2.0.0-rc.2/lazyload.js"></script>
+            <script>
+            lazyload();
+            </script>
+        </body>
+        </html>
+        """
+        with open(os.path.join(output_dir, "index.html"), "w") as f:
+            f.write(html)
+
+    def export_team_posts(self, team, output_dir, xc_year, folder_name):
+        self.generate_team_posts_html(team, output_dir, xc_year, aws_prefix=None)
+        tmp_filename = f"post_{team['team_id']}.zip"
+
+        with ZipFile(os.path.join(output_dir, tmp_filename), "w") as zip_file:
+            for root, _, files in os.walk(output_dir):
+                for file in files:
+                    if file != tmp_filename:  # Exclude the zip file itself
+                        file_path = os.path.join(root, file)
+                        archive_name = os.path.relpath(file_path, output_dir)
+                        archive_name = os.path.join(folder_name, archive_name)
+                        zip_file.write(file_path, archive_name)
+
+        utils.log(
+            f"Exported posts for team {team['team_name']} to {output_dir}/{tmp_filename}",
+            level="success",
+        )
+        return os.path.join(output_dir, tmp_filename)
+
+    def generate_static_page(self, output_dir, teams, xc_year):
+        title = f"Letní X-Challenge {xc_year}"
+
+        for i, team in enumerate(teams):
+            posts = team["posts"]
+            posts["action_type"].value_counts()
+            for action_type in ["challenge", "checkpoint", "story"]:
+                teams[i][action_type] = (
+                    posts["action_type"].value_counts().get(action_type, 0)
+                )
+        table = pd.DataFrame(
+            teams,
+            columns=[
+                "team_name",
+                "points",
+                "team_id",
+                "member1_name",
+                "member2_name",
+                "challenge",
+                "checkpoint",
+                "story",
+            ],
+        )
+        table = table.sort_values(by="points", ascending=False)
+        table = table.reset_index(drop=True)
+
+        # Round points to integers
+        table["points"] = table["points"].astype(int)
+        table = table.rename(
+            columns={
+                "team_name": "Tým",
+                "member1_name": "Člen 1",
+                "member2_name": "Člen 2",
+                "points": "Body",
+                "challenge": "Výzvy",
+                "checkpoint": "Checkpointy",
+                "story": "Příspěvky",
+            }
+        )
+
+        # table.index += 1
+        # table.index.name = "Pořadí"
+        # Generate HTML code for the table
+
+        with open("static/website_export/custom.css") as f:
+            css = f.read()
+
+        html_code = f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <a href="../index.html" class="btn btn-outline-dark" style="margin-top: 20px;">← Zpět na seznam akcí</a>
+            <title>{title}</title>
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" crossorigin="anonymous">
+            <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&display=swap">
+        </head>
+        <body>
+            <style>{css}</style>
+            <div class="container">
+                <h1>{title}</h1>
+                <p>{title} je za námi! Zde si můžeš prohlédnout výsledky a příspěvky týmů.</p>
+                <table class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th>Pořadí</th>
+                            """
+
+        # Add table headers
+        for col in table.columns:
+            if col == "team_id":
+                continue
+            html_code += f"<th>{col}</th>"
+
+        html_code += """
+                        </tr>
+                    </thead>
+                    <tbody>
+                        """
+
+        # Add table rows
+        for index, row in table.iterrows():
+            html_code += f"<tr>\n<td>{index+1}</td>"
+            for col in table.columns:
+                if col == "Tým":
+                    # Add link according to the team_id
+                    html_code += f"<td><a href='teams/{row['team_id']}/index.html'>{row[col]}</a></td>"
+                elif col == "team_id":
+                    continue
+                else:
+                    html_code += f"<td>{row[col]}</td>"
+            html_code += "</tr>\n"
+
+        html_code += """
+                    </tbody>
+                </table>
+            </div>
+            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+        </body>
+        </html>
+        """
+
+        with open(os.path.join(output_dir, "index.html"), "w") as f:
+            f.write(html_code)
+
+    def export_static_website(self, output_dir):
+        aws_prefix = "https://s3.eu-west-3.amazonaws.com/xchallengecz"
+        teams = self.get_teams_overview()
+
+        event_id = self.event["year"]
+        xc_year = self.event["year"]
+
+        os.makedirs(os.path.join(output_dir, event_id, "teams"), exist_ok=True)
+
+        for i, team in enumerate(teams):
+            team_out_dir = os.path.join(output_dir, event_id, "teams", team["team_id"])
+            os.makedirs(team_out_dir, exist_ok=True)
+
+            self.generate_team_posts_html(
+                team, team_out_dir, event_id, aws_prefix=aws_prefix
+            )
+
+        self.generate_static_page(os.path.join(output_dir, event_id), teams, xc_year)
+        utils.log(f"Exported static website to {output_dir}", level="success")
 
     def get_team_by_id(self, team_id):
         # retrieve team from the database, return a single Python object or None
@@ -569,12 +968,120 @@ class Database:
         if pax_id is None:
             return None
 
-        # the field `member1`, `member2`  contains the id
-        query = "SELECT * FROM teams WHERE member1 = ? OR member2 = ?"
-        ret = self.conn.execute(query, (pax_id, pax_id))
+        query = "SELECT * FROM teams WHERE member1 = ? OR member2 = ? OR member3 = ?"
+        ret = self.conn.execute(query, (pax_id, pax_id, pax_id))
         team = ret.fetchone()
-
         return team
+
+    def get_team_members(self, team_id):
+        team = self.get_team_by_id(team_id)
+        member1 = self.get_participant_by_id(team["member1"])
+        member2 = self.get_participant_by_id(team["member2"])
+        member3 = self.get_participant_by_id(team["member3"])
+
+        members = [member1, member2, member3]
+        members = [x for x in members if x is not None]
+
+        return members
+
+    def get_teams_with_awards(self):
+        # any team that has a non-empty award column (non-empty = NULL or "")
+        return pd.read_sql_query(
+            "SELECT * FROM teams WHERE (award IS NOT NULL AND award != '')", self.conn
+        )
+
+    def set_team_award(self, team_id, award):
+        self.conn.execute(
+            "UPDATE teams SET award = ? WHERE team_id = ?", (award, team_id)
+        )
+        self.conn.commit()
+        utils.log(f"Set award {award} for team {team_id}", level="info")
+
+    def update_or_create_notification(self, notification_id, name, text, category):
+        self.conn.execute(
+            "INSERT OR REPLACE INTO notifications (id, name, text, type) VALUES (?, ?, ?, ?)",
+            (notification_id, name, text, category),
+        )
+        self.conn.commit()
+        utils.log(f"Updated notification {name}", level="info")
+
+    def delete_notification(self, notification_id):
+        self.conn.execute("DELETE FROM notifications WHERE id = ?", (notification_id,))
+        self.conn.commit()
+        utils.log(f"Deleted notification {notification_id}", level="info")
+
+    def update_or_create_checkpoint(
+        self,
+        checkpoint_id,
+        name,
+        description,
+        challenge,
+        lat,
+        lon,
+        points,
+        points_challenge,
+    ):
+        self.conn.execute(
+            "INSERT OR REPLACE INTO checkpoints (id, name, description, challenge, latitude, longitude, points, points_challenge) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                checkpoint_id,
+                name,
+                description,
+                challenge,
+                lat,
+                lon,
+                points,
+                points_challenge,
+            ),
+        )
+        self.conn.commit()
+        utils.log(f"Updated checkpoint {name}", level="info")
+
+    def delete_checkpoint(self, checkpoint_id):
+        self.conn.execute("DELETE FROM checkpoints WHERE id = ?", (checkpoint_id,))
+        self.conn.commit()
+        utils.log(f"Deleted checkpoint {checkpoint_id}", level="info")
+
+    def update_or_create_challenge(
+        self, challenge_id, name, description, category, points
+    ):
+        self.conn.execute(
+            "INSERT OR REPLACE INTO challenges (id, name, description, category, points) VALUES (?, ?, ?, ?, ?)",
+            (challenge_id, name, description, category, points),
+        )
+        self.conn.commit()
+        utils.log(f"Updated challenge {name}", level="info")
+
+    def delete_challenge(self, challenge_id):
+        self.conn.execute("DELETE FROM challenges WHERE id = ?", (challenge_id,))
+        self.conn.commit()
+        utils.log(f"Deleted challenge {challenge_id}", level="info")
+
+    def import_checkpoints(self, df):
+        for _, row in df.iterrows():
+            latitude, longitude = row["gps"].split(",")
+            checkpoint_id = slugify(str(row["name"]))
+            self.update_or_create_checkpoint(
+                checkpoint_id,
+                row["name"],
+                row["description"],
+                row["challenge"],
+                latitude,
+                longitude,
+                row["points"],
+                row["points_challenge"],
+            )
+
+    def import_challenges(self, df):
+        for _, row in df.iterrows():
+            challenge_id = slugify(str(row["name"]))
+            self.update_or_create_challenge(
+                challenge_id,
+                row["name"],
+                row["description"],
+                row["category"],
+                row["points"],
+            )
 
     def get_action(self, action_type, action_name):
         # retrieve action from the database, return a single Python object or None
@@ -617,17 +1124,25 @@ class Database:
         if not posts_team.empty:
             posts_team = posts_team.assign(
                 points=posts_team.apply(
-                    lambda row: self.get_points_for_action(row["action_type"], row["action_name"]), axis=1
+                    lambda row: self.get_points_for_action(
+                        row["action_type"], row["action_name"]
+                    ),
+                    axis=1,
                 )
             )
+
         team = self.get_team_by_id(team_id)
 
-        member1_name = participants[participants["id"] == team["member1"]].to_dict("records")[0]
+        member1_name = participants[participants["id"] == team["member1"]].to_dict(
+            "records"
+        )[0]
         member1_name = member1_name["name"]
 
         member2_name = ""
         if team["member2"]:
-            member2_name = participants[participants["id"] == team["member2"]].to_dict("records")[0]
+            member2_name = participants[participants["id"] == team["member2"]].to_dict(
+                "records"
+            )[0]
             member2_name = member2_name["name"]
 
         team_info = {
@@ -639,20 +1154,37 @@ class Database:
             "member2_name": member2_name,
             "points": posts_team["points"].sum() if not posts_team.empty else 0,
             "posts": posts_team,
+            "award": team["award"],
+            "is_top_x": team["is_top_x"],
+            "team_photo": team["team_photo"],
+            "team_motto": team["team_motto"],
+            "team_web": team["team_web"],
         }
+
+        if self.event.get("budget_per_person") is not None:
+            spendings = self.get_spendings_by_team(team)
+            team_info["spent"] = spendings["amount_czk"].sum()
+
         return team_info
 
     def get_teams_overview(self):
         teams = self.get_table_as_df("teams")
         posts = self.get_table_as_df("posts")
-        participants = self.get_participants(include_non_registered=True, sort_by_name=False)
+        participants = self.get_participants(
+            include_non_registered=True, sort_by_name=False
+        )
 
         # get team overview for each team
-        teams_info = [self.get_team_overview(team_id, posts, participants) for team_id in teams["team_id"]]
+        teams_info = [
+            self.get_team_overview(team_id, posts, participants)
+            for team_id in teams["team_id"]
+        ]
 
         return teams_info
 
-    def get_posts(self, team_filter=None, challenge_filter=None, checkpoint_filter=None):
+    def get_posts(
+        self, team_filter=None, challenge_filter=None, checkpoint_filter=None
+    ):
         # team_filter is the team_name, the table posts contain only id -> join with teams table to get the team_name
         posts = self.get_table_as_df("posts")
         teams = self.get_table_as_df("teams")
@@ -673,6 +1205,13 @@ class Database:
         posts = posts.to_dict("records")
         return posts
 
+    def update_post_comment(self, post_id, comment):
+        self.conn.execute(
+            "UPDATE posts SET comment = ? WHERE post_id = ?", (comment, post_id)
+        )
+        self.conn.commit()
+        utils.log(f"Updated comment for post {post_id}", level="info")
+
     def delete_post(self, post_id):
         self.conn.execute("DELETE FROM posts WHERE post_id = ?", (post_id,))
         self.conn.commit()
@@ -691,7 +1230,9 @@ class Database:
         # get all the actions completed by `team_id` in the table `posts`
         completed_actions = self.get_table_as_df("posts")
 
-        completed_actions = completed_actions[completed_actions["action_type"] == action_type]
+        completed_actions = completed_actions[
+            completed_actions["action_type"] == action_type
+        ]
         completed_actions = completed_actions[completed_actions["team_id"] == team_id]
         completed_actions = completed_actions["action_name"].unique()
 
@@ -701,7 +1242,9 @@ class Database:
         elif action_type == "checkpoint":
             available_actions = self.get_table_as_df("checkpoints")
 
-        available_actions = available_actions[~available_actions["name"].isin(completed_actions)]
+        available_actions = available_actions[
+            ~available_actions["name"].isin(completed_actions)
+        ]
 
         # convert df to list with dicts
         available_actions = available_actions.to_dict("records")
@@ -713,7 +1256,9 @@ class Database:
         return pd.read_sql_query("SELECT * FROM teams", self.conn)
 
     def get_available_participants(self, pax_id, team):
-        all_paxes = self.get_participants(fetch_teams=True, sort_by_name=True, include_non_registered=True)
+        all_paxes = self.get_participants(
+            fetch_teams=True, sort_by_name=True, include_non_registered=True
+        )
 
         if all_paxes.empty:
             return []
@@ -747,12 +1292,21 @@ class Database:
         if teammate:
             # teammate is not in the list because they are already in a team, but we want to show them as available
             teammate_row = all_paxes[all_paxes["id"] == teammate]
-            available_paxes = pd.concat([teammate_row, available_paxes], ignore_index=True)
+            available_paxes = pd.concat(
+                [teammate_row, available_paxes], ignore_index=True
+            )
 
         return available_paxes
 
     def add_or_update_team(
-        self, team_name, team_motto, team_web, team_photo, first_member, second_member, current_team=None
+        self,
+        team_name,
+        team_motto,
+        team_web,
+        team_photo,
+        first_member,
+        second_member,
+        current_team=None,
     ):
         # if team is already in the database, get its id
         if current_team:
@@ -780,7 +1334,16 @@ class Database:
         if not current_team:
             self.conn.execute(
                 f"INSERT INTO teams (team_id, team_name, team_motto, team_web, team_photo, member1, member2, is_top_x) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                (team_id, team_name, team_motto, team_web, photo_path, first_member, second_member, 0),
+                (
+                    team_id,
+                    team_name,
+                    team_motto,
+                    team_web,
+                    photo_path,
+                    first_member,
+                    second_member,
+                    0,
+                ),
             )
             self.conn.commit()
             utils.log(f"Added team {team_name}", level="success")
@@ -788,7 +1351,15 @@ class Database:
             # only update new values, keep the existing
             self.conn.execute(
                 f"UPDATE teams SET team_name = ?, team_motto = ?, team_web = ?, team_photo = ?, member1 = ?, member2 = ? WHERE team_id = ?",
-                (team_name, team_motto, team_web, photo_path, first_member, second_member, team_id),
+                (
+                    team_name,
+                    team_motto,
+                    team_web,
+                    photo_path,
+                    first_member,
+                    second_member,
+                    team_id,
+                ),
             )
             self.conn.commit()
             utils.log(f"Updated team {team_name}", level="info")
@@ -820,6 +1391,7 @@ class Database:
                 location_color text,
                 location_icon_color text,
                 location_icon text,
+                award text,
                 primary key(team_id)   
             );"""
         )
@@ -855,7 +1427,8 @@ class Database:
         )
         self.conn.execute(
             """CREATE TABLE if not exists challenges (
-                name text not null unique,
+                id text not null unique,
+                name text not null,
                 description text not null,
                 category text not null,
                 points int not null,
@@ -864,19 +1437,37 @@ class Database:
         )
         self.conn.execute(
             """CREATE TABLE if not exists checkpoints (
-                name text not null unique,
+                id text not null unique,
+                name text not null,
                 description text not null,
                 points int not null,
                 latitude float,
                 longitude float,
                 challenge text,
+                points_challenge int,
                 primary key(name)       
             );"""
         )
         self.conn.execute(
             """CREATE TABLE if not exists notifications (
+                id text not null unique,
+                name text,
                 text text not null,
                 type text
+            );"""
+        )
+
+        self.conn.execute(
+            """
+            CREATE TABLE if not exists budget (
+                id TEXT PRIMARY KEY,
+                team_id TEXT NOT NULL,
+                amount INTEGER NOT NULL,
+                amount_czk INTEGER NOT NULL,
+                description TEXT,
+                category TEXT NOT NULL,
+                currency TEXT NOT NULL,
+                date TEXT NOT NULL
             );"""
         )
 
@@ -900,7 +1491,18 @@ class Database:
         return None
 
     def save_location(
-        self, user, comment, longitude, latitude, accuracy, altitude, altitude_accuracy, heading, speed, address, date
+        self,
+        user,
+        comment,
+        longitude,
+        latitude,
+        accuracy,
+        altitude,
+        altitude_accuracy,
+        heading,
+        speed,
+        address,
+        date,
     ):
         team = self.get_team_for_user(user["pax_id"])
         username = user["username"]
@@ -926,7 +1528,9 @@ class Database:
         self.conn.commit()
         # utils.log(f"Saved location {latitude}, {longitude} for {username}", level="success")
 
-    def save_location_options(self, team, location_color, location_icon_color, location_icon):
+    def save_location_options(
+        self, team, location_color, location_icon_color, location_icon
+    ):
         team_id = str(team["team_id"])
 
         self.conn.execute(
@@ -957,6 +1561,44 @@ class Database:
 
         return df.to_dict("records")[0]
 
+    def get_locations_as_gpx(_self, team):
+        team_id = team["team_id"]
+
+        df = pd.read_sql_query(
+            f"SELECT * FROM locations WHERE team_id='{team_id}'",
+            _self.conn,
+        )
+        if df.empty:
+            return None
+
+        gpx = GPX()
+
+        xc_year = _self.event["year"]
+        team_name = team["team_name"]
+        route = GPXRoute(name=f"{team_name} – Letní X-Challenge {xc_year}")
+        gpx.routes.append(route)
+
+        for i, location in df.iterrows():
+            gpx_routepoint = GPXRoutePoint(
+                latitude=location["latitude"],
+                longitude=location["longitude"],
+            )
+            route.points.append(gpx_routepoint)
+
+            date = dateutil.parser.parse(location["date"])
+            date_text = date.strftime("%d.%m. %H:%M")
+
+            waypoint = GPXWaypoint(
+                latitude=location["latitude"],
+                longitude=location["longitude"],
+                time=date,
+                name=f"{date_text}",
+                description=location["comment"],
+            )
+            gpx.waypoints.append(waypoint)
+
+        return gpx.to_xml()
+
     def get_last_locations(_self, for_datetime=None):
         # get last locations of all teams
         teams = _self.get_table_as_df("teams")
@@ -986,7 +1628,9 @@ class Database:
         username = location["username"]
         date = location["date"]
 
-        self.conn.execute(f"DELETE FROM locations WHERE username='{username}' AND date='{date}'")
+        self.conn.execute(
+            f"DELETE FROM locations WHERE username='{username}' AND date='{date}'"
+        )
         self.conn.commit()
 
         utils.log(f"Deleted location {username} {date}", level="info")
@@ -1017,21 +1661,90 @@ class Database:
     def get_fa_icons(self):
         return self.fa_icons
 
+    def get_currency_list(self):
+        currency_list = sorted(list(self.currency_converter.currencies))
+        # move CZK and EUR to the front
+        currency_list.remove("CZK")
+        currency_list.remove("EUR")
+        currency_list = ["CZK", "EUR"] + currency_list
+        return currency_list
+
+    def get_spending_categories(self):
+        return {
+            "transport": "🚍️ Doprava",
+            "food": "🥫 Jídlo a pití",
+            "accomodation": "🏠️ Ubytování",
+            "other": "💸 Ostatní",
+        }
+
+    def get_challenge_categories(self):
+        return [
+            "🌞 Denní výzva",
+            "🤗 Lidská interakce",
+            "💙 Zlepšení světa",
+            "👣 Dobrodružství",
+            "🏋️ Fyzické překonání",
+            "📝 Reportování",
+            "🧘 Nitrozpyt",
+        ]
+
+    def convert_to_czk(self, amount, currency):
+        return self.currency_converter.convert(amount, currency, "CZK")
+
+    def save_spending(self, team, amount, currency, date, category, comment):
+        team_id = team["team_id"]
+        amount_czk = self.convert_to_czk(amount, currency)
+        spending_id = utils.generate_uuid()
+
+        self.conn.execute(
+            f"INSERT INTO budget (id, team_id, amount, amount_czk, description, currency, category, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                spending_id,
+                team_id,
+                amount,
+                amount_czk,
+                comment,
+                currency,
+                category,
+                date,
+            ),
+        )
+        self.conn.commit()
+        utils.log(
+            f"Added spending {amount} {currency} for {team['team_name']}",
+            level="success",
+        )
+
+    def get_spendings_by_team(self, team):
+        team_id = team["team_id"]
+
+        if self.event.get("budget_per_person") is not None:
+            spendings = pd.read_sql_query(
+                f"SELECT * FROM budget WHERE team_id='{team_id}'", self.conn
+            )
+        else:
+            spendings = None
+
+        return spendings
+
+    def delete_spending(self, spending_id):
+        self.conn.execute(f"DELETE FROM budget WHERE id='{spending_id}'")
+        self.conn.commit()
+        utils.log(f"Deleted spending {spending_id}", level="info")
+
     def get_team_link(self, team):
         team_id = team["team_id"]
         team_name = team["team_name"]
         is_top_x = bool(int(team["is_top_x"]))
-
-        link_color = self.get_settings_value("link_color")
 
         if is_top_x:
             # there is no other good way how to incorporate a static image into html (without st.image())
             data_url = self.get_static_image_base64("topx.png")
 
             top_x_badge = f"<img src='data:image/png;base64,{data_url}' style='margin-top: -5px; margin-left: 5px'>"
-            return f"<a href='/Týmy?team_id={team_id}' target='_self' style='text-decoration: none; color: {link_color}; margin-top: -10px;'>{team_name}</a> {top_x_badge}"
+            return f"<a href='/Týmy?team_id={team_id}&event_id={self.event['year']}' target='_self' class='app-link' style='margin-top: -10px;'>{team_name}</a> {top_x_badge}"
         else:
-            return f"<a href='/Týmy?team_id={team_id}' target='_self' style='text-decoration: none; color: {link_color}; margin-top: -10px;'>{team_name}</a>"
+            return f"<a href='/Týmy?team_id={team_id}&event_id={self.event['year']}' target='_self' class='app-link' style='margin-top: -10px;'>{team_name}</a>"
 
     def toggle_team_visibility(self, team):
         team_id = team["team_id"]
@@ -1040,6 +1753,8 @@ class Database:
             f"SELECT * FROM teams WHERE team_id='{team_id}'",
             self.conn,
         )
+        if df.empty:
+            return None
 
         visibility = df.to_dict("records")[0]["location_visibility"]
 
@@ -1067,7 +1782,9 @@ class Database:
                 return files
             team_name = team_name["team_name"]
 
-            path = os.path.join("files", "2022", action_type, slugify(action_name), slugify(team_name))
+            path = os.path.join(
+                "files", "2022", action_type, slugify(action_name), slugify(team_name)
+            )
 
             # find all files in the directory
             for file in os.listdir(path):
@@ -1081,7 +1798,9 @@ class Database:
                     # guess from the extension
                     extension = file.split(".")[-1]
                     file_type = (
-                        f"video/{extension}" if extension.lower() in ["mp4", "mov", "avi"] else f"image/{extension}"
+                        f"video/{extension}"
+                        if extension.lower() in ["mp4", "mov", "avi"]
+                        else f"image/{extension}"
                     )
 
                 files.append({"path": file_path, "type": file_type})
@@ -1102,10 +1821,10 @@ class Database:
                     (?, ?, ?, ?);
                     """,
                     (
-                        i + 1,
+                        f"2022_team_{i + 1}",
                         row["Název týmu"],
-                        row["Člen #1: Jméno a příjmení"],
-                        row["Člen #2: Jméno a příjmení"],
+                        "2022_" + slugify(row["Člen #1: Jméno a příjmení"]),
+                        "2022_" + slugify(row["Člen #2: Jméno a příjmení"]),
                     ),
                 )
                 self.conn.execute(
@@ -1115,7 +1834,7 @@ class Database:
                     (?, ?, ?);
                     """,
                     (
-                        row["Člen #1: Jméno a příjmení"],
+                        "2022_" + slugify(row["Člen #1: Jméno a příjmení"]),
                         utils.generate_uuid() + "@xc-test.cz",
                         row["Člen #1: Jméno a příjmení"],
                     ),
@@ -1127,7 +1846,7 @@ class Database:
                     (?, ?, ?);
                     """,
                     (
-                        row["Člen #2: Jméno a příjmení"],
+                        "2022_" + slugify(row["Člen #2: Jméno a příjmení"]),
                         utils.generate_uuid() + "@xc-test.cz",
                         row["Člen #2: Jméno a příjmení"],
                     ),
@@ -1138,10 +1857,13 @@ class Database:
             reader = csv.DictReader(f, delimiter=",")
             for i, row in enumerate(reader):
                 username = "xc-bot"
-                team_id = row["ID týmu"]
+                team_id = "2022_team_" + row["ID týmu"]
 
                 # format from %d/%m/%Y %H:%M:%S to %Y-%m-%d %H:%M:%S")
                 timestamp = row["Timestamp"]
+                timestamp = datetime.strptime(timestamp, "%d/%m/%Y %H:%M:%S").strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                )
 
                 action_type_dict = {
                     "⭐ splněnou výzvu": "challenge",
@@ -1165,12 +1887,12 @@ class Database:
 
                 self.conn.execute(
                     """INSERT OR IGNORE INTO posts
-                    (post_id, username, team_id, action_type, action_name, comment, created, files)
+                    (post_id, pax_id, team_id, action_type, action_name, comment, created, files)
                     VALUES
                     (?, ?, ?, ?, ?, ?, ?, ?);
                     """,
                     (
-                        utils.generate_uuid(),
+                        "2022_" + utils.generate_uuid(),
                         username,
                         team_id,
                         action_type,
@@ -1242,17 +1964,21 @@ if __name__ == "__main__":
     parser.add_argument("--fill_addresses", action="store_true")
     parser.add_argument("--insert_data_2022", action="store_true")
     parser.add_argument("--reslugify", action="store_true")
+    # parser.add_argument("--export_static_website", action="store_true")
 
     args = parser.parse_args()
 
     print(args)
-
     print("Creating database...")
-    db = Database()
-    db.create_tables()
 
     if args.insert_data_2022:
+        db = Database(event_id="2022")
+        db.create_tables()
         db.insert_data_2022()
+        exit()
+
+    db = Database()
+    db.create_tables()
 
     if args.load_from_wc_product:
         print("Fetching participants from Woocommerce...")
@@ -1262,6 +1988,11 @@ if __name__ == "__main__":
         with open(args.load_from_local_file) as f:
             wc_participants = json.load(f)
             db.add_participants(wc_participants)
+
+    # elif args.export_static_website:
+    #     print("Exporting static website...")
+    #     db = Database(event_id="2022")
+    #     db.export_static_website("exported_website", "2022")
 
     elif args.fill_addresses:
         print("Filling addresses...")

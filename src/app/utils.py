@@ -17,7 +17,8 @@ from datetime import datetime, timedelta
 import pytz
 import psutil
 import gc
-
+from streamlit_javascript import st_javascript
+from ftplib import FTP
 
 TTL = 600
 
@@ -189,7 +190,9 @@ def postprocess_uploaded_video(video):
     for f in os.listdir("/tmp"):
         if f.endswith("_pp.mp4"):
             fpath = os.path.join("/tmp", f)
-            if datetime.now() - datetime.fromtimestamp(os.path.getmtime(fpath)) > timedelta(hours=1):
+            if datetime.now() - datetime.fromtimestamp(
+                os.path.getmtime(fpath)
+            ) > timedelta(hours=1):
                 os.remove(fpath)
 
     video_uuid = generate_uuid()
@@ -206,7 +209,9 @@ def postprocess_uploaded_video(video):
 
     original_video_path = video_path
     video_path = f"/tmp/{video_uuid}_pp.mp4"
-    st.write(f"Zpracovávám video {original_video_path}, může to chvíli trvat, prosím vydrž...")
+    st.write(
+        f"Zpracovávám video {original_video_path}, může to chvíli trvat, prosím vydrž..."
+    )
 
     # TODO write about ffmpeg as a dependency
     postprocess_ffmpeg(original_video_path, video_path)
@@ -272,24 +277,142 @@ def check_ram_limit():
     used_percentage = memory_info.percent
 
     if used_percentage > threshold_percentage:
-        log(f"Used RAM: {used_percentage}%, clearing cache and calling garbage collector.", "debug")
+        log(
+            f"Used RAM: {used_percentage}%, clearing cache and calling garbage collector.",
+            "debug",
+        )
         clear_cache()
         gc.collect()
 
 
-def style_sidebar():
+def get_active_event_id():
+    # this needs to be outside db so that we can initialize the db for the first time
+    current_dir = os.path.dirname(os.path.realpath(__file__))
+    settings_path = os.path.join(current_dir, "settings.yaml")
+
+    with open(settings_path) as f:
+        settings = yaml.safe_load(f)
+
+    active_event_id = settings.get("active_event_id")
+
+    return active_event_id
+
+
+def page_wrapper():
+    event = st.session_state.get("event")
+
+    # currently the only way to detect streamlit theme
+    bg_color = st_javascript(
+        """window.getComputedStyle(window.parent.document.getElementsByClassName("stApp")[0]).getPropertyValue("background-color")"""
+    )
+    # bg_color is set to 0 until the page is loaded, we need to ignore it
+    if bg_color:
+        st.session_state.bg_color = bg_color
+    if not hasattr(st.session_state, "bg_color"):
+        st.session_state.bg_color = "rgb(255, 255, 255)"
+
+    link_color = (
+        "#002676" if st.session_state.bg_color == "rgb(255, 255, 255)" else "#6bb6fe"
+    )
+
     st.markdown(
         """
     <style>
-    div[data-testid='stSidebarNav'] ul {max-height:none}</style>
+    div[data-testid='stSidebarNav'] ul {max-height:none}
+    .app-link, a:link, a:visited {
+        color: """
+        + link_color
+        + """ !important;
+        text-decoration: none;
+    }
+    .table-display {
+        width: 100%;
+    }
+    .table-display > thead > tr > th {
+        text-align: left;
+    }
+    </style>
     """,
         unsafe_allow_html=True,
     )
 
-    app_logo.add_logo("static/letax.png", height=40)
+    if event and event["status"] == "past":
+        st.markdown(
+            """
+        <style>
+        div[data-testid='stSidebarNav'] {
+            filter: grayscale(100%);
+        }
+        </style>
+        """,
+            unsafe_allow_html=True,
+        )
+        st.sidebar.info(f"Prohlížíš si archiv ročníku {event['year']}.")
+
+        show_active_btn = st.sidebar.button("Zobrazit aktuální ročník")
+
+        if show_active_btn:
+            st.session_state.event = None
+            clear_cache()
+            st.rerun()
+
+    if not event:
+        app_logo.add_logo("static/logo_icon.png", year="", height=40)
+    else:
+        app_logo.add_logo("static/logo_icon.png", year=event["year"], height=40)
 
     # it is useful to run it here since this gets called every time
     check_ram_limit()
+
+
+def upload_to_ftp(local_dir, remote_dir):
+    ftp = FTP(host=st.secrets["ftp"]["host"])
+    ftp.login(user=st.secrets["ftp"]["login"], passwd=st.secrets["ftp"]["password"])
+
+    # upload all the files from local_dir to remote_dir
+    progress_text = "Nahrávám soubory"
+    my_bar = st.progress(0, text=progress_text)
+
+    all_files = list(os.walk(local_dir))
+    for i, (root, dirs, files) in enumerate(all_files):
+        for directory in dirs:
+            remote_path = os.path.join(
+                remote_dir, root.replace(local_dir, ""), directory
+            )
+            try:
+                ftp.mkd(remote_path)
+            except:
+                pass
+
+        for file in files:
+            local_path = os.path.join(root, file)
+            remote_path = os.path.join(remote_dir, root.replace(local_dir, ""), file)
+
+            log(f"Uploading {local_path} to {remote_path}", "debug")
+
+            with open(local_path, "rb") as f:
+                ftp.storbinary(f"STOR {remote_path}", f)
+
+            my_bar.progress(
+                int(((i + 1) / len(all_files)) * 100),
+                text=f"Nahrávám `{local_path}` do `{remote_path}`",
+            )
+
+    my_bar.progress(100)
+    ftp.quit()
+
+
+def get_event_id(params):
+    if params.get("event_id"):
+        return params["event_id"]
+
+    elif st.session_state.get("event"):
+        return st.session_state["event"]["year"]
+
+    else:
+        return get_active_event_id()
+
+    return None
 
 
 def clear_cache():

@@ -9,7 +9,9 @@ import time
 import time
 import utils
 
-db = get_database()
+params = st.query_params
+event_id = utils.get_event_id(params)
+db = get_database(event_id=event_id)
 
 
 def get_logged_info():
@@ -135,7 +137,7 @@ def login_page():
     tabs = None
 
     # delete query parameters
-    st.experimental_set_query_params()
+    st.query_params.clear()
 
     if st.session_state["authentication_status"] == None:
         _, center_column, _ = st.columns([1, 3, 1])

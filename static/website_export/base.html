@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Letní X-Challenge 2023</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css"
+        crossorigin="anonymous">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&display=swap">
+</head>
+
+<body>
+    <style>
+        body {
+            font-family: "Source Sans Pro", sans-serif;
+            max-width: 800px;
+            margin: auto;
+        }
+
+        h1,
+        h2 {
+            font-weight: 700;
+            margin-top: 20px;
+            margin-bottom: 30px;
+        }
+
+        h3,
+        h4,
+        h5,
+        h6 {
+            font-weight: 600;
+        }
+
+        .video {
+            max-height: 300px;
+            overflow: hidden;
+        }
+
+        /* center the cointainer contents */
+        .container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        /* make link color #31278F */
+        a {
+            color: #31278F;
+        }
+
+        .event-list {
+            max-width: 500px;
+            word-wrap: break-word;
+        }
+
+        .event-list a {
+            color: #31278F;
+            margin-right: 10px;
+            margin-left: 10px;
+            font-size: 30px;
+            font-weight: 700;
+        }
+    </style>
+    <div class="container">
+        <!-- show logo.png -->
+        <a href="https://x-challenge.cz"><img src="logo.png" alt="logo" class="img-fluid" style="max-width: 300px;"></a>
+        <h1>Letní X-Challenge</h1>
+
+        <p>Zde najdeš archiv příspěvků z předešlých ročníků <a href="https://x-challenge.cz/letni/">Letní
+                X-Challenge</a> od roku 2022.</p>
+
+        <p>
+        <div class="event-list" id="event-list">
+        </div>
+        </p>
+
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"
+        crossorigin="anonymous"></script>
+</body>
+
+</html>

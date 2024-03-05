@@ -8,9 +8,15 @@ import datetime
 from folium.plugins import BeautifyIcon
 from streamlit_folium import folium_static
 
-st.set_page_config(page_title="Mapa týmů", page_icon="static/favicon.png", layout="wide")
-utils.style_sidebar()
-db = get_database()
+st.set_page_config(
+    page_title="Mapa týmů", page_icon="static/favicon.png", layout="wide"
+)
+
+params = st.query_params
+event_id = utils.get_event_id(params)
+db = get_database(event_id=event_id)
+st.session_state["event"] = db.get_event()
+utils.page_wrapper()
 
 from map import show_last_shared_locations, show_positions, show_checkpoints, render_map
 
@@ -30,12 +36,12 @@ def main():
         # st.caption(
         #     "Na mapě je zobrazena poslední poloha týmů, které svou polohu zaznamenaly. Historii konkrétního týmu najdeš na jejich stránce."
         # )
-        m, last_locations = show_positions()
-        show_checkpoints(m)
+        m, last_locations = show_positions(db)
+        show_checkpoints(db, m)
         render_map(m)
 
     with cols[1]:
-        show_last_shared_locations(last_locations)
+        show_last_shared_locations(db, last_locations)
 
 
 if __name__ == "__main__":

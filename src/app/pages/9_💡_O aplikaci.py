@@ -12,15 +12,18 @@ import pandas as pd
 from database import get_database
 
 
-st.set_page_config(page_title="O aplikaci", page_icon="static/favicon.png", layout="centered")
-utils.style_sidebar()
+st.set_page_config(
+    page_title="O aplikaci", page_icon="static/favicon.png", layout="centered"
+)
 
-db = get_database()
+params = st.query_params
+event_id = utils.get_event_id(params)
+db = get_database(event_id=event_id)
+st.session_state["event"] = db.get_event()
+utils.page_wrapper()
 
 
 def main():
-    # st.title("Letní X-Challenge")
-
     st.title("O a(pli)k(a)ci")
 
     columns = st.columns([2, 1], gap="large")
@@ -45,7 +48,7 @@ Pokud narazíš na nějakou chybu (a že jich ze začátku může být!), dej mi
         st.divider()
         st.markdown(
             """
-*© 2023 X-Challenge*
+*© 2024 X-Challenge*
 """
         )
     with columns[1]:
