@@ -23,21 +23,6 @@ utils.page_wrapper()
 from authenticator import login_page
 
 
-def display_challenge(challenge):
-    points = challenge["points"]
-
-    if not points:
-        points = "0"
-
-    # if points can be rounded to int without loss of precision, do it
-    if points == int(points):
-        points = int(points)
-
-    st.markdown("#### " + challenge["name"] + " (" + str(points) + ")")
-    st.markdown(f"{challenge['description']}")
-    st.divider()
-
-
 def main():
     st.title("Výzvy")
 
@@ -47,25 +32,36 @@ def main():
         st.info("Na tento ročník zatím výzvy nejsou. Ale budou!")
         st.stop()
 
+    tabs = st.tabs(["Seznam", "Popis"])
+
     # sort by name: letter case insensitive, interpunction before numbers
     challenges = utils.sort_challenges(challenges)
-    categories = list(challenges.category.unique())
-    tab_list = ["💪 vše"] + categories
-    tabs = st.tabs(tab_list)
 
-    for _, challenge in challenges.iterrows():
-        with tabs[0]:
-            display_challenge(challenge)
+    # if points can be rounded to int without loss of precision, do it
+    challenges["points"] = challenges["points"].apply(
+        lambda x: str(int(x)) if float(x) == int(x) else str(x)
+    )
 
-        if challenge["category"] in categories:
-            with tabs[categories.index(challenge["category"]) + 1]:
-                display_challenge(challenge)
+    # replace NaN with 0
+    challenges["points"] = challenges["points"].fillna(0)
 
-        else:
-            utils.log(
-                f'Category {challenge["category"]} does not have its own tab',
-                level="warning",
-            )
+    with tabs[0]:
+        challenges_table = challenges.rename(
+            columns={"name": "Název", "points": "Body", "category": "Kategorie"}
+        )
+        challenges_table = challenges_table[["Kategorie", "Název", "Body"]]
+        challenges_table = challenges_table.reset_index(drop=True)
+        st.write(
+            challenges_table.to_html(escape=False, index=False), unsafe_allow_html=True
+        )
+
+    with tabs[1]:
+        for _, challenge in challenges.iterrows():
+            points = challenge["points"]
+
+            st.markdown("#### " + challenge["name"] + " (" + str(points) + ")")
+            st.markdown(f"{challenge['description']}")
+            st.divider()
 
 
 if __name__ == "__main__":

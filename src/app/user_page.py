@@ -104,7 +104,7 @@ def create_post(db, user, action_type, action, comment, files):
 def record_challenge(db, user):
     event = db.get_event()
 
-    if event["status"] != "active":
+    if event["status"] != "ongoing":
         st.info(
             f"Pro Letní X-Challenge {event['year']} momentálně nelze vkládat příspěvky."
         )
@@ -148,7 +148,7 @@ def record_challenge(db, user):
 def record_checkpoint(db, user):
     event = db.get_event()
 
-    if event["status"] != "active":
+    if event["status"] != "ongoing":
         st.info(
             f"Pro Letní X-Challenge {event['year']} momentálně nelze vkládat příspěvky."
         )
@@ -190,7 +190,7 @@ def record_checkpoint(db, user):
 
 def record_story(db, user):
     event = db.get_event()
-    if event["status"] != "active":
+    if event["status"] != "ongoing":
         st.info(
             f"Pro Letní X-Challenge {event['year']} momentálně nelze vkládat příspěvky."
         )
@@ -233,7 +233,7 @@ def record_story(db, user):
 
 def record_location(db, user, team):
     event = db.get_event()
-    if event["status"] != "active":
+    if event["status"] != "ongoing":
         st.info(
             f"Pro Letní X-Challenge {event['year']} momentálně nelze sdílet lokaci."
         )
@@ -413,7 +413,7 @@ def record_location(db, user, team):
 
 def show_team_info(db, user, team):
     event = db.get_event()
-    fields_disabled = event["status"] != "active"
+    fields_disabled = event["status"] != "ongoing"
 
     team_name = team["team_name"] if team else ""
     motto = team["team_motto"] if team else ""
@@ -616,7 +616,7 @@ def show_posts(db, user, team, posts):
                     st.rerun()
             else:
                 if st.button("📝 Upravit", key=f"edit-{post['post_id']}"):
-                    if event["status"] != "active":
+                    if event["status"] != "ongoing":
                         st.toast(
                             f"Pro Letní X-Challenge {event['year']} momentálně nelze upravovat příspěvky."
                         )
@@ -642,7 +642,7 @@ def show_posts(db, user, team, posts):
                     st.rerun()
             else:
                 if st.button("❌ Smazat", key=f"delete-{post['post_id']}"):
-                    if event["status"] != "active":
+                    if event["status"] != "ongoing":
                         st.toast(
                             f"Pro Letní X-Challenge {event['year']} momentálně nelze upravovat příspěvky."
                         )

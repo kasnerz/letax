@@ -41,7 +41,7 @@ def main():
         render_map(m)
 
     with cols[1]:
-        show_last_shared_locations(last_locations, db)
+        show_last_shared_locations(db, last_locations)
 
 
 if __name__ == "__main__":

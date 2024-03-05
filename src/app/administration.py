@@ -180,27 +180,43 @@ def action_add_participant(db):
 
 def action_set_events(db):
     events = db.get_events()
-    st.markdown("#### Nastavit akci")
+    active_event = db.get_active_event()
 
-    event_status = [
-        ("active", "Aktivní"),
-        ("draft", "Draft"),
-        ("past", "Proběhlá"),
-    ]
+    st.markdown("#### Aktivní akce")
+    with st.form("active_event_form"):
+        active_event = st.selectbox(
+            "Akce, která se zobrazuje na hlavní stránce.",
+            events,
+            format_func=lambda x: x["year"],
+            index=events.index(active_event),
+        )
+        btn_active = st.form_submit_button(label="Nastavit")
+
+    if btn_active:
+        db.set_active_event(active_event["year"])
+        utils.clear_cache()
+        st.success("Aktivní akce nastavena")
+
+    st.markdown("#### Nastavit akci")
 
     selected_event = st.selectbox(
         "Vyber ročník", events, format_func=lambda x: x["year"]
     )
 
+    event_status = {
+        "draft": "Připravovaná",
+        "ongoing": "Probíhající",
+        "past": "Ukončená",
+    }
+
     with st.form("event_form"):
-        event_status_idx = [x[0] for x in event_status].index(selected_event["status"])
         event_status = st.selectbox(
-            "Status",
-            options=event_status,
+            "Stav",
+            list(event_status.values()),
+            format_func=lambda x: list(event_status.keys())[
+                list(event_status.values()).index(x)
+            ],
             key="event_status",
-            help="Aktivní akce se zobrazuje na hlavní stránce. Akce ve stavu Draft se zobrazuje jen administrátorům. Proběhlou akci je možné zobrazit v archivu.",
-            index=event_status_idx,
-            format_func=lambda x: x[1],
         )
         event_gmaps_url = st.text_input(
             "URL na Google Maps s checkpointy",
@@ -217,18 +233,10 @@ def action_set_events(db):
         cols = st.columns([1, 6, 1])
         btn_save = cols[0].form_submit_button(label="Uložit")
 
-    selected_event_id = selected_event["id"]
+    selected_event_id = selected_event["year"]
 
     if btn_save:
         event_status = event_status[0]
-        # refuse to set two active events
-        if event_status == "active":
-            for event in events:
-                if event["status"] == "active" and event["id"] != selected_event_id:
-                    st.error(
-                        f"Nelze nastavit dvě aktivní akce, jako aktivní akce už je nastavený ročník {event['year']}."
-                    )
-                    st.stop()
 
         db.set_event_info(
             event_id=selected_event_id,
@@ -261,6 +269,8 @@ def action_set_events(db):
 
 
 def export_full_website(events, output_dir):
+    os.makedirs(output_dir, exist_ok=True)
+
     with open("static/website_export/base.html") as f:
         base_html = f.read()
 
@@ -289,7 +299,7 @@ def export_full_website(events, output_dir):
             continue
 
         st.write(f"Exportuji {event['year']}")
-        db_event = get_database(event_id=event["id"])
+        db_event = get_database(event_id=event["year"])
         db_event.export_static_website(output_dir=output_dir)
 
 
@@ -300,17 +310,17 @@ def action_export(db):
     )
     btn_export = st.button(label="Stáhnout export lokálně")
     btn_ftp = st.button(
-        label="Aktualizovat web na FTP",
-        help="Nahraje web na letni.x-challenge.cz",
+        label="Aktualizovat letni.x-challenge.cz",
+        help="Vyexportuje statickou verzi webu na letni.x-challenge.cz",
     )
+    # important to keep the trailing slash
+    output_dir = "static/website_export/export/"
 
     if btn_ftp:
-        output_dir = "static/website_export/export"
-        os.makedirs(output_dir, exist_ok=True)
         with st.status("Exportuji web"):
             export_full_website(events=events, output_dir=output_dir)
 
-        with st.spinner("Aktualizuji web na FTP"):
+        with st.spinner("Aktualizuji web letni.x-challenge.cz, čekej prosím..."):
             # upload to FTP
             utils.upload_to_ftp(
                 local_dir=output_dir,
@@ -325,9 +335,6 @@ def action_export(db):
         st.balloons()
 
     if btn_export:
-        output_dir = "static/website_export/export"
-        os.makedirs(output_dir, exist_ok=True)
-
         with st.status("Exportuji web"):
             export_full_website(events=events, output_dir=output_dir)
             tmp_filename = f"xc_export.zip"

@@ -10,3 +10,4 @@ settings.yaml
 letax.log
 backups
 .vscode
+static/website_export/export/

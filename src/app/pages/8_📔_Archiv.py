@@ -35,22 +35,19 @@ def main():
         )
         # dropdown
         events = db.get_events()
-        events = [event for event in events if event["status"] != "draft"]
+        # events = [event for event in events if event["stat"] is True]
 
         if not events:
             st.info("Zatím nebyly nalezeny žádné ročníky.")
             st.stop()
 
-        active_event = st.session_state.get("event", None)
-        active_event_idx = [
-            i for i, event in enumerate(events) if event["id"] == active_event
-        ]
+        active_event = st.session_state.event
         # keep year and event_id so that we can use event_id later
         selected_event = st.selectbox(
             "Vyber ročník",
             events,
             format_func=lambda x: x["year"],
-            index=active_event_idx[0] if active_event_idx else 0,
+            index=events.index(active_event) if active_event else 0,
         )
 
         change_event = st.button("Změnit ročník")
