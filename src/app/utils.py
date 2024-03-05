@@ -18,7 +18,7 @@ import pytz
 import psutil
 import gc
 from streamlit_javascript import st_javascript
-import paramiko
+from ftplib import FTP
 
 TTL = 600
 
@@ -301,6 +301,21 @@ def page_wrapper():
     link_color = (
         "#002676" if st.session_state.bg_color == "rgb(255, 255, 255)" else "#6bb6fe"
     )
+    # st.markdown(
+    #     """
+    #     <style>
+    #     [data-testid="stSidebarNav"]::before {{
+    #             content: "Letní X-Challenge 2024";
+    #             margin-left: 20px;
+    #             margin-top: 20px;
+    #             font-size: 30px;
+    #             position: relative;
+    #             top: 100px;
+    #         }}
+    #         </style>
+    #     """,
+    #     unsafe_allow_html=True,
+    # )
     st.markdown(
         """
     <style>
@@ -335,39 +350,16 @@ def page_wrapper():
         #     st.session_state.event = None
         #     st.rerun()
 
-    app_logo.add_logo("static/letax.png", height=40)
+    app_logo.add_logo("static/logo_icon.png", year=event["year"], height=40)
+    # app_logo.add_logo("static/letax.png", height=40)
 
     # it is useful to run it here since this gets called every time
     check_ram_limit()
 
 
 def upload_to_ftp(local_dir, remote_dir):
-    ssh = paramiko.SSHClient()
-    ssh.connect(
-        st.secrets["ftp"]["host"],
-        username=st.secrets["ftp"]["login"],
-        password=st.secrets["ftp"]["password"],
-        timeout=15,
-        allow_agent=False,
-    )
-    breakpoint()
-    # or
-
-    sftp = ssh.open_sftp()
-
-    # sftp.get(remotepath, localpath)
-    # # or
-    # sftp.put(localpath, remotepath)
-
-    # # # connect to the server
-    # transport = paramiko.Transport(
-    #     (st.secrets["ftp"]["host"], st.secrets["ftp"]["port"])
-    # )
-    # transport.banner_timeout = 60
-    # transport.connect(
-    #     username=st.secrets["ftp"]["login"], password=st.secrets["ftp"]["password"]
-    # )
-    # sftp = paramiko.SFTPClient.from_transport(transport)
+    ftp = FTP(host=st.secrets["ftp"]["host"])
+    ftp.login(user=st.secrets["ftp"]["login"], passwd=st.secrets["ftp"]["password"])
 
     # upload all the files from local_dir to remote_dir
     progress_text = "Nahrávám soubory"
@@ -379,11 +371,22 @@ def upload_to_ftp(local_dir, remote_dir):
             remote_path = os.path.join(
                 remote_dir, os.path.relpath(local_path, local_dir)
             )
-            sftp.put(local_path, remote_path)
-            my_bar.progress(0, text=f"{progress_text} {file}")
+            log(f"Uploading {local_path} to {remote_path}", level="debug")
 
-    st.progress(100)
-    sftp.close()
+            # if the subdirectory doesn't exist, create it
+            subdirs = remote_path.split("/")[:-1]
+            for i in range(1, len(subdirs) + 1):
+                subdir = "/".join(subdirs[:i])
+                if subdir not in ftp.nlst(remote_dir):
+                    ftp.mkd(subdir)
+
+            with open(local_path, "rb") as f:
+                ftp.storbinary(f"STOR {remote_path}", f)
+
+            my_bar.progress(0, text=f"{progress_text} {local_path}")
+
+    my_bar.progress(100)
+    ftp.quit()
 
 
 def get_event_id(params):

@@ -146,6 +146,9 @@ def action_fetch_users(db):
 
 
 def action_clear_cache(db):
+    st.caption(
+        "Vyčistit cache může pomoci v případě, že se některé údaje v appce (například uživatelské účty) nedaří aktualizovat."
+    )
     cache_btn = st.button("Vyčistit cache", on_click=utils.clear_cache)
 
     if cache_btn:
@@ -153,6 +156,10 @@ def action_clear_cache(db):
 
 
 def action_add_participant(db):
+    st.caption(
+        "Zde můžeš přidat do letošní soutěže účastníka, který se nenahrál automaticky z webu."
+    )
+
     with st.form("add_extra_participant"):
         name = st.text_input("Jméno a příjmení", help="Celé jméno účastníka")
         email = st.text_input("email", help="Email účastníka")
@@ -219,7 +226,7 @@ def action_set_events(db):
             for event in events:
                 if event["status"] == "active" and event["id"] != selected_event_id:
                     st.error(
-                        "Nelze nastavit dvě aktivní akce. Nejdřív nastav tu starou jako draft nebo past."
+                        f"Nelze nastavit dvě aktivní akce, jako aktivní akce už je nastavený ročník {event['year']}."
                     )
                     st.stop()
 
