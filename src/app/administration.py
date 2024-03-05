@@ -605,7 +605,7 @@ def action_set_events(db):
             "Rozpočet na osobu (CZK)",
             value=selected_event["budget_per_person"]
             if selected_event.get("budget_per_person")
-            else 0,
+            else None,
             key="event_budget",
             help="Rozpočet na osobu na akci v CZK.",
             disabled=selected_event.get("budget_per_person") is None,
