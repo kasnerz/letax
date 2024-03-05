@@ -22,6 +22,8 @@ if __name__ == "__main__":
     params = st.query_params
     event_id = utils.get_event_id(params)
     db = get_database(event_id=event_id)
+    st.session_state["event"] = db.get_event()
+    st.session_state["active_event"] = db.get_active_event()
     utils.page_wrapper()
 
     if user["role"] == "admin":

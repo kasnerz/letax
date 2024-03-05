@@ -330,6 +330,7 @@ def add_logo(logo_url: str, year: int, height: int = 120):
 
 def page_wrapper():
     event = st.session_state.get("event")
+    active_event = st.session_state.get("active_event")
 
     # currently the only way to detect streamlit theme
     bg_color = st_javascript(
@@ -366,7 +367,7 @@ def page_wrapper():
         unsafe_allow_html=True,
     )
 
-    if event and event["status"] == "past":
+    if event and active_event and event["year"] != active_event["year"]:
         st.markdown(
             """
         <style>
@@ -377,9 +378,11 @@ def page_wrapper():
         """,
             unsafe_allow_html=True,
         )
-        st.sidebar.info(f"Prohlížíš si archiv ročníku {event['year']}.")
+        st.sidebar.info(f"Prohlížíš si ročník {event['year']}.")
 
-        show_active_btn = st.sidebar.button("Zobrazit aktuální ročník")
+        show_active_btn = st.sidebar.button(
+            f"Zobrazit aktuální ročník {active_event['year']}"
+        )
 
         if show_active_btn:
             st.session_state.event = None

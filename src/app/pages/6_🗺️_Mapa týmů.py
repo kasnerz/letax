@@ -16,6 +16,7 @@ params = st.query_params
 event_id = utils.get_event_id(params)
 db = get_database(event_id=event_id)
 st.session_state["event"] = db.get_event()
+st.session_state["active_event"] = db.get_active_event()
 utils.page_wrapper()
 
 from map import show_last_shared_locations, show_positions, show_checkpoints, render_map
