@@ -13,7 +13,6 @@ st.set_page_config(
     # initial_sidebar_state="expanded",
 )
 params = st.query_params
-
 event_id = utils.get_event_id(params)
 db = get_database(event_id=event_id)
 st.session_state["event"] = db.get_event()

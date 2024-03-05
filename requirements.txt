@@ -4,6 +4,7 @@ currencyconverter==0.17.17
 ffmpeg-python==0.2.0
 geopy==2.3.0
 gpxpy==1.6.2
+openpyxl==3.1.2
 pdbpp==0.10.3
 pip-chill==1.0.3
 psutil==5.9.5

@@ -23,7 +23,7 @@ utils.page_wrapper()
 from authenticator import login_page
 
 
-def main():
+def main(user):
     st.title("Výzvy")
 
     challenges = db.get_table_as_df("challenges")
@@ -33,6 +33,8 @@ def main():
         st.stop()
 
     tabs = st.tabs(["Seznam", "Popis"])
+
+    available_actions = [x["id"] for x in db.get_available_actions(user, "challenge")]
 
     # sort by name: letter case insensitive, interpunction before numbers
     challenges = utils.sort_challenges(challenges)
@@ -45,14 +47,21 @@ def main():
     # replace NaN with 0
     challenges["points"] = challenges["points"].fillna(0)
 
+    challenges["Splněno"] = challenges.apply(
+        lambda x: "✔️" if x["id"] not in available_actions else "-", axis=1
+    )
+
     with tabs[0]:
         challenges_table = challenges.rename(
             columns={"name": "Název", "points": "Body", "category": "Kategorie"}
         )
-        challenges_table = challenges_table[["Kategorie", "Název", "Body"]]
+        challenges_table = challenges_table[["Kategorie", "Název", "Body", "Splněno"]]
         challenges_table = challenges_table.reset_index(drop=True)
         st.write(
-            challenges_table.to_html(escape=False, index=False), unsafe_allow_html=True
+            challenges_table.to_html(
+                escape=False, index=False, classes="table-display"
+            ),
+            unsafe_allow_html=True,
         )
 
     with tabs[1]:
@@ -70,4 +79,4 @@ if __name__ == "__main__":
     if user:
         cols = st.columns([1, 3, 1])
         with cols[1]:
-            main()
+            main(user)

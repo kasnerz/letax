@@ -97,7 +97,7 @@ class Database:
 
         self.currency_converter = CurrencyConverter(currency_rates_file)
 
-        utils.log(f"Database for the year {self.get_year()} initialized")
+        utils.log(f"Database `{self.get_year()}` initialized")
 
     def __del__(self):
         self.conn.close()
@@ -723,6 +723,7 @@ class Database:
         os.makedirs(os.path.join(output_dir, "files"), exist_ok=True)
 
         photos_html = "<div class='container'><div class='row'>"
+
         for file in files:
             file_type = "image" if file["type"].startswith("image") else "video"
             if not aws_prefix:
@@ -774,6 +775,12 @@ class Database:
         with open("static/website_export/custom.css") as f:
             css = f.read()
 
+        # we are exporting locally for a user
+        if aws_prefix is None:
+            back_btn = ""
+        else:
+            back_btn = '<a href="../../index.html" class="btn btn-outline-dark" style="margin-top: 20px;">← Zpět na výsledky</a>'
+
         # use Source Sans Pro font, bold for headings
         html = f"""
         <!DOCTYPE html>
@@ -782,7 +789,7 @@ class Database:
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <!-- Back button -->
-            <a href="../../index.html" class="btn btn-outline-dark" style="margin-top: 20px;">← Zpět na výsledky</a>
+            {back_btn}
             <title>{title}</title>
             <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css">
             <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&display=swap">
@@ -806,6 +813,7 @@ class Database:
             f.write(html)
 
     def export_team_posts(self, team, output_dir, xc_year, folder_name):
+        self.generate_team_posts_html(team, output_dir, xc_year, aws_prefix=None)
         tmp_filename = f"post_{team['team_id']}.zip"
 
         with ZipFile(os.path.join(output_dir, tmp_filename), "w") as zip_file:
@@ -989,6 +997,92 @@ class Database:
         self.conn.commit()
         utils.log(f"Set award {award} for team {team_id}", level="info")
 
+    def update_or_create_notification(self, notification_id, name, text, category):
+        self.conn.execute(
+            "INSERT OR REPLACE INTO notifications (id, name, text, type) VALUES (?, ?, ?, ?)",
+            (notification_id, name, text, category),
+        )
+        self.conn.commit()
+        utils.log(f"Updated notification {name}", level="info")
+
+    def delete_notification(self, notification_id):
+        self.conn.execute("DELETE FROM notifications WHERE id = ?", (notification_id,))
+        self.conn.commit()
+        utils.log(f"Deleted notification {notification_id}", level="info")
+
+    def update_or_create_checkpoint(
+        self,
+        checkpoint_id,
+        name,
+        description,
+        challenge,
+        lat,
+        lon,
+        points,
+        points_challenge,
+    ):
+        self.conn.execute(
+            "INSERT OR REPLACE INTO checkpoints (id, name, description, challenge, latitude, longitude, points, points_challenge) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                checkpoint_id,
+                name,
+                description,
+                challenge,
+                lat,
+                lon,
+                points,
+                points_challenge,
+            ),
+        )
+        self.conn.commit()
+        utils.log(f"Updated checkpoint {name}", level="info")
+
+    def delete_checkpoint(self, checkpoint_id):
+        self.conn.execute("DELETE FROM checkpoints WHERE id = ?", (checkpoint_id,))
+        self.conn.commit()
+        utils.log(f"Deleted checkpoint {checkpoint_id}", level="info")
+
+    def update_or_create_challenge(
+        self, challenge_id, name, description, category, points
+    ):
+        self.conn.execute(
+            "INSERT OR REPLACE INTO challenges (id, name, description, category, points) VALUES (?, ?, ?, ?, ?)",
+            (challenge_id, name, description, category, points),
+        )
+        self.conn.commit()
+        utils.log(f"Updated challenge {name}", level="info")
+
+    def delete_challenge(self, challenge_id):
+        self.conn.execute("DELETE FROM challenges WHERE id = ?", (challenge_id,))
+        self.conn.commit()
+        utils.log(f"Deleted challenge {challenge_id}", level="info")
+
+    def import_checkpoints(self, df):
+        for _, row in df.iterrows():
+            latitude, longitude = row["gps"].split(",")
+            checkpoint_id = slugify(str(row["name"]))
+            self.update_or_create_checkpoint(
+                checkpoint_id,
+                row["name"],
+                row["description"],
+                row["challenge"],
+                latitude,
+                longitude,
+                row["points"],
+                row["points_challenge"],
+            )
+
+    def import_challenges(self, df):
+        for _, row in df.iterrows():
+            challenge_id = slugify(str(row["name"]))
+            self.update_or_create_challenge(
+                challenge_id,
+                row["name"],
+                row["description"],
+                row["category"],
+                row["points"],
+            )
+
     def get_action(self, action_type, action_name):
         # retrieve action from the database, return a single Python object or None
         table_name = {
@@ -1036,6 +1130,7 @@ class Database:
                     axis=1,
                 )
             )
+
         team = self.get_team_by_id(team_id)
 
         member1_name = participants[participants["id"] == team["member1"]].to_dict(
@@ -1065,6 +1160,11 @@ class Database:
             "team_motto": team["team_motto"],
             "team_web": team["team_web"],
         }
+
+        if self.event.get("budget_per_person") is not None:
+            spendings = self.get_spendings_by_team(team)
+            team_info["spent"] = spendings["amount_czk"].sum()
+
         return team_info
 
     def get_teams_overview(self):
@@ -1327,7 +1427,8 @@ class Database:
         )
         self.conn.execute(
             """CREATE TABLE if not exists challenges (
-                name text not null unique,
+                id text not null unique,
+                name text not null,
                 description text not null,
                 category text not null,
                 points int not null,
@@ -1336,17 +1437,21 @@ class Database:
         )
         self.conn.execute(
             """CREATE TABLE if not exists checkpoints (
-                name text not null unique,
+                id text not null unique,
+                name text not null,
                 description text not null,
                 points int not null,
                 latitude float,
                 longitude float,
                 challenge text,
+                points_challenge int,
                 primary key(name)       
             );"""
         )
         self.conn.execute(
             """CREATE TABLE if not exists notifications (
+                id text not null unique,
+                name text,
                 text text not null,
                 type text
             );"""
@@ -1572,6 +1677,17 @@ class Database:
             "other": "💸 Ostatní",
         }
 
+    def get_challenge_categories(self):
+        return [
+            "🌞 Denní výzva",
+            "🤗 Lidská interakce",
+            "💙 Zlepšení světa",
+            "👣 Dobrodružství",
+            "🏋️ Fyzické překonání",
+            "📝 Reportování",
+            "🧘 Nitrozpyt",
+        ]
+
     def convert_to_czk(self, amount, currency):
         return self.currency_converter.convert(amount, currency, "CZK")
 
@@ -1602,7 +1718,7 @@ class Database:
     def get_spendings_by_team(self, team):
         team_id = team["team_id"]
 
-        if self.event.get("budget_per_person"):
+        if self.event.get("budget_per_person") is not None:
             spendings = pd.read_sql_query(
                 f"SELECT * FROM budget WHERE team_id='{team_id}'", self.conn
             )
