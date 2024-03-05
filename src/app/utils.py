@@ -10,15 +10,16 @@ import smtplib
 import ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from streamlit_extras import app_logo
 import subprocess
 import ffmpeg
 from datetime import datetime, timedelta
 import pytz
+import base64
 import psutil
 import gc
 from streamlit_javascript import st_javascript
 from ftplib import FTP
+from pathlib import Path
 
 TTL = 600
 
@@ -298,6 +299,35 @@ def get_active_event_id():
     return active_event_id
 
 
+def add_logo(logo_url: str, year: int, height: int = 120):
+    # Adapted from https://arnaudmiribel.github.io/streamlit-extras/extras/app_logo/
+
+    logo = f"url(data:image/png;base64,{base64.b64encode(Path(logo_url).read_bytes()).decode()})"
+
+    st.markdown(
+        f"""
+        <style>
+            [data-testid="stSidebarNav"] {{
+                background-image: {logo};
+                background-repeat: no-repeat;
+                padding-top: {height - 40}px;
+                background-position: 20px 20px;
+            }}
+            [data-testid="stSidebarNav"]::before {{
+                content: "Letní X-Challenge {year}";
+                margin-left: 62px;
+                font-size: 19px;
+                font-weight: 700;
+                font-family: "Source Sans Pro", sans-serif;
+                position: relative;
+                top: 21px;
+            }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def page_wrapper():
     event = st.session_state.get("event")
 
@@ -357,9 +387,9 @@ def page_wrapper():
             st.rerun()
 
     if not event:
-        app_logo.add_logo("static/logo_icon.png", year="", height=40)
+        add_logo("static/logo_icon.png", year="", height=40)
     else:
-        app_logo.add_logo("static/logo_icon.png", year=event["year"], height=40)
+        add_logo("static/logo_icon.png", year=event["year"], height=40)
 
     # it is useful to run it here since this gets called every time
     check_ram_limit()
