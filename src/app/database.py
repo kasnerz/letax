@@ -10,6 +10,7 @@ from accounts import AccountManager
 from zipfile import ZipFile
 from gpxpy.gpx import GPX, GPXRoute, GPXRoutePoint, GPXWaypoint
 from geopy.geocoders import Nominatim
+from currency_converter import CurrencyConverter, SINGLE_DAY_ECB_URL
 
 import argparse
 import boto3
@@ -31,9 +32,11 @@ import base64
 import copy
 import locale
 
+
 import shutil
 import tempfile
 import ast
+import urllib.request
 import dateutil.parser
 
 # logging.basicConfig(level=logging.DEBUG)
@@ -47,8 +50,7 @@ TTL = 3600 * 24
 
 
 @st.cache_resource
-def get_database(event_id=None):
-    # if event_id is none, the active event is used
+def get_database(event_id):
     return Database(event_id)
 
 
@@ -85,7 +87,17 @@ class Database:
         self.fa_icons = self.load_fa_icons()
         self.geoloc = Nominatim(user_agent="GetLoc")
 
-        utils.log("Database initialized")
+        # download the currency rates
+        currency_rates_file = os.path.join(
+            os.path.dirname(self.db_path), "currency_rates.zip"
+        )
+        if not os.path.exists(currency_rates_file):
+            utils.log("Downloading currency rates", level="info")
+            urllib.request.urlretrieve(SINGLE_DAY_ECB_URL, currency_rates_file)
+
+        self.currency_converter = CurrencyConverter(currency_rates_file)
+
+        utils.log(f"Database for the year {self.get_year()} initialized")
 
     def __del__(self):
         self.conn.close()
@@ -100,8 +112,6 @@ class Database:
 
         if event_id:
             events = [e for e in events if e["year"] == event_id]
-        else:
-            events = [self.get_active_event()]
 
         if not events:
             raise ValueError(f"Event {event_id} not found")
@@ -151,14 +161,17 @@ class Database:
         )
         self.set_settings_value("events", events)
 
-    def set_event_info(self, event_id, status, gmaps_url, product_id):
+    def set_event_info(
+        self, event_id, status, gmaps_url, product_id, budget_per_person
+    ):
         events = self.get_events()
         for event in events:
             if event["year"] == event_id:
+                event["status"] = status
                 event["gmaps_url"] = gmaps_url
                 event["product_id"] = product_id
+                event["budget_per_person"] = budget_per_person
                 break
-
         self.set_settings_value("events", events)
 
     def set_active_event(self, event_id):
@@ -947,12 +960,21 @@ class Database:
         if pax_id is None:
             return None
 
-        # the field `member1`, `member2`  contains the id
-        query = "SELECT * FROM teams WHERE member1 = ? OR member2 = ?"
-        ret = self.conn.execute(query, (pax_id, pax_id))
+        query = "SELECT * FROM teams WHERE member1 = ? OR member2 = ? OR member3 = ?"
+        ret = self.conn.execute(query, (pax_id, pax_id, pax_id))
         team = ret.fetchone()
-
         return team
+
+    def get_team_members(self, team_id):
+        team = self.get_team_by_id(team_id)
+        member1 = self.get_participant_by_id(team["member1"])
+        member2 = self.get_participant_by_id(team["member2"])
+        member3 = self.get_participant_by_id(team["member3"])
+
+        members = [member1, member2, member3]
+        members = [x for x in members if x is not None]
+
+        return members
 
     def get_teams_with_awards(self):
         # any team that has a non-empty award column (non-empty = NULL or "")
@@ -1333,11 +1355,13 @@ class Database:
         self.conn.execute(
             """
             CREATE TABLE if not exists budget (
-                id INTEGER PRIMARY KEY,
+                id TEXT PRIMARY KEY,
                 team_id TEXT NOT NULL,
                 amount INTEGER NOT NULL,
+                amount_czk INTEGER NOT NULL,
                 description TEXT,
                 category TEXT NOT NULL,
+                currency TEXT NOT NULL,
                 date TEXT NOT NULL
             );"""
         )
@@ -1532,6 +1556,66 @@ class Database:
     def get_fa_icons(self):
         return self.fa_icons
 
+    def get_currency_list(self):
+        currency_list = sorted(list(self.currency_converter.currencies))
+        # move CZK and EUR to the front
+        currency_list.remove("CZK")
+        currency_list.remove("EUR")
+        currency_list = ["CZK", "EUR"] + currency_list
+        return currency_list
+
+    def get_spending_categories(self):
+        return {
+            "transport": "🚍️ Doprava",
+            "food": "🥫 Jídlo a pití",
+            "accomodation": "🏠️ Ubytování",
+            "other": "💸 Ostatní",
+        }
+
+    def convert_to_czk(self, amount, currency):
+        return self.currency_converter.convert(amount, currency, "CZK")
+
+    def save_spending(self, team, amount, currency, date, category, comment):
+        team_id = team["team_id"]
+        amount_czk = self.convert_to_czk(amount, currency)
+        spending_id = utils.generate_uuid()
+
+        self.conn.execute(
+            f"INSERT INTO budget (id, team_id, amount, amount_czk, description, currency, category, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                spending_id,
+                team_id,
+                amount,
+                amount_czk,
+                comment,
+                currency,
+                category,
+                date,
+            ),
+        )
+        self.conn.commit()
+        utils.log(
+            f"Added spending {amount} {currency} for {team['team_name']}",
+            level="success",
+        )
+
+    def get_spendings_by_team(self, team):
+        team_id = team["team_id"]
+
+        if self.event.get("budget_per_person"):
+            spendings = pd.read_sql_query(
+                f"SELECT * FROM budget WHERE team_id='{team_id}'", self.conn
+            )
+        else:
+            spendings = None
+
+        return spendings
+
+    def delete_spending(self, spending_id):
+        self.conn.execute(f"DELETE FROM budget WHERE id='{spending_id}'")
+        self.conn.commit()
+        utils.log(f"Deleted spending {spending_id}", level="info")
+
     def get_team_link(self, team):
         team_id = team["team_id"]
         team_name = team["team_name"]
@@ -1542,9 +1626,9 @@ class Database:
             data_url = self.get_static_image_base64("topx.png")
 
             top_x_badge = f"<img src='data:image/png;base64,{data_url}' style='margin-top: -5px; margin-left: 5px'>"
-            return f"<a href='/Týmy?team_id={team_id}&event_id={self.event['year']}' target='_self' class='app-link' margin-top: -10px;'>{team_name}</a> {top_x_badge}"
+            return f"<a href='/Týmy?team_id={team_id}&event_id={self.event['year']}' target='_self' class='app-link' style='margin-top: -10px;'>{team_name}</a> {top_x_badge}"
         else:
-            return f"<a href='/Týmy?team_id={team_id}&event_id={self.event['year']}' target='_self' class='app-link' margin-top: -10px;'>{team_name}</a>"
+            return f"<a href='/Týmy?team_id={team_id}&event_id={self.event['year']}' target='_self' class='app-link' style='margin-top: -10px;'>{team_name}</a>"
 
     def toggle_team_visibility(self, team):
         team_id = team["team_id"]
@@ -1553,6 +1637,8 @@ class Database:
             f"SELECT * FROM teams WHERE team_id='{team_id}'",
             self.conn,
         )
+        if df.empty:
+            return None
 
         visibility = df.to_dict("records")[0]["location_visibility"]
 
