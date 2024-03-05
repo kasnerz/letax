@@ -56,15 +56,19 @@ def show_overview():
     event = db.get_event()
     year = db.get_year()
 
+    st.title(f"Letní X-Challenge {year}")
     posts = load_posts(db)
 
     post_gallery_cnt = min(3, len(posts))
     if event["status"] == "past":
         # select 3 random posts
         posts = random.sample(posts, post_gallery_cnt)
-    else:
+    elif event["status"] == "ongoing":
         # select 3 last posts (posts is a dataframe)
         posts = posts[:post_gallery_cnt]
+    else:
+        st.info("Akce ještě nezačala.")
+        st.stop()
 
     st.markdown(
         """
@@ -84,7 +88,6 @@ def show_overview():
         """,
         unsafe_allow_html=True,
     )
-    st.title(f"Letní X-Challenge {year}")
 
     if event["status"] == "past":
         st.caption(

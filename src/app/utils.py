@@ -18,7 +18,7 @@ import pytz
 import psutil
 import gc
 from streamlit_javascript import st_javascript
-from ftplib import FTP
+from ftplib import FTP, all_errors
 
 TTL = 600
 
@@ -320,18 +320,19 @@ def page_wrapper():
         """
     <style>
     div[data-testid='stSidebarNav'] ul {max-height:none}
-    .app-link {
+    .app-link, a:link, a:visited {
         color: """
         + link_color
         + """ !important;
         text-decoration: none;
     }
+    
     </style>
     """,
         unsafe_allow_html=True,
     )
 
-    if event and event["status"] != "active":
+    if event and event["status"] == "past":
         st.markdown(
             """
         <style>
@@ -344,13 +345,17 @@ def page_wrapper():
         )
         st.sidebar.info(f"Prohlížíš si archiv ročníku {event['year']}.")
 
-        # show_active_btn = st.sidebar.button("Zobrazit aktuální ročník")
+        show_active_btn = st.sidebar.button("Zobrazit aktuální ročník")
 
-        # if show_active_btn:
-        #     st.session_state.event = None
-        #     st.rerun()
+        if show_active_btn:
+            st.session_state.event = None
+            clear_cache()
+            st.rerun()
 
-    app_logo.add_logo("static/logo_icon.png", year=event["year"], height=40)
+    if not event:
+        app_logo.add_logo("static/logo_icon.png", year="", height=40)
+    else:
+        app_logo.add_logo("static/logo_icon.png", year=event["year"], height=40)
     # app_logo.add_logo("static/letax.png", height=40)
 
     # it is useful to run it here since this gets called every time
@@ -365,25 +370,30 @@ def upload_to_ftp(local_dir, remote_dir):
     progress_text = "Nahrávám soubory"
     my_bar = st.progress(0, text=progress_text)
 
-    for root, dirs, files in os.walk(local_dir):
+    all_files = list(os.walk(local_dir))
+    for i, (root, dirs, files) in enumerate(all_files):
+        for directory in dirs:
+            remote_path = os.path.join(
+                remote_dir, root.replace(local_dir, ""), directory
+            )
+            try:
+                ftp.mkd(remote_path)
+            except:
+                pass
+
         for file in files:
             local_path = os.path.join(root, file)
-            remote_path = os.path.join(
-                remote_dir, os.path.relpath(local_path, local_dir)
-            )
-            log(f"Uploading {local_path} to {remote_path}", level="debug")
+            remote_path = os.path.join(remote_dir, root.replace(local_dir, ""), file)
 
-            # if the subdirectory doesn't exist, create it
-            subdirs = remote_path.split("/")[:-1]
-            for i in range(1, len(subdirs) + 1):
-                subdir = "/".join(subdirs[:i])
-                if subdir not in ftp.nlst(remote_dir):
-                    ftp.mkd(subdir)
+            log(f"Uploading {local_path} to {remote_path}", "debug")
 
             with open(local_path, "rb") as f:
                 ftp.storbinary(f"STOR {remote_path}", f)
 
-            my_bar.progress(0, text=f"{progress_text} {local_path}")
+            my_bar.progress(
+                int(((i + 1) / len(all_files)) * 100),
+                text=f"Nahrávám `{local_path}` do `{remote_path}`",
+            )
 
     my_bar.progress(100)
     ftp.quit()
@@ -394,7 +404,7 @@ def get_event_id(params):
         return params["event_id"]
 
     elif st.session_state.get("event"):
-        return st.session_state["event"]["id"]
+        return st.session_state["event"]["year"]
 
     return None
 

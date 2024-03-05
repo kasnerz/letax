@@ -65,7 +65,7 @@ class Database:
             timeout=30,
         )
         self.event = self.get_event_by_id(event_id)
-        self.conn = self.get_db_for_event(self.event["id"])
+        self.conn = self.get_db_for_event(self.event["year"])
 
         if self.get_settings_value("file_system") == "s3":
             # S3 bucket
@@ -78,7 +78,7 @@ class Database:
                 aws_access_key_id=st.secrets["AWS_ACCESS_KEY_ID"],
                 aws_secret_access_key=st.secrets["AWS_SECRET_ACCESS_KEY"],
             )
-        self.top_dir = f"files/{self.event['id']}"
+        self.top_dir = f"files/{self.event['year']}"
         self.am = AccountManager()
         self.preauthorized_emails = self.load_preauthorized_emails()
         self.static_imgs = self.load_static_images()
@@ -99,12 +99,9 @@ class Database:
         events = self.get_events()
 
         if event_id:
-            events = [e for e in events if e["id"] == event_id]
-        elif any(e["status"] == "active" for e in events):
-            events = [e for e in events if e["status"] == "active"]
+            events = [e for e in events if e["year"] == event_id]
         else:
-            # find the most recent `past` event
-            events = [e for e in events if e["status"] == "past"]
+            events = [self.get_active_event()]
 
         if not events:
             raise ValueError(f"Event {event_id} not found")
@@ -135,16 +132,21 @@ class Database:
     def get_event(self):
         return self.event
 
+    def get_active_event(self):
+        events = self.get_events()
+        active_event_id = self.get_settings_value("active_event_id")
+
+        return [e for e in events if e["year"] == active_event_id][0]
+
     def create_new_event(self, year):
         events = self.get_events()
-        new_event_id = utils.generate_uuid()
         events.append(
             {
-                "id": new_event_id,
                 "year": year,
                 "status": "draft",
                 "gmaps_url": "",
                 "product_id": "",
+                "display": False,
             }
         )
         self.set_settings_value("events", events)
@@ -152,13 +154,16 @@ class Database:
     def set_event_info(self, event_id, status, gmaps_url, product_id):
         events = self.get_events()
         for event in events:
-            if event["id"] == event_id:
-                event["status"] = status
+            if event["year"] == event_id:
                 event["gmaps_url"] = gmaps_url
                 event["product_id"] = product_id
                 break
 
         self.set_settings_value("events", events)
+
+    def set_active_event(self, event_id):
+        self.set_settings_value("active_event_id", event_id)
+        st.session_state["event"] = self.get_active_event()
 
     def load_settings(self):
         with open(self.settings_path) as f:
@@ -915,7 +920,7 @@ class Database:
         aws_prefix = "https://s3.eu-west-3.amazonaws.com/xchallengecz"
         teams = self.get_teams_overview()
 
-        event_id = self.event["id"]
+        event_id = self.event["year"]
         xc_year = self.event["year"]
 
         os.makedirs(os.path.join(output_dir, event_id, "teams"), exist_ok=True)
@@ -1325,6 +1330,18 @@ class Database:
             );"""
         )
 
+        self.conn.execute(
+            """
+            CREATE TABLE if not exists budget (
+                id INTEGER PRIMARY KEY,
+                team_id TEXT NOT NULL,
+                amount INTEGER NOT NULL,
+                description TEXT,
+                category TEXT NOT NULL,
+                date TEXT NOT NULL
+            );"""
+        )
+
     def get_address(self, latitude, longitude):
         try:
             locname = self.geoloc.reverse(f"{latitude}, {longitude}")
@@ -1525,9 +1542,9 @@ class Database:
             data_url = self.get_static_image_base64("topx.png")
 
             top_x_badge = f"<img src='data:image/png;base64,{data_url}' style='margin-top: -5px; margin-left: 5px'>"
-            return f"<a href='/Týmy?team_id={team_id}&event_id={self.event['id']}' target='_self' class='app-link' margin-top: -10px;'>{team_name}</a> {top_x_badge}"
+            return f"<a href='/Týmy?team_id={team_id}&event_id={self.event['year']}' target='_self' class='app-link' margin-top: -10px;'>{team_name}</a> {top_x_badge}"
         else:
-            return f"<a href='/Týmy?team_id={team_id}&event_id={self.event['id']}' target='_self' class='app-link' margin-top: -10px;'>{team_name}</a>"
+            return f"<a href='/Týmy?team_id={team_id}&event_id={self.event['year']}' target='_self' class='app-link' margin-top: -10px;'>{team_name}</a>"
 
     def toggle_team_visibility(self, team):
         team_id = team["team_id"]
