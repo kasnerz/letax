@@ -626,7 +626,7 @@ def show_account_info(db, user):
 
         db.am.update_user_name(username, name)
 
-        st.cache_data.clear()
+        utils.clear_cache()
         st.success(f"Informace uloženy.")
         st.balloons()
         time.sleep(3)
