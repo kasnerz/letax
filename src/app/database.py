@@ -76,9 +76,9 @@ class Database:
             self.fs_bucket = self.get_settings_value("fs_bucket")
             self.boto3 = boto3.resource(
                 "s3",
-                region_name=st.secrets["AWS_DEFAULT_REGION"],
-                aws_access_key_id=st.secrets["AWS_ACCESS_KEY_ID"],
-                aws_secret_access_key=st.secrets["AWS_SECRET_ACCESS_KEY"],
+                region_name=st.secrets["aws"]["AWS_DEFAULT_REGION"],
+                aws_access_key_id=st.secrets["aws"]["AWS_ACCESS_KEY_ID"],
+                aws_secret_access_key=st.secrets["aws"]["AWS_SECRET_ACCESS_KEY"],
             )
         self.top_dir = f"files/{self.event['year']}"
         self.am = AccountManager()
