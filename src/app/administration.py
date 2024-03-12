@@ -757,6 +757,8 @@ def action_export(db):
 
 
 def action_restore_db(db):
+    os.makedirs("backups", exist_ok=True)
+
     # list all the files in the "backups" folder
     backup_files = [
         f for f in os.listdir("backups") if os.path.isfile(os.path.join("backups", f))
@@ -821,6 +823,10 @@ def action_set_awards(db):
         teams,
         format_func=lambda x: x["team_name"],
     )
+    if teams_select is None:
+        st.warning("Zatím nemáme žádné týmy")
+        st.stop()
+
     with st.form("Ocenění"):
         info_text = st.text_input(
             'Nastavit týmové ocenění (např. "Sebepřekonání")',
