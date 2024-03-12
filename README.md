@@ -36,3 +36,11 @@ You should be able to log in on the user page with the following details:
 - password: `changethispassword`
 
 (you should of course change the default password)
+
+## Development
+
+A few pointers:
+- [Streamlit docs](https://docs.streamlit.io/library/api-reference)
+- [my fork of Streamlit Authenticator](https://github.com/kasnerz/Streamlit-Authenticator)
+- [Remote SSH in VSCode](https://code.visualstudio.com/docs/remote/ssh)
+- [SQLite3 Editor for VSCode](https://marketplace.visualstudio.com/items?itemName=yy0931.vscode-sqlite3-editor)
