@@ -11,7 +11,7 @@ credentials:
     admin:
       email: admin@admin.com
       name: "X-Challenge Admin"
-      password: $2b$12$cRVW4jhrJ3T7U39jgWgiku0kVEksVPSQXztckmoKRAQmTNRZoCjQi
+      password: $2b$12$9JQSZU1hT3IALhGrM1bRBOGl2gWhog2AlXyYpTslFOKd5FnlWZTqO
       registered: '1990-01-01 00:00:00'
       role: admin
       username: admin
