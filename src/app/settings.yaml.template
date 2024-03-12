@@ -1,0 +1,24 @@
+# ---------------
+#  TODO: create a copy of this file named `settings.yaml`
+# ---------------
+
+# All of these settings can be modified by administrators from the adminstration page.
+
+# Event that will be visible on the main page
+active_event_id: '2024'
+# List of available events
+events:
+- budget_per_person: 0
+  display: false
+  gmaps_url: ''
+  product_id: ''
+  status: ongoing
+  year: '2024'
+# Options: 
+# - s3: files are stored and loaded from AWS S3
+# - local: files are stored and loaded locally (useful for debugging)
+file_system: local
+# Name of the S3 bucket if S3 is used for storing files
+fs_bucket: xchallengecz
+# Participants will see this text in the info section once they log in. Can be used to provide emergency contacts, link to rules, etc. Markdown can be used for formatting.
+info_text: ""

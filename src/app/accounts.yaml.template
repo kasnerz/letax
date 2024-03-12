@@ -1,0 +1,28 @@
+# ---------------
+#  TODO: create a copy of this file named `accounts.yaml`
+# ---------------
+
+# list of people that have registered in the app
+credentials:
+  usernames:
+
+    # the default password for administrator is "changethispassword"
+    # this account can be safely deleted once an actual administrator has created an account
+    admin:
+      email: admin@admin.com
+      name: "X-Challenge Admin"
+      password: $2b$12$cRVW4jhrJ3T7U39jgWgiku0kVEksVPSQXztckmoKRAQmTNRZoCjQi
+      registered: '1990-01-01 00:00:00'
+      role: admin
+      username: admin
+
+# list which can be used to assign default roles to people when they register (e.g. to make them admins), can be also modified within the app
+preauthorized_emails:
+  test@test.com:
+    role: admin
+
+# the settings for the login cookie
+cookie:
+  expiry_days: 30
+  key: xcapp-login
+  name: xcapp-login-cookie
