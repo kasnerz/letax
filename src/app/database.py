@@ -1161,7 +1161,7 @@ class Database:
             "team_web": team["team_web"],
         }
 
-        if self.event.get("budget_per_person") is not None:
+        if self.event.get("budget_per_person"):
             spendings = self.get_spendings_by_team(team)
             team_info["spent"] = spendings["amount_czk"].sum()
 
@@ -1718,7 +1718,7 @@ class Database:
     def get_spendings_by_team(self, team):
         team_id = team["team_id"]
 
-        if self.event.get("budget_per_person") is not None:
+        if self.event.get("budget_per_person"):
             spendings = pd.read_sql_query(
                 f"SELECT * FROM budget WHERE team_id='{team_id}'", self.conn
             )

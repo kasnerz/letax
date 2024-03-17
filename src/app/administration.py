@@ -603,12 +603,9 @@ def action_set_events(db):
         )
         budget_per_person = st.number_input(
             "Rozpočet na osobu (CZK)",
-            value=selected_event["budget_per_person"]
-            if selected_event.get("budget_per_person")
-            else None,
+            value=selected_event["budget_per_person"],
             key="event_budget",
             help="Rozpočet na osobu na akci v CZK.",
-            disabled=selected_event.get("budget_per_person") is None,
         )
         event_gmaps_url = st.text_input(
             "URL na Google Maps s checkpointy",

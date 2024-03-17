@@ -430,7 +430,7 @@ def show_budget_management(db, user, team):
 
     budget = event.get("budget_per_person")
 
-    if budget is None:
+    if not budget:
         st.info("Pro tento ročník Letní X-Challenge není vedený rozpočet týmů.")
         return
 
