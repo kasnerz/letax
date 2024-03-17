@@ -35,8 +35,14 @@ def show_admin_page(db, user):
 
     with tab_users:
         st.markdown("#### Uživatelé")
+        st.caption(
+            "Seznam užitelských účtů založených v appce. Účty s rolí 'user' lze používat na libovolnou akci, do které je uživatel přidaný jako účastník. Účty s rolí 'admin' mají přístup k administraci."
+        )
         show_users_editor(db)
         st.markdown("#### Preautorizované e-maily")
+        st.caption(
+            "Seznam e-mailů, které se mohou registrovat do appky, aniž by byly přidány jako účastníci do aktuální akce. Nastavená role jim bude automaticky přiřazena po registraci."
+        )
         show_preauthorized_editor(db)
 
     # with tab_db:
@@ -113,61 +119,6 @@ def show_db_data_editor(db, table, column_config=None):
         db.save_df_as_table(edited_df, f"{table}")
 
 
-def action_manage_users(db):
-    st.markdown("#### Přidat extra účastníka")
-    st.caption(
-        "Zde můžeš přidat do letošní soutěže účastníka, který se nenahrál automaticky z webu."
-    )
-
-    with st.form("add_extra_participant"):
-        name = st.text_input("Jméno a příjmení", help="Celé jméno účastníka")
-        email = st.text_input("email", help="Email účastníka")
-        add_pax_submit_button = st.form_submit_button(label="Přidat účastníka")
-
-    if add_pax_submit_button:
-        if not email or not name:
-            st.error("Musíš vyplnit email i jméno")
-            st.stop()
-
-        with st.spinner("Přidávám účastníka"):
-            db.add_extra_participant(email=email, name=name)
-            utils.clear_cache()
-
-        st.success("Účastník přidán")
-        return True
-
-    st.markdown("#### Načíst účastníky z WooCommerce")
-    st.caption(
-        "Zde můžeš načíst seznam přihlášených účastníků přes WooCommerce API. Zkontroluj předtím, že je u letošní akce správně nastavené product ID."
-    )
-
-    with st.form("fetch_wc_users"):
-        limit = st.number_input(
-            "limit (0 = bez omezení)",
-            help="Maximální počet účastníků (0 = bez omezení)",
-            value=0,
-        )
-
-        update_submit_button = st.form_submit_button(label="Aktualizovat účastníky")
-
-    event = db.get_event()
-    if event["product_id"] is None:
-        st.error(
-            "Není nastaven Wordpress product ID. Nastav ho v sekci Spravovaat akce."
-        )
-        st.stop()
-
-    if update_submit_button:
-        if limit == 0:
-            limit = None
-
-        with st.spinner("Aktualizuji účastníky"):
-            container = st.container()
-            db.wc_fetch_participants(log_area=container, limit=limit)
-
-        return True
-
-
 def action_manage_notifications(db):
     notifications = db.get_table_as_df("notifications")
 
@@ -231,6 +182,118 @@ def action_manage_notifications(db):
 
     st.markdown("#### Aktuální oznámení")
     st.dataframe(notifications)
+
+
+def action_manage_participants(db):
+    st.markdown("#### Načíst účastníky z WooCommerce")
+    st.caption(
+        "Zde můžeš automaticky načíst seznam přihlášených účastníků na letošní akci přes WooCommerce API."
+    )
+
+    event = db.get_event()
+
+    if not event["product_id"]:
+        st.warning(
+            f'Pro ročník {event["year"]} není nastaven Wordpress product ID. Nastav ho v sekci Spravovat akce.'
+        )
+    else:
+        with st.form("fetch_wc_users"):
+            st.caption(
+                f'Aktuální ročník {event["year"]}. Wordpress product ID: {event["product_id"]}'
+            )
+            limit = st.number_input(
+                f"Načíst posledních *x* přihlášených účastníků (0 = bez omezení)",
+                value=0,
+            )
+
+            update_submit_button = st.form_submit_button(label="Aktualizovat účastníky")
+
+        if update_submit_button:
+            if limit == 0:
+                limit = None
+
+            with st.spinner("Aktualizuji účastníky"):
+                container = st.container()
+                db.wc_fetch_participants(log_area=container, limit=limit)
+
+    participants = db.get_table_as_df("participants")
+    participants = participants.sort_values(by="name_web")
+    default_name = "[nový účastník]"
+
+    st.markdown("#### Upravit účastníka")
+
+    participant_list = participants.to_dict(orient="records")
+
+    new_pax = {
+        "id": utils.generate_uuid(),
+        "name_web": default_name,
+        "email": "",
+        "bio": "",
+        "emergency_contact": "",
+        "photo": "",
+    }
+    participant_list.insert(0, new_pax)
+
+    participant = st.selectbox(
+        "Vyber účastníka",
+        participant_list,
+        format_func=lambda x: f"{x['name_web']}",
+    )
+    with st.form("challenge_form"):
+        name = st.text_input("Jméno", value=participant["name_web"])
+        email = st.text_input("E-mail", value=participant["email"])
+        bio = st.text_input("Bio (nepovinné)", value=participant["bio"])
+        emergency_contact = st.text_input(
+            "Nouzový kontakt (nepovinný)", value=participant["emergency_contact"]
+        )
+        cols = st.columns([4, 1])
+        with cols[0]:
+            photo = st.file_uploader("Profilové foto (nepovinné):")
+        with cols[1]:
+            photo_img = participant["photo"]
+
+            if photo_img:
+                st.image(db.read_image(photo_img, thumbnail="150_square"))
+
+        cols = st.columns([1, 6, 1])
+        submit_button = cols[0].form_submit_button(label="Uložit")
+        delete_button = cols[2].form_submit_button(label="Smazat")
+
+    if submit_button:
+        if name == default_name:
+            st.error(f'Jméno účastníka nesmí být "{default_name}"')
+            st.stop()
+
+        if email == "":
+            st.error("E-mail nesmí být prázdný")
+            st.stop()
+
+        ret = db.update_or_create_participant(
+            participant_id=participant["id"],
+            name=name,
+            email=email,
+            bio=bio,
+            emergency_contact=emergency_contact,
+            photo=photo,
+        )
+        if ret == "exists":
+            st.warning("Účastník s tímto e-mailem již existuje.")
+            st.stop()
+
+        st.success("Účastník uložen")
+        return True
+
+    if delete_button:
+        if name == default_name:
+            st.error("Vyber nejprve nějakého účastníka.")
+            st.stop()
+
+        db.delete_participant(participant["id"])
+        st.success("Účastník smazán")
+        return True
+
+    st.markdown("#### Aktuální účastníci")
+    st.dataframe(participants)
 
 
 def action_manage_challenges(db):
@@ -568,7 +631,7 @@ def action_set_events(db):
     st.markdown("#### Aktivní akce")
     with st.form("active_event_form"):
         active_event = st.selectbox(
-            "Akce, která se zobrazuje na hlavní stránce.",
+            "Aktivní akce se zobrazuje na hlavní stránce, na stránce účastníků, a platí pro ni všechna nastavení v administraci.",
             events,
             format_func=lambda x: x["year"],
             index=events.index(active_event),
@@ -894,7 +957,7 @@ def show_actions(db):
                 "💪 Výzvy",
                 "📌 Checkpointy",
                 "📅 Akce",
-                "👥 Účastníci",
+                "🧑 Účastníci",
                 "ℹ️ Infotext",
                 "🏆️ Výherci",
                 "💻️ Pokročilá nastavení",
@@ -914,8 +977,8 @@ def show_actions(db):
         elif action == "🍍 Oznámení":
             ret = action_manage_notifications(db)
 
-        elif action == "👥 Účastníci":
-            ret = action_manage_users(db)
+        elif action == "🧑 Účastníci":
+            ret = action_manage_participants(db)
 
         elif action == "🏆️ Výherci":
             ret = action_set_awards(db)

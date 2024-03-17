@@ -437,7 +437,7 @@ class Database:
         with open("wc_participants.json", "w") as f:
             json.dump(new_participants, f)
 
-        self.add_participants(new_participants)
+        self.add_wc_participants(new_participants)
         self.load_preauthorized_emails()
 
         utils.clear_cache()
@@ -460,20 +460,7 @@ class Database:
     def get_preauthorized_emails(self):
         return self.preauthorized_emails
 
-    def add_extra_participant(self, email, name):
-        # generate a random integer id
-        user_id = utils.generate_uuid()
-        email = email.lower()
-
-        self.conn.execute(
-            "INSERT OR IGNORE INTO participants (id, email, name_web) VALUES (?, ?, ?)",
-            (user_id, email, name),
-        )
-        self.conn.commit()
-
-        utils.log(f"Added extra participant {email} ({name})", level="success")
-
-    def add_participants(self, new_participants):
+    def add_wc_participants(self, new_participants):
         for user in new_participants:
             user_data = (
                 str(int(user["id"])),
@@ -577,7 +564,52 @@ class Database:
         query = "SELECT * FROM participants WHERE email = ?"
         return self.conn.execute(query, (email,)).fetchone()
 
-    def update_participant(self, username, email, bio, emergency_contact, photo=None):
+    def update_or_create_participant(
+        self, participant_id, email, name, bio, emergency_contact, photo=None
+    ):
+        # if there is a participant with a different id but same email, return False
+        query = "SELECT * FROM participants WHERE email = ? AND id != ?"
+        if self.conn.execute(query, (email, participant_id)).fetchone():
+            return "exists"
+
+        if photo is None:
+            query = "INSERT OR REPLACE INTO participants (id, email, name_web, bio, emergency_contact) VALUES (?, ?, ?, ?, ?)"
+            self.conn.execute(
+                query, (participant_id, email, name, bio, emergency_contact)
+            )
+            self.conn.commit()
+            utils.log(f"Updated participant {name}", level="info")
+
+        else:
+            query = "INSERT OR REPLACE INTO participants (id, email, name_web, bio, emergency_contact, photo) VALUES (?, ?, ?, ?, ?, ?)"
+
+            photo_content, photo_name = utils.postprocess_uploaded_photo(photo)
+
+            dir_path = os.path.join(self.top_dir, "participants", slugify(name))
+
+            photo_path = os.path.join(dir_path, photo_name)
+
+            self.write_file(
+                filepath=os.path.join(dir_path, photo_name), content=photo_content
+            )
+
+            self.conn.execute(
+                query, (participant_id, email, name, bio, emergency_contact, photo_path)
+            )
+            self.conn.commit()
+
+            utils.log(f"Updated participant {name}", level="info")
+
+        return True
+
+    def delete_participant(self, participant_id):
+        query = "DELETE FROM participants WHERE id = ?"
+        self.conn.execute(query, (participant_id,))
+        self.conn.commit()
+
+    def update_participant_info(
+        self, username, email, bio, emergency_contact, photo=None
+    ):
         if photo is None:
             query = (
                 "UPDATE participants SET bio = ?, emergency_contact = ? WHERE email = ?"
@@ -1987,7 +2019,7 @@ if __name__ == "__main__":
         print("Loading users from file...")
         with open(args.load_from_local_file) as f:
             wc_participants = json.load(f)
-            db.add_participants(wc_participants)
+            db.add_wc_participants(wc_participants)
 
     # elif args.export_static_website:
     #     print("Exporting static website...")
