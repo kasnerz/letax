@@ -80,6 +80,11 @@ def show_profile(team_id):
             member_string += ", "
             member_string += get_pax_link(team["member2"], member_2["name"])
 
+        if team["member3"]:
+            member_3 = db.get_participant_by_id(team["member3"])
+            member_string += ", "
+            member_string += get_pax_link(team["member3"], member_3["name"])
+
         st.markdown(f"<h5>{member_string}</h5>", unsafe_allow_html=True)
 
         if team["team_motto"]:
@@ -214,6 +219,10 @@ def show_teams():
             if team["member2"]:
                 member2 = db.get_participant_by_id(team["member2"])
                 members.append(get_member_link(member2["id"], member2["name"]))
+
+            if team["member3"]:
+                member3 = db.get_participant_by_id(team["member3"])
+                members.append(get_member_link(member3["id"], member3["name"]))
 
             members = ", ".join(members)
             st.image(img)

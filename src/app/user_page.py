@@ -164,8 +164,6 @@ def record_checkpoint(db, user):
     # sort checkpoints alphabetically
     checkpoints = sorted(checkpoints, key=lambda x: unidecode(x["name"].lower()))
 
-    print(checkpoints[0])
-
     with st.form("checkpoint", clear_on_submit=True):
         checkpoint_idx = st.selectbox(
             "Checkpoint:",
@@ -516,6 +514,7 @@ def show_team_info(db, user, team):
             format_func=lambda x: available_paxes.iloc[x]["name"],
             disabled=fields_disabled,
         )
+
         team_motto = st.text_input(
             "Motto týmu (nepovinné):", value=motto, disabled=fields_disabled
         )
@@ -543,7 +542,7 @@ def show_team_info(db, user, team):
 
         second_member = available_paxes.iloc[second_member]["id"]
 
-        db.add_or_update_team(
+        db.update_or_create_team(
             team_name=team_name,
             team_motto=team_motto,
             team_web=team_web,

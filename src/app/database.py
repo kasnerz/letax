@@ -526,6 +526,13 @@ class Database:
                     if row["member2"]
                 }
             )
+            pax_id_to_team.update(
+                {
+                    str(row["member3"]): row
+                    for _, row in teams.iterrows()
+                    if row["member3"]
+                }
+            )
 
             participants["team_name"] = participants.apply(
                 lambda x: pax_id_to_team.get(str(x["id"]), {}).get("team_name"), axis=1
@@ -541,6 +548,9 @@ class Database:
         return self.conn.execute(query, (email,)).fetchone() is not None
 
     def get_participant_by_id(self, id):
+        if id == "" or id is None:
+            return None
+
         query = "SELECT * FROM participants WHERE id = ?"
         pax_info = self.conn.execute(query, (id,)).fetchone()
 
@@ -1201,10 +1211,17 @@ class Database:
 
     def get_teams_overview(self):
         teams = self.get_table_as_df("teams")
+
+        if teams.empty:
+            return []
+
         posts = self.get_table_as_df("posts")
         participants = self.get_participants(
             include_non_registered=True, sort_by_name=False
         )
+
+        if participants.empty:
+            return []
 
         # get team overview for each team
         teams_info = [
@@ -1312,7 +1329,7 @@ class Database:
             [
                 pd.DataFrame(
                     {
-                        "id": ["-1"],
+                        "id": [""],
                         "name": ["(bez parťáka)"],
                     }
                 ),
@@ -1330,14 +1347,16 @@ class Database:
 
         return available_paxes
 
-    def add_or_update_team(
+    def update_or_create_team(
         self,
         team_name,
         team_motto,
         team_web,
         team_photo,
         first_member,
-        second_member,
+        second_member=None,
+        third_member=None,
+        is_top_x=0,
         current_team=None,
     ):
         # if team is already in the database, get its id
@@ -1347,8 +1366,11 @@ class Database:
             # add team to the database
             team_id = utils.generate_uuid()
 
-        if str(second_member) == "-1":
+        if second_member == "":
             second_member = None
+
+        if third_member == "":
+            third_member = None
 
         photo_path = None
         if team_photo:
@@ -1365,7 +1387,7 @@ class Database:
 
         if not current_team:
             self.conn.execute(
-                f"INSERT INTO teams (team_id, team_name, team_motto, team_web, team_photo, member1, member2, is_top_x) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                f"INSERT INTO teams (team_id, team_name, team_motto, team_web, team_photo, member1, member2, member3, is_top_x) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     team_id,
                     team_name,
@@ -1374,7 +1396,8 @@ class Database:
                     photo_path,
                     first_member,
                     second_member,
-                    0,
+                    third_member,
+                    is_top_x,
                 ),
             )
             self.conn.commit()
@@ -1382,7 +1405,7 @@ class Database:
         else:
             # only update new values, keep the existing
             self.conn.execute(
-                f"UPDATE teams SET team_name = ?, team_motto = ?, team_web = ?, team_photo = ?, member1 = ?, member2 = ? WHERE team_id = ?",
+                f"UPDATE teams SET team_name = ?, team_motto = ?, team_web = ?, team_photo = ?, member1 = ?, member2 = ?, member3 = ?, is_top_x = ? WHERE team_id = ?",
                 (
                     team_name,
                     team_motto,
@@ -1390,6 +1413,8 @@ class Database:
                     photo_path,
                     first_member,
                     second_member,
+                    third_member if third_member else current_team["member3"],
+                    is_top_x if is_top_x else current_team["is_top_x"],
                     team_id,
                 ),
             )
@@ -1690,6 +1715,11 @@ class Database:
 
         return bool(is_top_x)
 
+    def delete_team(self, team_id):
+        self.conn.execute("DELETE FROM teams WHERE team_id = ?", (team_id,))
+        self.conn.commit()
+        utils.log(f"Deleted team {team_id}", level="info")
+
     def get_fa_icons(self):
         return self.fa_icons
 
@@ -1802,191 +1832,6 @@ class Database:
 
         return visibility
 
-    def find_files_2022(self, action_type, action_name, team_id):
-        files = []
-        mt = mimetypes.MimeTypes()
-
-        try:
-            team_name = self.get_team_by_id(team_id)
-
-            if not team_name:
-                utils.log(f"Team {team_id} not found", level="warning")
-                return files
-            team_name = team_name["team_name"]
-
-            path = os.path.join(
-                "files", "2022", action_type, slugify(action_name), slugify(team_name)
-            )
-
-            # find all files in the directory
-            for file in os.listdir(path):
-                if file.endswith(".txt") or os.path.isdir(os.path.join(path, file)):
-                    continue
-
-                file_path = os.path.join(path, file)
-                file_type = mt.guess_type(path)[0]
-
-                if not file_type:
-                    # guess from the extension
-                    extension = file.split(".")[-1]
-                    file_type = (
-                        f"video/{extension}"
-                        if extension.lower() in ["mp4", "mov", "avi"]
-                        else f"image/{extension}"
-                    )
-
-                files.append({"path": file_path, "type": file_type})
-        except FileNotFoundError:
-            pass
-
-        return files
-
-    def insert_data_2022(self):
-        with open("files/2022/prihlasky.csv") as f:
-            reader = csv.DictReader(f, delimiter=",")
-            for i, row in enumerate(reader):
-                # note that we use here member names as ids
-                self.conn.execute(
-                    """INSERT OR IGNORE INTO teams
-                    (team_id, team_name, member1, member2)
-                    VALUES
-                    (?, ?, ?, ?);
-                    """,
-                    (
-                        f"2022_team_{i + 1}",
-                        row["Název týmu"],
-                        "2022_" + slugify(row["Člen #1: Jméno a příjmení"]),
-                        "2022_" + slugify(row["Člen #2: Jméno a příjmení"]),
-                    ),
-                )
-                self.conn.execute(
-                    """INSERT OR IGNORE INTO participants
-                    (id, email, name_web)
-                    VALUES
-                    (?, ?, ?);
-                    """,
-                    (
-                        "2022_" + slugify(row["Člen #1: Jméno a příjmení"]),
-                        utils.generate_uuid() + "@xc-test.cz",
-                        row["Člen #1: Jméno a příjmení"],
-                    ),
-                )
-                self.conn.execute(
-                    """INSERT OR IGNORE INTO participants
-                    (id, email, name_web)
-                    VALUES
-                    (?, ?, ?);
-                    """,
-                    (
-                        "2022_" + slugify(row["Člen #2: Jméno a příjmení"]),
-                        utils.generate_uuid() + "@xc-test.cz",
-                        row["Člen #2: Jméno a příjmení"],
-                    ),
-                )
-            self.conn.commit()
-
-        with open("files/2022/odpovedi.csv") as f:
-            reader = csv.DictReader(f, delimiter=",")
-            for i, row in enumerate(reader):
-                username = "xc-bot"
-                team_id = "2022_team_" + row["ID týmu"]
-
-                # format from %d/%m/%Y %H:%M:%S to %Y-%m-%d %H:%M:%S")
-                timestamp = row["Timestamp"]
-                timestamp = datetime.strptime(timestamp, "%d/%m/%Y %H:%M:%S").strftime(
-                    "%Y-%m-%d %H:%M:%S"
-                )
-
-                action_type_dict = {
-                    "⭐ splněnou výzvu": "challenge",
-                    "📍 splněný checkpoint": "checkpoint",
-                    "✍️ příspěvek": "story",
-                }
-                action_type = action_type_dict[row["Chci přidat..."]]
-
-                if action_type == "challenge":
-                    action_name = row["Výzva"]
-                    comment = row["Komentář - Výzva"]
-                elif action_type == "checkpoint":
-                    action_name = row["Checkpoint"]
-                    comment = row["Komentář - Checkpoint"]
-                elif action_type == "story":
-                    action_name = row["Nadpis"]
-                    comment = row["Text"]
-
-                files = self.find_files_2022(action_type, action_name, team_id)
-                files = json.dumps(files)
-
-                self.conn.execute(
-                    """INSERT OR IGNORE INTO posts
-                    (post_id, pax_id, team_id, action_type, action_name, comment, created, files)
-                    VALUES
-                    (?, ?, ?, ?, ?, ?, ?, ?);
-                    """,
-                    (
-                        "2022_" + utils.generate_uuid(),
-                        username,
-                        team_id,
-                        action_type,
-                        action_name,
-                        comment,
-                        timestamp,
-                        files,
-                    ),
-                )
-            self.conn.commit()
-
-        with open("files/2022/challenges.csv") as f:
-            reader = csv.DictReader(f, delimiter=",")
-            for i, row in enumerate(reader):
-                self.conn.execute(
-                    """INSERT OR IGNORE INTO challenges
-                    (name, category, description, points)
-                    VALUES
-                    (?, ?, ?, ?);
-                    """,
-                    (
-                        row["název"],
-                        row["kategorie"],
-                        row["popis"],
-                        row["počet bodů"],
-                    ),
-                )
-            self.conn.commit()
-
-        with open("files/2022/checkpoints.csv") as f:
-            reader = csv.DictReader(f, delimiter=",")
-            for i, row in enumerate(reader):
-                gps = row["gps"]
-
-                try:
-                    # remove all letters
-                    gps = re.sub("[a-zA-Z]", "", gps)
-                    gps = gps.split(",")[:2]
-
-                    lat = float(gps[0].strip())
-                    lon = float(gps[1].strip())
-                except:
-                    utils.log(f"Cannot convert {gps}", level="warning")
-                    gps = None
-
-                self.conn.execute(
-                    """INSERT OR IGNORE INTO checkpoints
-                    (name, description, points, challenge, latitude, longitude)
-                    VALUES
-                    (?, ?, ?, ?, ?, ?);
-                    """,
-                    (
-                        row["název"],
-                        row["popis"],
-                        row["počet bodů"],
-                        row["výzva (dobrovolná)"],
-                        lat,
-                        lon,
-                    ),
-                )
-            self.conn.commit()
-
 
 if __name__ == "__main__":
     # read arguments
@@ -1994,21 +1839,12 @@ if __name__ == "__main__":
     parser.add_argument("-p", "--load_from_wc_product", type=int)
     parser.add_argument("-f", "--load_from_local_file", type=str)
     parser.add_argument("--fill_addresses", action="store_true")
-    parser.add_argument("--insert_data_2022", action="store_true")
     parser.add_argument("--reslugify", action="store_true")
-    # parser.add_argument("--export_static_website", action="store_true")
 
     args = parser.parse_args()
 
     print(args)
     print("Creating database...")
-
-    if args.insert_data_2022:
-        db = Database(event_id="2022")
-        db.create_tables()
-        db.insert_data_2022()
-        exit()
-
     db = Database()
     db.create_tables()
 
@@ -2020,11 +1856,6 @@ if __name__ == "__main__":
         with open(args.load_from_local_file) as f:
             wc_participants = json.load(f)
             db.add_wc_participants(wc_participants)
-
-    # elif args.export_static_website:
-    #     print("Exporting static website...")
-    #     db = Database(event_id="2022")
-    #     db.export_static_website("exported_website", "2022")
 
     elif args.fill_addresses:
         print("Filling addresses...")

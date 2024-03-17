@@ -160,9 +160,19 @@ def show_overview():
     if best_teams.empty:
         # find the teams with most points
         teams_overview = db.get_teams_overview()
+
+        if not teams_overview:
+            st.info("Zatím nejsou zaregistrované žádné týmy.")
+            st.stop()
+
         best_teams = (
             pd.DataFrame(teams_overview).sort_values("points", ascending=False).head(4)
         )
+
+        # if all best teams have 0 points, display warning that the game has not started yet
+        if best_teams["points"].sum() == 0:
+            st.info("Žádný tým zatím nezískal body.")
+            st.stop()
 
     best_teams = best_teams.to_dict("records")
     column_cnt = len(best_teams)

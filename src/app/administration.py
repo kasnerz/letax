@@ -296,6 +296,134 @@ def action_manage_participants(db):
     st.dataframe(participants)
 
 
+def action_manage_teams(db):
+    teams = db.get_table_as_df("teams")
+
+    teams = teams.sort_values(by="team_name")
+    default_name = "[nový tým]"
+
+    st.markdown("#### Upravit tým")
+
+    team_list = teams.to_dict(orient="records")
+
+    generated_uuid = utils.generate_uuid()
+    new_team = {
+        "id": generated_uuid,
+        "team_name": default_name,
+        "member1": "",
+        "member2": "",
+        "member3": "",
+        "team_motto": "",
+        "team_web": "",
+        "team_photo": "",
+        "is_top_x": 0,
+    }
+    team_list.insert(0, new_team)
+
+    team = st.selectbox(
+        "Vyber tým",
+        team_list,
+        format_func=lambda x: f"{x['team_name']}",
+    )
+    participants = db.get_participants(include_non_registered=True)
+
+    participants = pd.concat(
+        [
+            pd.DataFrame(
+                {
+                    "id": [""],
+                    "name_web": ["-"],
+                }
+            ),
+            participants,
+        ],
+        ignore_index=True,
+    )
+    try:
+        pax1_idx = int(participants[participants["id"] == team["member1"]].index[0])
+        pax2_idx = int(participants[participants["id"] == team["member2"]].index[0])
+        pax3_idx = int(participants[participants["id"] == team["member3"]].index[0])
+    except:
+        pax1_idx = 0
+        pax2_idx = 0
+        pax3_idx = 0
+
+    participant_list = participants.to_dict(orient="records")
+
+    with st.form("challenge_form"):
+        name = st.text_input("Název týmu", value=team["team_name"])
+
+        member1 = st.selectbox(
+            "Člen 1",
+            participant_list,
+            format_func=lambda x: f"{x['name_web']}",
+            index=pax1_idx,
+        )
+        member2 = st.selectbox(
+            "Člen 2 (nepovinný)",
+            participant_list,
+            format_func=lambda x: f"{x['name_web']}",
+            index=pax2_idx,
+        )
+        member3 = st.selectbox(
+            "Člen 3 (nepovinný, pouze ve výjimečných případech)",
+            participant_list,
+            format_func=lambda x: f"{x['name_web']}",
+            index=pax3_idx,
+        )
+        motto = st.text_input("Motto týmu (nepovinné)", value=team["team_motto"])
+        web = st.text_input("Webová stránka týmu (nepovinné)", value=team["team_web"])
+        is_top_x = st.checkbox("Tým je v top X", value=team["is_top_x"])
+
+        cols = st.columns([4, 1])
+        with cols[0]:
+            photo = st.file_uploader("Profilové foto (nepovinné):")
+        with cols[1]:
+            photo_img = team["team_photo"]
+
+            if photo_img:
+                st.image(db.read_image(photo_img, thumbnail="150_square"))
+
+        cols = st.columns([1, 6, 1])
+        submit_button = cols[0].form_submit_button(label="Uložit")
+        delete_button = cols[2].form_submit_button(label="Smazat")
+
+    if submit_button:
+        if name == default_name:
+            st.error(f'Jméno týmu nesmí být "{default_name}"')
+            st.stop()
+
+        if member1["id"] == "":
+            st.error("Vyber alespoň jednoho člena týmu.")
+            st.stop()
+
+        ret = db.update_or_create_team(
+            team_name=name,
+            team_motto=motto,
+            team_web=web,
+            team_photo=photo,
+            first_member=member1["id"],
+            second_member=member2["id"],
+            third_member=member3["id"],
+            is_top_x=is_top_x,
+            current_team=team if team["team_id"] != generated_uuid else None,
+        )
+        st.success("Tým uložen")
+        return True
+
+    if delete_button:
+        if name == default_name:
+            st.error("Vyber nejprve nějaký tým.")
+            st.stop()
+
+        db.delete_team(team["team_id"])
+        st.success("Tým smazán")
+        return True
+
+    st.markdown("#### Aktuální týmy")
+    st.dataframe(teams)
+
+
 def action_manage_challenges(db):
     challenges = db.get_table_as_df("challenges")
     challenges = challenges.sort_values(by="name")
@@ -954,10 +1082,11 @@ def show_actions(db):
             "Akce:",
             [
                 "🍍 Oznámení",
+                "📅 Akce",
                 "💪 Výzvy",
                 "📌 Checkpointy",
-                "📅 Akce",
                 "🧑 Účastníci",
+                "🧑‍🤝‍🧑 Týmy",
                 "ℹ️ Infotext",
                 "🏆️ Výherci",
                 "💻️ Pokročilá nastavení",
@@ -979,6 +1108,9 @@ def show_actions(db):
 
         elif action == "🧑 Účastníci":
             ret = action_manage_participants(db)
+
+        elif action == "🧑‍🤝‍🧑 Týmy":
+            ret = action_manage_teams(db)
 
         elif action == "🏆️ Výherci":
             ret = action_set_awards(db)
