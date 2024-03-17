@@ -672,10 +672,16 @@ class Database:
         )
         return df
 
-    def save_post(self, user, action_type, action, comment, files):
+    def save_post(
+        self,
+        user,
+        action_type,
+        action,
+        comment,
+        files,
+        flags=None,
+    ):
         team = self.get_team_for_user(user["pax_id"])
-        # save all the files to the filesystem
-
         title = action if action_type == "story" else action["name"]
 
         dir_path = os.path.join(
@@ -683,9 +689,6 @@ class Database:
         )
 
         files_json = []
-
-        # show progress in streamlit
-        # progress_bar = st.progress(0)
 
         for i, file in enumerate(files):
             # if it's a photo, we need to process it
@@ -713,7 +716,7 @@ class Database:
         team_id = str(team["team_id"])
 
         self.conn.execute(
-            f"INSERT INTO posts (post_id, pax_id, team_id, action_type, action_name, comment, files, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            f"INSERT INTO posts (post_id, pax_id, team_id, action_type, action_name, comment, files, created, flags) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 post_id,
                 pax_id,
@@ -723,6 +726,7 @@ class Database:
                 comment,
                 files_json,
                 created,
+                str(flags) if flags is not None else None,
             ),
         )
         self.conn.commit()
@@ -1142,9 +1146,12 @@ class Database:
         action = ret.fetchone()
         return dict(action) if action else None
 
-    def get_points_for_action(self, action_type, action_name):
+    def get_points_for_action(self, action_type, action_name, flags):
         if action_type == "story":
             return 0
+
+        if flags:
+            flags = ast.literal_eval(flags)
 
         action = self.get_action(action_type, action_name)
 
@@ -1153,6 +1160,10 @@ class Database:
             return 0
 
         pts = action.get("points", 0)
+
+        if action_type == "checkpoint" and action.get("points_challenge") and flags and flags.get("checkpoint_challenge_completed"):
+            pts += action.get("points_challenge")
+
 
         return pts
 
@@ -1167,7 +1178,7 @@ class Database:
             posts_team = posts_team.assign(
                 points=posts_team.apply(
                     lambda row: self.get_points_for_action(
-                        row["action_type"], row["action_name"]
+                        row["action_type"], row["action_name"], row["flags"]
                     ),
                     axis=1,
                 )

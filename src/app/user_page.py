@@ -89,7 +89,7 @@ def show_user_page(db, user, team):
         show_info_info(db)
 
 
-def create_post(db, user, action_type, action, comment, files):
+def create_post(db, user, action_type, action, comment, files, flags=None):
     try:
         db.save_post(
             user=user,
@@ -97,6 +97,7 @@ def create_post(db, user, action_type, action, comment, files):
             action=action,
             comment=comment,
             files=files,
+            flags=flags,
         )
         st.success("Příspěvek odeslán.")
         st.balloons()
@@ -170,6 +171,10 @@ def record_checkpoint(db, user):
             options=range(len(checkpoints)),
             format_func=lambda x: checkpoints[x]["name"],
         )
+        challenge_completed = st.checkbox(
+            "Výzva u checkpointu splněna",
+            help="Zaškrtni, pokud váš tým splnil výzvu u checkpointu. Pokud má checkpoint i body za výzvu, získáš body navíc.",
+        )
         # Create two text input fields
         comment = st.text_area(
             "Komentář:",
@@ -189,6 +194,7 @@ def record_checkpoint(db, user):
                 action=checkpoints[checkpoint_idx],
                 comment=comment,
                 files=files,
+                flags={"checkpoint_challenge_completed": challenge_completed},
             )
             time.sleep(2)
             st.rerun()
