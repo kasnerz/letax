@@ -163,26 +163,27 @@ def login_page():
     # delete query parameters
     st.query_params.clear()
 
+    print(st.session_state["authentication_status"])
     if st.session_state["authentication_status"]:
-        username_container = st.sidebar.container()
-        authenticator.logout("Odhlásit se", "sidebar")
+        # username_container = st.sidebar.container()
+        # authenticator.logout("Odhlásit se", "sidebar")
 
         user, team = get_logged_info()
-        if not user:
-            st.error("Uživatel není přihlášen.")
-            st.stop()
+        # if not user:
+        #     st.error("Uživatel není přihlášen.")
+        #     st.stop()
 
-        username_container.markdown("### Uživatel")
-        username_container.markdown(
-            f'{"🧑‍🔧 " if user["role"] == "admin" else "🧒 "}**{user["name"]}** ({user["username"]})'
-        )
+        # username_container.markdown("### Uživatel")
+        # username_container.markdown(
+        #     f'{"🧑‍🔧 " if user["role"] == "admin" else "🧒 "}**{user["name"]}** ({user["username"]})'
+        # )
 
         return user, team
 
     elif st.session_state["authentication_status"] is False:
         incorrect_login_details()
 
-    if st.session_state["authentication_status"] is None:
+    elif st.session_state["authentication_status"] is None:
         _, center_column, _ = st.columns([1, 3, 1])
         with center_column:
             tabs = st.tabs(["Přihlásit se", "Zaregistrovat se", "Reset hesla"])
@@ -207,14 +208,14 @@ Pokud dostaneš hlášku \"Email already taken\", už máš pravděpodobně zalo
                 )
                 register_form(authenticator, config)
 
-            if res[0] is not None:
-                # this is necessary to display the user interface right after login and not showing all the tabs
-                st.session_state["name"] = res[0]
-                st.session_state["authentication_status"] = res[1]
-                st.session_state["username"] = res[2]
-                time.sleep(0.5)
+            # if res[0] is not None:
+            #     # this is necessary to display the user interface right after login and not showing all the tabs
+            #     st.session_state["name"] = res[0]
+            #     st.session_state["authentication_status"] = res[1]
+            #     st.session_state["username"] = res[2]
+            #     time.sleep(0.5)
 
-                st.rerun()
+            #     st.rerun()
 
             if res[1] is False:
                 incorrect_login_details()

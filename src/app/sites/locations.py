@@ -3,10 +3,6 @@
 import streamlit as st
 from database import get_database
 import utils
-import folium
-import datetime
-from folium.plugins import BeautifyIcon
-from streamlit_folium import folium_static
 
 st.set_page_config(
     page_title="Mapa týmů", page_icon="static/favicon.png", layout="wide"
@@ -19,7 +15,7 @@ st.session_state["event"] = db.get_event()
 st.session_state["active_event"] = db.get_active_event()
 utils.page_wrapper()
 
-from app.sites.locations import (
+from map import (
     show_last_shared_locations,
     show_positions,
     show_checkpoints,

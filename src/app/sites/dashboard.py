@@ -216,7 +216,7 @@ def show_overview():
         unsafe_allow_html=True,
     )
 
-    from app.sites.locations import show_positions, render_map
+    from map import show_positions, render_map
 
     m, _ = show_positions(db)
     render_map(m)
