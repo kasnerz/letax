@@ -304,18 +304,19 @@ def add_logo(logo_url: str, year: int, height: int = 120):
 
     logo = f"url(data:image/png;base64,{base64.b64encode(Path(logo_url).read_bytes()).decode()})"
 
-    st.markdown(
+    st.html(
         f"""
         <style>
-            [data-testid="stSidebarNav"] {{
+            [data-testid="stSidebarHeader"] {{
                 background-image: {logo};
                 background-repeat: no-repeat;
                 padding-top: {height - 40}px;
-                background-position: 20px 20px;
+                background-position: 25px 20px;
+                padding-bottom: 70px;
             }}
-            [data-testid="stSidebarNav"]::before {{
+            [data-testid="stSidebarHeader"]::before {{
                 content: "Letní X-Challenge {year}";
-                margin-left: 62px;
+                margin-left: 50px;
                 font-size: 19px;
                 font-weight: 700;
                 font-family: "Source Sans Pro", sans-serif;
@@ -323,8 +324,7 @@ def add_logo(logo_url: str, year: int, height: int = 120):
                 top: 21px;
             }}
         </style>
-        """,
-        unsafe_allow_html=True,
+        """
     )
 
 
@@ -389,6 +389,7 @@ def page_wrapper():
             clear_cache()
             st.rerun()
 
+    # st.logo("static/logo_icon.png")
     if not event:
         add_logo("static/logo_icon.png", year="", height=40)
     else:
