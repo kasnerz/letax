@@ -311,7 +311,7 @@ def add_logo(logo_url: str, year: int, height: int = 120):
                 background-image: {logo};
                 background-repeat: no-repeat;
                 padding-top: {height - 40}px;
-                background-position: 25px 20px;
+                background-position: 25px 30px;
                 padding-bottom: 70px;
             }}
             [data-testid="stSidebarHeader"]::before {{
@@ -321,7 +321,7 @@ def add_logo(logo_url: str, year: int, height: int = 120):
                 font-weight: 700;
                 font-family: "Source Sans Pro", sans-serif;
                 position: relative;
-                top: 21px;
+                top: 31px;
             }}
         </style>
         """

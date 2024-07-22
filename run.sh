@@ -11,12 +11,17 @@ if [[ "$1" == "-v" ]]; then
     shift
 fi
 
+if [[ "$1" == "-n" ]]; then
+    CMD='streamlit run "src/app/app.py" --server.headless true'
+    shift
+else
+    CMD='streamlit run "src/app/app.py"'
+fi
+
 # Set the memory limit in MB
 # The limit should be something like 500 MB less than the total memory available, i.e. 1500 MB for 2GB instance
 MEMORY_LIMIT_MB=${1:-0} # 0 means no limit, default
 REFRESH_RATE=5 # seconds
-
-CMD="streamlit run \"src/app/app.py\""
 
 # If memory limit is unset, do not check memory usage
 if [ $MEMORY_LIMIT_MB -eq 0 ]; then
@@ -49,3 +54,5 @@ else
     done
 fi
 
+# prevent disappearing terminal cursor
+tset

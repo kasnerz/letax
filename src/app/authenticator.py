@@ -32,26 +32,33 @@ def get_logged_info():
     return user, team
 
 
-def register_new_user(config):
-    username, user = db.am.get_registered_user(config)
-
-    if username is None:
-        st.error("Tento email je již zaregistrován.")
-        st.stop()
-
+def register_new_user(authenticator, email, username):
     # if the user is allowed to register through extra accounts, find their role
-    extra_account = db.am.get_extra_account(user["email"].lower())
+    extra_account = db.am.get_extra_account(email)
     role = extra_account["role"] if extra_account else "user"
 
-    db.am.add_user(
-        username=username,
-        email=user["email"].lower(),
-        name=user["name"],
-        password_hash=user["password"],
-        registered=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        role=role,
-    )
+    user = authenticator.authentication_handler.credentials["usernames"][username]
+    user["role"] = role
+
+    db.am.accounts["credentials"] = authenticator.authentication_handler.credentials
+    db.am.save_accounts()
     utils.clear_cache()
+
+    # if db.am.get_user_by_username(username) is not None:
+    #     st.error("Toto uživatelské jméno již existuje.")
+    #     st.stop()
+    # if db.am.get_user_by_email(email) is not None:
+    #     st.error("Tento email je již zaregistrován.")
+
+    # db.am.add_user(
+    #     username=username,
+    #     email=email,
+    #     name=name,
+    #     password_hash=user["password"],
+    #     registered=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    #     role=role,
+    # )
+    # utils.clear_cache()
 
 
 def reset_password_form(authenticator):
@@ -62,7 +69,10 @@ def reset_password_form(authenticator):
         username_forgot_pw,
         email_forgot_password,
         random_password,
-    ) = authenticator.forgot_password("Zapomenuté heslo")
+    ) = authenticator.forgot_password(
+        fields={"Form name": "Zapomenuté heslo", "Username": "Uživatelské jméno"},
+        location="main",
+    )
 
     if username_forgot_pw is None:
         st.stop()
@@ -105,14 +115,20 @@ def reset_password_form(authenticator):
 
 def register_form(authenticator, config):
     try:
-        if authenticator.register_user("Zaregistrovat se"):
-            register_new_user(config)
+        email, username, name = authenticator.register_user(
+            fields={
+                "Form name": "Zaregistrovat se",
+                "Name": "Jméno a příjmení",
+                "Username": "Uživatelské jméno",
+                "Password": "Heslo",
+                "Repeat password": "Heslo znovu",
+            }
+        )
+        if email:
+            register_new_user(authenticator, email, username)
 
-            utils.clear_cache()
             st.success("Uživatel úspěšně zaregistrován. Nyní se můžeš přihlásit.")
             st.balloons()
-            # time.sleep(5)
-            # st.rerun()
 
     except Exception as e:
         st.error(e)
@@ -132,6 +148,14 @@ def create_authenticator():
     return authenticator, config
 
 
+def incorrect_login_details():
+    st.error("Nesprávné přihlašovací údaje.")
+    st.info("Před prvním přihlášením se musíš zaregistrovat.")
+    st.session_state["authentication_status"] = None
+
+    return None, None
+
+
 def login_page():
     authenticator, config = create_authenticator()
     tabs = None
@@ -139,39 +163,7 @@ def login_page():
     # delete query parameters
     st.query_params.clear()
 
-    if st.session_state["authentication_status"] == None:
-        _, center_column, _ = st.columns([1, 3, 1])
-        with center_column:
-            tabs = st.tabs(["Přihlásit se", "Zaregistrovat se", "Reset hesla"])
-            with tabs[0]:
-                res = authenticator.login("Přihlásit se", "main")
-            with tabs[1]:
-                st.info(
-                    """- **Email** použij stejný, jako jsi použil(a) pro registraci na akci (malými písmeny). 
-- **Username** je libovolný identifikátor, které budeš používat na přihlášení do systému.
-- **Name** je tvoje celé jméno a příjmení.
-- **Heslo** použij takové, které se ti bude dobře pamatovat, dobře psát na mobilu, a zároveň ho nenajdeš [tady](https://en.wikipedia.org/wiki/Wikipedia:10,000_most_common_passwords) :)
-
-Pokud tě na akci přihlásil někdo jiný nebo se ti z nějakého důvodu nedaří zaregistrovat, tak nám napiš svoje jméno, příjmení a e-mail (ideálně s dokladem o zaplacení) na letni@x-challenge.cz, přidáme tě do databáze ručně."""
-                )
-                register_form(authenticator, config)
-
-            if res[0] is not None:
-                # this is necessary to display the user interface right after login and not showing all the tabs
-                st.session_state["name"] = res[0]
-                st.session_state["authentication_status"] = res[1]
-                st.session_state["username"] = res[2]
-                time.sleep(0.1)
-
-                st.rerun()
-
-        with tabs[2]:
-            reset_password_form(authenticator)
-
-    if st.session_state["authentication_status"] == True:
-        # if tabs:
-        # del tabs
-
+    if st.session_state["authentication_status"]:
         username_container = st.sidebar.container()
         authenticator.logout("Odhlásit se", "sidebar")
 
@@ -187,9 +179,45 @@ Pokud tě na akci přihlásil někdo jiný nebo se ti z nějakého důvodu neda�
 
         return user, team
 
-    elif st.session_state["authentication_status"] == False:
-        st.error("Nesprávné přihlašovací údaje.")
-        st.info("Před prvním přihlášením se musíš zaregistrovat.")
-        st.session_state["authentication_status"] = None
+    elif st.session_state["authentication_status"] is False:
+        incorrect_login_details()
 
-        return None, None
+    if st.session_state["authentication_status"] is None:
+        _, center_column, _ = st.columns([1, 3, 1])
+        with center_column:
+            tabs = st.tabs(["Přihlásit se", "Zaregistrovat se", "Reset hesla"])
+            with tabs[0]:
+                res = authenticator.login(
+                    fields={
+                        "Form name": "Přihlásit se",
+                        "Username": "Uživatelské jméno",
+                        "Password": "Heslo",
+                    },
+                    location="main",
+                )
+            with tabs[1]:
+                st.info(
+                    """- **Email** použij stejný, jako jsi použil(a) pro registraci na akci.
+- **Uživatelské jméno** je identifikátor, které budeš používat na přihlášení do systému. Může obsahovat pouze písmena anglické abecedy, čísla, podtržítko (_) a pomlčku (-).
+- **Heslo** použij takové, které se ti bude dobře pamatovat, dobře psát na mobilu, a zároveň ho nenajdeš [tady](https://en.wikipedia.org/wiki/Wikipedia:10,000_most_common_passwords).
+
+Pokud tě na akci přihlásil někdo jiný nebo se ti z nějakého důvodu nedaří zaregistrovat, tak nám napiš svoje jméno, příjmení a e-mail (ideálně s dokladem o zaplacení) na letni@x-challenge.cz, přidáme tě do databáze ručně.
+
+Pokud dostaneš hlášku \"Email already taken\", už máš pravděpodobně založený účet z předchozích ročníků - přihlas se, případně si vyresetuj heslo."""
+                )
+                register_form(authenticator, config)
+
+            if res[0] is not None:
+                # this is necessary to display the user interface right after login and not showing all the tabs
+                st.session_state["name"] = res[0]
+                st.session_state["authentication_status"] = res[1]
+                st.session_state["username"] = res[2]
+                time.sleep(0.5)
+
+                st.rerun()
+
+            if res[1] is False:
+                incorrect_login_details()
+
+        with tabs[2]:
+            reset_password_form(authenticator)

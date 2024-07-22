@@ -281,6 +281,7 @@ def action_manage_participants(db):
             st.stop()
 
         st.success("Účastník uložen")
+        utils.clear_cache()
         return True
 
     if delete_button:

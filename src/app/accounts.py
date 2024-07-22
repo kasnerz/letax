@@ -9,7 +9,9 @@ import utils
 
 class AccountManager:
     def __init__(self):
-        self.accounts_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), "accounts.yaml")
+        self.accounts_file = os.path.join(
+            os.path.dirname(os.path.realpath(__file__)), "accounts.yaml"
+        )
         self.load_accounts()
 
         self.email_index = {}
@@ -63,21 +65,21 @@ class AccountManager:
 
         self.save_accounts()
 
-    def get_registered_user(self, config):
-        # there is no way to tell which user just registered except for comparing the old and new config files
-        old_emails = {user["email"].lower() for user in self.accounts["credentials"]["usernames"].values()}
-        new_emails = {user["email"].lower() for user in config["credentials"]["usernames"].values()}
+    # def get_registered_user(self, config):
+    #     # there is no way to tell which user just registered except for comparing the old and new config files
+    #     old_emails = {user["email"].lower() for user in self.accounts["credentials"]["usernames"].values()}
+    #     new_emails = {user["email"].lower() for user in config["credentials"]["usernames"].values()}
 
-        if len(new_emails) == len(old_emails):
-            # no new user
-            return None, None
+    #     if len(new_emails) == len(old_emails):
+    #         # no new user
+    #         return None, None
 
-        new_email = list(new_emails - old_emails)[0]
-        username, user = [user for user in config["credentials"]["usernames"].items() if user[1]["email"] == new_email][
-            0
-        ]
+    #     new_email = list(new_emails - old_emails)[0]
+    #     username, user = [user for user in config["credentials"]["usernames"].items() if user[1]["email"] == new_email][
+    #         0
+    #     ]
 
-        return username, user
+    #     return username, user
 
     def get_extra_accounts(self):
         # emails which are not registered for X-Challenge but are allowed to register in the app (admins etc.)

@@ -55,7 +55,7 @@ def parse_links(web):
 
 
 def get_pax_link(pax_id, pax_name):
-    return f"<a href='/Účastníci?id={pax_id}' target='_self' class='app-link' margin-top: -10px;'>{pax_name}</a>"
+    return f"<a href='/participants?id={pax_id}' target='_self' class='app-link' margin-top: -10px;'>{pax_name}</a>"
 
 
 def show_profile(team_id):
@@ -103,7 +103,7 @@ def show_profile(team_id):
         else:
             for i, post in posts.iterrows():
                 # link to post
-                post_link = f"/Příspěvky?post={post['post_id']}&event_id={event_id}"
+                post_link = f"posts?post={post['post_id']}&event_id={event_id}"
                 post_date = pd.to_datetime(post["created"]).strftime("%d.%m.%Y %H:%M")
                 st.markdown(
                     f"{post_date} – <b><a href='{post_link}' target='_self'> {post['action_name']}</a><b>",
@@ -180,7 +180,7 @@ def show_profile(team_id):
 
 
 def get_member_link(member_id, member_name):
-    return f"<a href='/Účastníci?id={member_id}&event_id={event_id}' class='app-link' target='_self'>{member_name}</a>"
+    return f"<a href='/participants?id={member_id}&event_id={event_id}' class='app-link' target='_self'>{member_name}</a>"
 
 
 # @st.cache_data(show_spinner=False)
@@ -279,5 +279,5 @@ def main():
     show_teams()
 
 
-if __name__ == "__main__":
+if __name__ == "__page__":
     main()

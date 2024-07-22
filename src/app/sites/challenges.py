@@ -74,7 +74,7 @@ def main(user):
             st.divider()
 
 
-if __name__ == "__main__":
+if __name__ == "__page__":
     user, team = login_page()
 
     if user:

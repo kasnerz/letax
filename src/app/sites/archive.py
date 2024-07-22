@@ -70,5 +70,5 @@ def main():
         st.image("static/logo.png", width=200)
 
 
-if __name__ == "__main__":
+if __name__ == "__page__":
     main()

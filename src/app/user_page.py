@@ -501,6 +501,11 @@ def show_team_info(db, user, team):
     event = db.get_event()
     fields_disabled = event["status"] != "ongoing"
 
+    if fields_disabled:
+        st.warning(
+            f"Pro Letní X-Challenge {event['year']} momentálně nelze upravovat tým"
+        )
+
     team_name = team["team_name"] if team else ""
     motto = team["team_motto"] if team else ""
     web = team["team_web"] if team else ""

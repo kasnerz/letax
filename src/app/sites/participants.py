@@ -82,7 +82,7 @@ def get_participant_name_view(pax):
 
     if pax["registered"]:
         pax_id = pax["id"]
-        link = f"<div><a href='/Účastníci?id={pax_id}&event_id={event_id}'  target='_self' class='app-link'><h5 class='app-link'>{name}</h5></a></div>"
+        link = f"<div><a href='/participants?id={pax_id}&event_id={event_id}'  target='_self' class='app-link'><h5 class='app-link'>{name}</h5></a></div>"
     else:
         link = f"<div><h5>{name}</h5></div>"
 
@@ -151,7 +151,7 @@ def show_participants():
 
             if team_name:
                 st.markdown(
-                    f"<div style='margin-top: -15px; margin-bottom:20px;'><a href='/Týmy?team_id={team_id}&event_id={event_id}' class='app-link' target='_self'>{team_name}</a></div>",
+                    f"<div style='margin-top: -15px; margin-bottom:20px;'><a href='/teams?team_id={team_id}&event_id={event_id}' class='app-link' target='_self'>{team_name}</a></div>",
                     unsafe_allow_html=True,
                 )
             else:
@@ -194,5 +194,5 @@ def main():
     show_participants()
 
 
-if __name__ == "__main__":
+if __name__ == "__page__":
     main()

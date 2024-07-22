@@ -44,13 +44,13 @@ def shorten(s, post_id, max_len=250):
     if len(s) > max_len:
         return (
             s[:max_len]
-            + f"<b><a href='/Příspěvky?post={post_id}&event_id={event_id}' class='app-link' target='_self'> (...)</a></b>"
+            + f"<b><a href='posts?post={post_id}&event_id={event_id}' class='app-link' target='_self'> (...)</a></b>"
         )
     return s
 
 
 def get_member_link(member_id, member_name):
-    return f"<a href='/Účastníci?id={member_id}&event_id={event_id}' class='app-link' target='_self'>{member_name}</a>"
+    return f"<a href='/participants?id={member_id}&event_id={event_id}' class='app-link' target='_self'>{member_name}</a>"
 
 
 def show_overview():
@@ -58,6 +58,7 @@ def show_overview():
     year = db.get_year()
 
     st.title(f"Letní X-Challenge {year}")
+
     posts = load_posts(db)
 
     post_gallery_cnt = min(3, len(posts))
@@ -96,13 +97,13 @@ def show_overview():
         )
         st.divider()
         st.markdown(
-            f"<h2><a href='/Příspěvky?event_id={event_id}' target='_self' class='app-link'>Příspěvky</a></h2>",
+            f"<h2><a href='posts?event_id={event_id}' target='_self' class='app-link'>Příspěvky</a></h2>",
             unsafe_allow_html=True,
         )
     else:
         st.divider()
         st.markdown(
-            f"<h2><a href='/Příspěvky?event_id={event_id}' target='_self' class='app-link'>Poslední příspěvky</a></h2>",
+            f"<h2><a href='posts?event_id={event_id}' target='_self' class='app-link'>Poslední příspěvky</a></h2>",
             unsafe_allow_html=True,
         )
 
@@ -128,7 +129,7 @@ def show_overview():
             action_type_icon = "✍️"
 
         post_id = post["post_id"]
-        link = f"<div style='margin-bottom:-10px; display:inline-block;'><h4><a href='/Příspěvky?post={post_id}&event_id={event_id}' target='_self' class='app-link'>{action_type_icon} {action_name} – {team['team_name']}</a></div>"
+        link = f"<div style='margin-bottom:-10px; display:inline-block;'><h4><a href='posts?post={post_id}&event_id={event_id}' target='_self' class='app-link'>{action_type_icon} {action_name} – {team['team_name']}</a></div>"
 
         with col:
             st.markdown(link, unsafe_allow_html=True)
@@ -152,7 +153,7 @@ def show_overview():
 
     st.divider()
     st.markdown(
-        f"<h2><a href='/Týmy?event_id={event_id}' target='_self' class='app-link'>Nejlepší týmy</a></h2>",
+        f"<h2><a href='/teams?event_id={event_id}' target='_self' class='app-link'>Nejlepší týmy</a></h2>",
         unsafe_allow_html=True,
     )
     best_teams = db.get_teams_with_awards()
@@ -211,11 +212,11 @@ def show_overview():
 
     st.divider()
     st.markdown(
-        f"<h2><a href='/Mapa_týmů?event_id={event_id}' target='_self' class='app-link'>Mapa týmů</a></h2>",
+        f"<h2><a href='/locations?event_id={event_id}' target='_self' class='app-link'>Mapa týmů</a></h2>",
         unsafe_allow_html=True,
     )
 
-    from map import show_positions, render_map
+    from app.sites.locations import show_positions, render_map
 
     m, _ = show_positions(db)
     render_map(m)
@@ -225,5 +226,5 @@ def main():
     show_overview()
 
 
-if __name__ == "__main__":
+if __name__ == "__page__":
     main()

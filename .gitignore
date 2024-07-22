@@ -6,6 +6,7 @@ fs
 files
 wc_participants.json
 accounts.yaml
+accounts_backup.yaml
 settings.yaml
 letax.log
 backups

@@ -157,6 +157,7 @@ class Database:
                 "gmaps_url": "",
                 "product_id": "",
                 "display": False,
+                "budget_per_person": 0,
             }
         )
         self.set_settings_value("events", events)
@@ -1161,9 +1162,13 @@ class Database:
 
         pts = action.get("points", 0)
 
-        if action_type == "checkpoint" and action.get("points_challenge") and flags and flags.get("checkpoint_challenge_completed"):
+        if (
+            action_type == "checkpoint"
+            and action.get("points_challenge")
+            and flags
+            and flags.get("checkpoint_challenge_completed")
+        ):
             pts += action.get("points_challenge")
-
 
         return pts
 
@@ -1815,9 +1820,9 @@ class Database:
             data_url = self.get_static_image_base64("topx.png")
 
             top_x_badge = f"<img src='data:image/png;base64,{data_url}' style='margin-top: -5px; margin-left: 5px'>"
-            return f"<a href='/Týmy?team_id={team_id}&event_id={self.event['year']}' target='_self' class='app-link' style='margin-top: -10px;'>{team_name}</a> {top_x_badge}"
+            return f"<a href='/teams?team_id={team_id}&event_id={self.event['year']}' target='_self' class='app-link' style='margin-top: -10px;'>{team_name}</a> {top_x_badge}"
         else:
-            return f"<a href='/Týmy?team_id={team_id}&event_id={self.event['year']}' target='_self' class='app-link' style='margin-top: -10px;'>{team_name}</a>"
+            return f"<a href='/teams?team_id={team_id}&event_id={self.event['year']}' target='_self' class='app-link' style='margin-top: -10px;'>{team_name}</a>"
 
     def toggle_team_visibility(self, team):
         team_id = team["team_id"]

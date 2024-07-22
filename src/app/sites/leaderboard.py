@@ -60,7 +60,7 @@ def main():
 
     # replace the values in `team_id` with "Týmy?team_id={team_id}"
     table["team_id"] = table["team_id"].apply(
-        lambda x: f"/Týmy?team_id={x}&event_id={event_id}" if x else ""
+        lambda x: f"/teams?team_id={x}&event_id={event_id}" if x else ""
     )
 
     table = table.rename(
@@ -93,5 +93,5 @@ def main():
     )
 
 
-if __name__ == "__main__":
+if __name__ == "__page__":
     main()

@@ -133,7 +133,7 @@ def shorten(s, post_id, page, max_len=250):
     if len(s) > max_len:
         return (
             s[:max_len]
-            + f"<b><a href='/Příspěvky?post={post_id}&event_id={event_id}&page={page}' target='_self' class='app-link'> (...)</a></b>"
+            + f"<b><a href='posts?post={post_id}&event_id={event_id}&page={page}' target='_self' class='app-link'> (...)</a></b>"
         )
     return s
 
@@ -228,7 +228,7 @@ def show_overview(db, page):
         post_id = post["post_id"]
         team_link = db.get_team_link(team)
 
-        link = f"<div style='margin-bottom:-10px; display:inline-block;'><h4><a href='/Příspěvky?post={post_id}&page={page}&event_id={event_id}' target='_self' class='app-link'>{action_type_icon} {action_name} – {team['team_name']}</a></div>"
+        link = f"<div style='margin-bottom:-10px; display:inline-block;'><h4><a href='posts?post={post_id}&page={page}&event_id={event_id}' target='_self' class='app-link'>{action_type_icon} {action_name} – {team['team_name']}</a></div>"
 
         st.markdown(link, unsafe_allow_html=True)
         cols = st.columns(col_layout)
@@ -273,5 +273,5 @@ def main():
         show_overview(db=db, page=int(page))
 
 
-if __name__ == "__main__":
+if __name__ == "__page__":
     main()

@@ -19,7 +19,12 @@ st.session_state["event"] = db.get_event()
 st.session_state["active_event"] = db.get_active_event()
 utils.page_wrapper()
 
-from map import show_last_shared_locations, show_positions, show_checkpoints, render_map
+from app.sites.locations import (
+    show_last_shared_locations,
+    show_positions,
+    show_checkpoints,
+    render_map,
+)
 
 make_map_responsive = """
      <style>
@@ -45,5 +50,5 @@ def main():
         show_last_shared_locations(db, last_locations)
 
 
-if __name__ == "__main__":
+if __name__ == "__page__":
     main()
