@@ -16,7 +16,7 @@ fi
 MEMORY_LIMIT_MB=${1:-0} # 0 means no limit, default
 REFRESH_RATE=5 # seconds
 
-CMD="streamlit run \"src/app/0_🪧_Hlavní stránka.py\""
+CMD="streamlit run \"src/app/app.py\""
 
 # If memory limit is unset, do not check memory usage
 if [ $MEMORY_LIMIT_MB -eq 0 ]; then
