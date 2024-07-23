@@ -209,7 +209,7 @@ def show_teams():
         subcol = cols[i % column_cnt]
 
         with subcol:
-            team_name = f"<h5>{db.get_team_link(team)}</h5>"
+            team_name = f"<b style='font-size: 18px;'>{db.get_team_link(team)}</b>"
             img_path = team["team_photo"] or "static/team.png"
             img = db.read_image(img_path, thumbnail="100_square")
 

@@ -82,9 +82,9 @@ def get_participant_name_view(pax):
 
     if pax["registered"]:
         pax_id = pax["id"]
-        link = f"<div><a href='/participants?id={pax_id}&event_id={event_id}'  target='_self' class='app-link'><h5 class='app-link'>{name}</h5></a></div>"
+        link = f"<div style='margin-bottom: 10px'><a href='/participants?id={pax_id}&event_id={event_id}'  target='_self' class='app-link'><b class='app-link' style='font-size: 18px;'>{name}</b></a></div>"
     else:
-        link = f"<div><h5>{name}</h5></div>"
+        link = f"<div style='margin-bottom: 10px'><b style='font-size: 18px;'>{name}</b></div>"
 
     return link
 
