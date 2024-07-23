@@ -499,7 +499,7 @@ def show_budget_management(db, user, team):
 
 def show_team_info(db, user, team):
     event = db.get_event()
-    fields_disabled = event["status"] != "ongoing"
+    fields_disabled = event["status"] == "past"
 
     if fields_disabled:
         st.warning(
@@ -571,7 +571,7 @@ def show_team_info(db, user, team):
 
 def show_user_info(db, user):
     event = db.get_event()
-    fields_disabled = event["status"] != "ongoing"
+    fields_disabled = event["status"] == "past"
 
     with st.form("user_info"):
         participant = db.get_participant_by_email(user["email"])

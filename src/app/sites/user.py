@@ -13,10 +13,8 @@ from authenticator import login_page
 from database import get_database
 
 if __name__ == "__page__":
-    print("Loading user page")
     user, team = login_page()
 
-    print("retrieved: user", user, "team", team)
     if user is None:
         st.stop()
 

@@ -240,7 +240,7 @@ def action_manage_participants(db):
         format_func=lambda x: f"{x['name_web']}",
     )
     with st.form("challenge_form"):
-        name = st.text_input("Jméno", value=participant["name_web"])
+        name = st.text_input("Jméno a příjmení", value=participant["name_web"])
         email = st.text_input("E-mail", value=participant["email"])
         bio = st.text_input("Bio (nepovinné)", value=participant["bio"])
         emergency_contact = st.text_input(
@@ -309,7 +309,7 @@ def action_manage_teams(db):
 
     generated_uuid = utils.generate_uuid()
     new_team = {
-        "id": generated_uuid,
+        "team_id": generated_uuid,
         "team_name": default_name,
         "member1": "",
         "member2": "",

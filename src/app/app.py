@@ -21,11 +21,11 @@ pg = st.navigation(
             leaderboard,
             participants,
             teams,
-            challenges,
-            checkpoints,
             locations,
         ],
         "Pro účastníky": [
+            challenges,
+            checkpoints,
             user,
         ],
         "Další": [

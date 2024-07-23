@@ -17,7 +17,6 @@ db = get_database(event_id=event_id)
 def get_logged_info():
     username = st.session_state["username"]
     user = db.am.get_user_by_username(username)
-
     if not user:
         st.stop()
 
@@ -113,7 +112,7 @@ def reset_password_form(authenticator):
                 )
 
 
-def register_form(authenticator, config):
+def register_form(authenticator):
     try:
         email, username, name = authenticator.register_user(
             fields={
@@ -135,17 +134,20 @@ def register_form(authenticator, config):
 
 
 def create_authenticator():
+    if "authenticator" in st.session_state:
+        return st.session_state["authenticator"]
+
     preauthorized = db.get_preauthorized_emails()
     config = copy.deepcopy(db.am.accounts)
 
-    authenticator = stauth.Authenticate(
+    st.session_state["authenticator"] = stauth.Authenticate(
         config["credentials"],
         config["cookie"]["name"],
         config["cookie"]["key"],
         config["cookie"]["expiry_days"],
         preauthorized,
     )
-    return authenticator, config
+    return st.session_state["authenticator"]
 
 
 def incorrect_login_details():
@@ -157,34 +159,36 @@ def incorrect_login_details():
 
 
 def login_page():
-    authenticator, config = create_authenticator()
     tabs = None
 
     # delete query parameters
     st.query_params.clear()
 
-    print(st.session_state["authentication_status"])
-    if st.session_state["authentication_status"]:
-        # username_container = st.sidebar.container()
-        # authenticator.logout("Odhlásit se", "sidebar")
+    authenticator = create_authenticator()
+    status = st.session_state.get("authentication_status")
+
+    if status is True:
+        username_container = st.sidebar.container()
+        authenticator.logout("Odhlásit se", "sidebar")
 
         user, team = get_logged_info()
-        # if not user:
-        #     st.error("Uživatel není přihlášen.")
-        #     st.stop()
+        if not user:
+            st.error("Uživatel není přihlášen.")
+            st.stop()
 
-        # username_container.markdown("### Uživatel")
-        # username_container.markdown(
-        #     f'{"🧑‍🔧 " if user["role"] == "admin" else "🧒 "}**{user["name"]}** ({user["username"]})'
-        # )
+        username_container.markdown("### Uživatel")
+        username_container.markdown(
+            f'{"🧑‍🔧 " if user["role"] == "admin" else "🧒 "}**{user["name"]}** ({user["username"]})'
+        )
 
         return user, team
 
-    elif st.session_state["authentication_status"] is False:
+    elif status is False:
         incorrect_login_details()
 
-    elif st.session_state["authentication_status"] is None:
+    elif status is None:
         _, center_column, _ = st.columns([1, 3, 1])
+
         with center_column:
             tabs = st.tabs(["Přihlásit se", "Zaregistrovat se", "Reset hesla"])
             with tabs[0]:
@@ -196,6 +200,20 @@ def login_page():
                     },
                     location="main",
                 )
+
+                # if status is not True and st.session_state["authentication_status"] is True:
+                if res[0] is not None:
+                    # this is necessary to display the user interface right after login and not showing all the tabs
+                    st.session_state["name"] = res[0]
+                    st.session_state["authentication_status"] = res[1]
+                    st.session_state["username"] = res[2]
+                    time.sleep(0.5)
+
+                    st.rerun()
+
+                if res[1] is False:
+                    incorrect_login_details()
+
             with tabs[1]:
                 st.info(
                     """- **Email** použij stejný, jako jsi použil(a) pro registraci na akci.
@@ -206,19 +224,7 @@ Pokud tě na akci přihlásil někdo jiný nebo se ti z nějakého důvodu neda�
 
 Pokud dostaneš hlášku \"Email already taken\", už máš pravděpodobně založený účet z předchozích ročníků - přihlas se, případně si vyresetuj heslo."""
                 )
-                register_form(authenticator, config)
-
-            # if res[0] is not None:
-            #     # this is necessary to display the user interface right after login and not showing all the tabs
-            #     st.session_state["name"] = res[0]
-            #     st.session_state["authentication_status"] = res[1]
-            #     st.session_state["username"] = res[2]
-            #     time.sleep(0.5)
-
-            #     st.rerun()
-
-            if res[1] is False:
-                incorrect_login_details()
+                register_form(authenticator)
 
         with tabs[2]:
             reset_password_form(authenticator)
