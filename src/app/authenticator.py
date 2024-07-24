@@ -44,22 +44,6 @@ def register_new_user(authenticator, email, username):
     db.am.save_accounts()
     utils.clear_cache()
 
-    # if db.am.get_user_by_username(username) is not None:
-    #     st.error("Toto uživatelské jméno již existuje.")
-    #     st.stop()
-    # if db.am.get_user_by_email(email) is not None:
-    #     st.error("Tento email je již zaregistrován.")
-
-    # db.am.add_user(
-    #     username=username,
-    #     email=email,
-    #     name=name,
-    #     password_hash=user["password"],
-    #     registered=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-    #     role=role,
-    # )
-    # utils.clear_cache()
-
 
 def reset_password_form(authenticator):
     st.info(
@@ -87,7 +71,7 @@ def reset_password_form(authenticator):
                 <body>
                     <p>Ahoj <b>{username_forgot_pw}</b>!<br>
                     <br>
-                    Tvoje nové heslo do systému pro letní X-Challenge je: <b>{random_password}</b>
+                    Tvoje nové heslo do systému pro Letní X-Challenge je: <b>{random_password}</b>
                     <br>
                     <br>
                     Hodně zdaru!
@@ -135,6 +119,7 @@ def register_form(authenticator):
 
 
 def create_authenticator():
+    # this is necessary to prevent multiple page reloads
     if "authenticator" in st.session_state:
         auth = st.session_state["authenticator"]
 
@@ -142,7 +127,6 @@ def create_authenticator():
             # this hack seems to be able to retrieve the cookie and correctly log the user after the page refresh
             auth.cookie_handler.cookie_manager = stx.CookieManager()
             token = auth.cookie_handler.get_cookie()
-            print("token", token)
             if token:
                 auth.authentication_handler.execute_login(token=token)
 
