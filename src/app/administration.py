@@ -465,7 +465,7 @@ def action_manage_challenges(db):
         for col in required_columns:
             if col not in df.columns:
                 st.error(
-                    f"Soubor musí obsahovat sloupec `{col}`. Nalezeno: {df.columns}"
+                    f"Soubor musí obsahovat sloupec `{col}`. Nalezeno: {df.columns}. Je nadpis sloupce hned na prvním listu v prvním řádku?"
                 )
                 st.stop()
 
@@ -486,6 +486,7 @@ def action_manage_challenges(db):
 
             # try to map the category to existing ones
             row_category_minimal = row["category"].lower().strip()
+
             for j, cat in enumerate(categories):
                 cat = cat.lower()
                 if row_category_minimal in cat:
@@ -598,7 +599,7 @@ def action_manage_checkpoints(db):
 
     with st.form("import_checkpoints"):
         st.caption(
-            f'Importovat můžeš checkpointy ze souboru CSV nebo XLSX. Připrav soubor, který bude obsahovat sloupce: {required_columns_str}. Sloupec `gps` by měl obsahovat souřadnice ve tvaru "50.123, 15.456" (s libovolným počtem desetinných míst). V souboru by neměly být žádné přebytečné řádky ani sloupce. Importem se **přepíší existující checkpointy**!'
+            f'Importovat můžeš checkpointy ze souboru CSV nebo XLSX. Připrav soubor, který bude obsahovat (hned na prvním listu v prvním řádku) sloupce: {required_columns_str}. Sloupec `gps` by měl obsahovat souřadnice ve tvaru "50.123,15.456" (s libovolným počtem desetinných míst). Souřadnice můžou být případně i součástí odkazu např. na Google Maps. V souboru by neměly být žádné přebytečné řádky ani sloupce. Importem se **přepíší existující checkpointy**!'
         )
 
         uploaded_file = st.file_uploader(
@@ -620,7 +621,9 @@ def action_manage_checkpoints(db):
 
         for col in required_columns:
             if col not in df.columns:
-                st.error(f"Soubor musí obsahovat sloupec `{col}`.")
+                st.error(
+                    f"Soubor musí obsahovat sloupec `{col}`. Nalezeno: {df.columns}. Je nadpis sloupce hned na prvním listu v prvním řádku?"
+                )
                 st.stop()
 
         # drop all rows that are completely empty
@@ -634,6 +637,9 @@ def action_manage_checkpoints(db):
         df["gps"] = df["gps"].str.replace(r"(\d+\.\d+)E", r"\1", regex=True)
         df["gps"] = df["gps"].str.replace(r"(\d+\.\d+)W", r"-\1", regex=True)
         df["gps"] = df["gps"].str.replace(r"(\d+\.\d+)S", r"-\1", regex=True)
+
+        # keep only the coordinates part of the URL if there is any
+        df["gps"] = df["gps"].str.extract(r"(\d+\.\d+,-?\d+\.\d+)")
 
         # strip all whitespace for name, desciption and challenge
         df["name"] = df["name"].str.strip()
