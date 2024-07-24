@@ -8,6 +8,7 @@ import streamlit_authenticator as stauth
 import time
 import time
 import utils
+import extra_streamlit_components as stx
 
 params = st.query_params
 event_id = utils.get_event_id(params)
@@ -135,7 +136,17 @@ def register_form(authenticator):
 
 def create_authenticator():
     if "authenticator" in st.session_state:
-        return st.session_state["authenticator"]
+        auth = st.session_state["authenticator"]
+
+        if not st.session_state["authentication_status"]:
+            # this hack seems to be able to retrieve the cookie and correctly log the user after the page refresh
+            auth.cookie_handler.cookie_manager = stx.CookieManager()
+            token = auth.cookie_handler.get_cookie()
+            print("token", token)
+            if token:
+                auth.authentication_handler.execute_login(token=token)
+
+        return auth
 
     preauthorized = db.get_preauthorized_emails()
     config = copy.deepcopy(db.am.accounts)
