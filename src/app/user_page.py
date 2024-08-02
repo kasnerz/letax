@@ -519,7 +519,7 @@ def show_team_info(db, user, team):
             "Název týmu:", value=team_name, disabled=fields_disabled
         )
 
-        second_member = st.selectbox(
+        member2 = st.selectbox(
             "Další člen:",
             options=range(len(available_paxes)),
             format_func=lambda x: available_paxes.iloc[x]["name"],
@@ -551,7 +551,10 @@ def show_team_info(db, user, team):
             st.error("Musíš zadat jméno týmu")
             st.stop()
 
-        second_member = available_paxes.iloc[second_member]["id"]
+        member2 = available_paxes.iloc[member2]["id"]
+
+        # we want to keep member3 if set by administrators but we do not want to give participants a way to set it themselves
+        member3 = team["member3"]
 
         db.update_or_create_team(
             team_name=team_name,
@@ -559,7 +562,8 @@ def show_team_info(db, user, team):
             team_web=team_web,
             team_photo=team_photo,
             first_member=user["pax_id"],
-            second_member=second_member,
+            second_member=member2,
+            third_member=member3,
             current_team=team,
         )
         st.cache_data.clear()

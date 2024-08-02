@@ -201,6 +201,10 @@ def show_overview():
                 member2 = db.get_participant_by_id(team["member2"])
                 members.append(get_member_link(member2["id"], member2["name"]))
 
+            if team["member3"]:
+                member3 = db.get_participant_by_id(team["member3"])
+                members.append(get_member_link(member3["id"], member3["name"]))
+
             members = ", ".join(members)
             st.image(img)
 

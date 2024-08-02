@@ -298,6 +298,12 @@ def action_manage_participants(db):
 
 
 def action_manage_teams(db):
+    def get_pax_index_in_list(participants, member_id):
+        try:
+            return int(participants[participants["id"] == member_id].index[0])
+        except:
+            return 0
+
     teams = db.get_table_as_df("teams")
 
     teams = teams.sort_values(by="team_name")
@@ -340,14 +346,10 @@ def action_manage_teams(db):
         ],
         ignore_index=True,
     )
-    try:
-        pax1_idx = int(participants[participants["id"] == team["member1"]].index[0])
-        pax2_idx = int(participants[participants["id"] == team["member2"]].index[0])
-        pax3_idx = int(participants[participants["id"] == team["member3"]].index[0])
-    except:
-        pax1_idx = 0
-        pax2_idx = 0
-        pax3_idx = 0
+
+    pax1_idx = get_pax_index_in_list(participants, team["member1"])
+    pax2_idx = get_pax_index_in_list(participants, team["member2"])
+    pax3_idx = get_pax_index_in_list(participants, team["member3"])
 
     participant_list = participants.to_dict(orient="records")
 

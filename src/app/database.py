@@ -1203,6 +1203,13 @@ class Database:
             )[0]
             member2_name = member2_name["name"]
 
+        member3_name = ""
+        if team["member3"]:
+            member3_name = participants[participants["id"] == team["member3"]].to_dict(
+                "records"
+            )[0]
+            member3_name = member3_name["name"]
+
         team_info = {
             "team_id": team_id,
             "team_name": team["team_name"],
@@ -1210,6 +1217,8 @@ class Database:
             "member1_name": member1_name,
             "member2": team["member2"],
             "member2_name": member2_name,
+            "member3": team["member3"],
+            "member3_name": member3_name,
             "points": posts_team["points"].sum() if not posts_team.empty else 0,
             "posts": posts_team,
             "award": team["award"],
