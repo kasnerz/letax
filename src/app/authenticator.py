@@ -39,6 +39,7 @@ def register_new_user(authenticator, email, username):
 
     user = authenticator.authentication_handler.credentials["usernames"][username]
     user["role"] = role
+    user["registered"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     db.am.accounts["credentials"] = authenticator.authentication_handler.credentials
     db.am.save_accounts()
