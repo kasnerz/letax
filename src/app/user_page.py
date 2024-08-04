@@ -617,8 +617,10 @@ def show_user_info(db, user):
 
 
 def show_account_info(db, user):
+    authenticator = st.session_state.get("authenticator")
+
     with st.form("account_info"):
-        participant = db.am.get_user_by_email(user["email"])
+        participant = db.am.get_user_by_email(authenticator, user["email"])
         username = participant["username"]
         st.markdown(f"Uživatel **{username}**")
         name = st.text_input("Jméno:", value=participant["name"])
@@ -636,9 +638,14 @@ def show_account_info(db, user):
             st.stop()
 
         if password:
-            db.am.set_password(username, password)
+            db.am.set_password(authenticator, username, password)
 
-        db.am.update_user_name(username, name)
+        db.am.update_user_name(authenticator, username, name)
+
+        if "authenticator" in st.session_state:
+            st.session_state["authenticator"].authentication_handler.credentials[
+                "usernames"
+            ] = db.am.accounts["credentials"]["usernames"]
 
         utils.clear_cache()
         st.success(f"Informace uloženy.")

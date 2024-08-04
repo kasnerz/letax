@@ -17,7 +17,8 @@ db = get_database(event_id=event_id)
 
 def get_logged_info():
     username = st.session_state["username"]
-    user = db.am.get_user_by_username(username)
+    authenticator = st.session_state.get("authenticator")
+    user = db.am.get_user_by_username(authenticator, username)
     if not user:
         st.stop()
 
@@ -34,16 +35,16 @@ def get_logged_info():
 
 def register_new_user(authenticator, email, username):
     # if the user is allowed to register through extra accounts, find their role
-    extra_account = db.am.get_extra_account(email)
+    extra_account = db.am.get_preauthorized_account(authenticator, email)
     role = extra_account["role"] if extra_account else "user"
 
     user = authenticator.authentication_handler.credentials["usernames"][username]
     user["role"] = role
     user["registered"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    db.am.accounts["credentials"] = authenticator.authentication_handler.credentials
-    db.am.save_accounts()
-    utils.clear_cache()
+    # authenticator is up-to-date, we just need to update the accounts
+    accounts = db.am.get_accounts(authenticator)
+    db.am.save_accounts(authenticator, accounts)
 
 
 def reset_password_form(authenticator):
@@ -55,7 +56,10 @@ def reset_password_form(authenticator):
         email_forgot_password,
         random_password,
     ) = authenticator.forgot_password(
-        fields={"Form name": "Zapomenuté heslo", "Username": "Uživatelské jméno"},
+        fields={
+            "Form name": "Zapomenuté heslo",
+            "Username": "Uživatelské jméno",
+        },
         location="main",
     )
 
@@ -88,7 +92,7 @@ def reset_password_form(authenticator):
                 content_html=content_html,
             )
             if ret:
-                db.am.set_password(username_forgot_pw, random_password)
+                db.am.set_password(authenticator, username_forgot_pw, random_password)
                 st.success(
                     "Nové heslo odesláno na email. Pokud nepřišel do pár minut, zkontroluj spam."
                 )
@@ -104,10 +108,11 @@ def register_form(authenticator):
             fields={
                 "Form name": "Zaregistrovat se",
                 "Name": "Jméno a příjmení",
-                "Username": "Uživatelské jméno",
+                "Username": "Uživatelské jméno (pro přihlašování, čti instrukce výše)",
                 "Password": "Heslo",
                 "Repeat password": "Heslo znovu",
-            }
+            },
+            pre_authorization=True,
         )
         if email:
             register_new_user(authenticator, email, username)
@@ -133,15 +138,15 @@ def create_authenticator():
 
         return auth
 
-    preauthorized = db.get_preauthorized_emails()
-    config = copy.deepcopy(db.am.accounts)
+    preauthorized = {"emails": db.get_preauthorized_emails()}
+    config = db.am.get_accounts(authenticator=None)
 
     st.session_state["authenticator"] = stauth.Authenticate(
-        config["credentials"],
-        config["cookie"]["name"],
-        config["cookie"]["key"],
-        config["cookie"]["expiry_days"],
-        preauthorized,
+        credentials=config["credentials"],
+        cookie_name=config["cookie"]["name"],
+        cookie_key=config["cookie"]["key"],
+        cookie_expiry_days=config["cookie"]["expiry_days"],
+        pre_authorized=preauthorized,
     )
     return st.session_state["authenticator"]
 
@@ -213,10 +218,10 @@ def login_page():
             with tabs[1]:
                 st.info(
                     """- **Email** použij stejný, jako jsi použil(a) pro registraci na akci.
-- **Uživatelské jméno** je identifikátor, které budeš používat na přihlášení do systému. Může obsahovat pouze písmena anglické abecedy, čísla, podtržítko (_) a pomlčku (-).
+- **Uživatelské jméno** je identifikátor, které budeš používat na přihlášení do systému. Může obsahovat **pouze** písmena anglické abecedy, čísla, podtržítko (_), pomlčku (-) a tečku (.).
 - **Heslo** použij takové, které se ti bude dobře pamatovat, dobře psát na mobilu, a zároveň ho nenajdeš [tady](https://en.wikipedia.org/wiki/Wikipedia:10,000_most_common_passwords).
 
-Pokud tě na akci přihlásil někdo jiný nebo se ti z nějakého důvodu nedaří zaregistrovat, tak nám napiš svoje jméno, příjmení a e-mail (ideálně s dokladem o zaplacení) na letni@x-challenge.cz, přidáme tě do databáze ručně.
+Pokud tě na akci přihlásil někdo jiný nebo se ti ani po přečtení všech instrukcí z nějakého důvodu nedaří zaregistrovat, tak nám napiš svoje jméno, příjmení a e-mail (ideálně s dokladem o zaplacení) na letni@x-challenge.cz, přidáme tě do databáze ručně.
 
 Pokud dostaneš hlášku \"Email already taken\", už máš pravděpodobně založený účet z předchozích ročníků - přihlas se, případně si vyresetuj heslo."""
                 )

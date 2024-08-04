@@ -35,7 +35,7 @@ def main():
 
     # sort by name
     checkpoints = checkpoints.sort_values(
-        by="name", key=lambda x: [unidecode(a) for a in x]
+        by="name", key=lambda x: [unidecode(a).lower() for a in x]
     )
 
     # generate urls

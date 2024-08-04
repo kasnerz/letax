@@ -82,7 +82,6 @@ class Database:
             )
         self.top_dir = f"files/{self.event['year']}"
         self.am = AccountManager()
-        self.preauthorized_emails = self.load_preauthorized_emails()
         self.static_imgs = self.load_static_images()
         self.fa_icons = self.load_fa_icons()
         self.geoloc = Nominatim(user_agent="GetLoc")
@@ -445,7 +444,7 @@ class Database:
 
         pb.progress(1.0, "Hotovo!")
 
-    def load_preauthorized_emails(self):
+    def get_preauthorized_emails(self):
         participants = self.get_participants(include_non_registered=True)
 
         emails = []
@@ -453,13 +452,13 @@ class Database:
             # extract the field `email` from pandas df
             emails = list(participants.email)
 
-        extra_allowed_emails = list(self.am.get_extra_accounts().keys())
-        preauthorized = {"emails": [e.lower() for e in emails + extra_allowed_emails]}
+        authenticator = st.session_state.get("authenticator")
+        extra_allowed_emails = list(
+            self.am.get_preauthorized_accounts(authenticator).keys()
+        )
+        preauthorized = [e.lower() for e in emails + extra_allowed_emails]
 
         return preauthorized
-
-    def get_preauthorized_emails(self):
-        return self.preauthorized_emails
 
     def add_wc_participants(self, new_participants):
         for user in new_participants:
@@ -488,9 +487,13 @@ class Database:
         participants = []
         query = "SELECT * FROM participants"
 
+        authenticator = st.session_state.get("authenticator")
+
         for pax_info in self.conn.execute(query).fetchall():
             pax_info = dict(pax_info)
-            user_info = self.am.get_user_by_email(pax_info["email"])
+
+            # this may be too slow, todo speedup
+            user_info = self.am.get_user_by_email(authenticator, pax_info["email"])
             if user_info:
                 pax_info.update(user_info)
 
@@ -559,7 +562,8 @@ class Database:
             return None
 
         pax_info = dict(pax_info)
-        user_info = self.am.get_user_by_email(pax_info["email"])
+        authenticator = st.session_state.get("authenticator")
+        user_info = self.am.get_user_by_email(authenticator, pax_info["email"])
         if user_info:
             pax_info.update(user_info)
 
@@ -1038,9 +1042,15 @@ class Database:
         )
 
     def set_team_award(self, team_id, award):
-        self.conn.execute(
-            "UPDATE teams SET award = ? WHERE team_id = ?", (award, team_id)
-        )
+        if award is None:
+            # delete the row with team_id from the table
+            self.conn.execute(
+                "UPDATE teams SET award = NULL WHERE team_id = ?", (team_id,)
+            )
+        else:
+            self.conn.execute(
+                "UPDATE teams SET award = ? WHERE team_id = ?", (award, team_id)
+            )
         self.conn.commit()
         utils.log(f"Set award {award} for team {team_id}", level="info")
 

@@ -9,89 +9,30 @@ import time
 import utils
 import re
 import shutil
+import copy
+import datetime
 from zipfile import ZipFile
 from user_page import show_account_info
 import lxml, lxml.etree, lxml.html
 from slugify import slugify
+from unidecode import unidecode
 
 
 def show_admin_page(db, user):
     st.title("Administrace")
 
-    (tab_actions, tab_users, tab_account) = st.tabs(
+    (tab_actions, tab_account) = st.tabs(
         [
             "👨‍🔧 Nastavení",
-            "👤 Uživatelé",
-            # "✏️ Databáze",
             "🔑 Účet",
         ]
     )
 
-    # with tab_notifications:
-    #     show_notification_manager(db)
-
     with tab_actions:
         show_actions(db)
 
-    with tab_users:
-        st.markdown("#### Uživatelé")
-        st.caption(
-            "Seznam užitelských účtů založených v appce. Účty s rolí 'user' lze používat na libovolnou akci, do které je uživatel přidaný jako účastník. Účty s rolí 'admin' mají přístup k administraci."
-        )
-        show_users_editor(db)
-        st.markdown("#### Preautorizované e-maily")
-        st.caption(
-            "Seznam e-mailů, které se mohou registrovat do appky, aniž by byly přidány jako účastníci do aktuální akce. Nastavená role jim bude automaticky přiřazena po registraci."
-        )
-        show_preauthorized_editor(db)
-
-    # with tab_db:
-    #     st.markdown("#### Databáze")
-    #     show_db(db)
-
     with tab_account:
         show_account_info(db, user)
-
-
-def show_users_editor(db):
-    if st.session_state.get(f"users_data") is None:
-        st.session_state[f"users_data"] = db.am.get_accounts_as_df()
-
-    edited_df = st.data_editor(
-        st.session_state[f"users_data"],
-        hide_index=True,
-        use_container_width=True,
-        num_rows="dynamic",
-        key=f"users_data_editor",
-        column_config={
-            "role": st.column_config.SelectboxColumn(options=["user", "admin"]),
-            "username": st.column_config.Column(disabled=True),
-        },
-    )
-    edits = st.session_state[f"users_data_editor"]
-
-    if any(list(edits.values())):
-        db.am.save_accounts_from_df(edited_df)
-
-
-def show_preauthorized_editor(db):
-    if st.session_state.get(f"preauthorized_data") is None:
-        st.session_state[f"preauthorized_data"] = db.am.get_preauthorized_emails_as_df()
-
-    edited_df = st.data_editor(
-        st.session_state[f"preauthorized_data"],
-        hide_index=True,
-        use_container_width=True,
-        num_rows="dynamic",
-        key=f"preauthorized_data_editor",
-        column_config={
-            "role": st.column_config.SelectboxColumn(options=["user", "admin"]),
-        },
-    )
-    edits = st.session_state[f"preauthorized_data_editor"]
-
-    if any(list(edits.values())):
-        db.am.save_preauthorized_emails_from_df(edited_df)
 
 
 def show_db_data_editor(db, table, column_config=None):
@@ -181,7 +122,119 @@ def action_manage_notifications(db):
         return True
 
     st.markdown("#### Aktuální oznámení")
-    st.dataframe(notifications)
+    st.dataframe(notifications, use_container_width=True)
+
+
+def action_manage_users(db):
+    st.markdown("#### Uživatelské účty")
+
+    authenticator = st.session_state.get("authenticator")
+
+    users = db.am.get_accounts(st.session_state.get("authenticator"))["credentials"][
+        "usernames"
+    ]
+
+    # add key among values, get a list of values
+    user_list = [{"username": username, **user} for username, user in users.items()]
+
+    # sort by names
+    user_list = sorted(user_list, key=lambda x: unidecode(x["name"]).lower())
+
+    # keep only the relevant columns
+    user_list = [
+        {
+            "username": user["username"],
+            "name": user["name"],
+            "email": user["email"],
+            "role": user["role"],
+            "registered": user.get("registered"),
+        }
+        for user in user_list
+    ]
+
+    user = st.selectbox(
+        "Vyber uživatele",
+        user_list,
+        format_func=lambda x: f"{x['name']} ({x['username']})",
+    )
+    with st.form("challenge_form"):
+        username = st.text_input("Uživatelské jméno", value=user["username"])
+        name = st.text_input("Jméno a příjmení", value=user["name"])
+        email = st.text_input("E-mail", value=user["email"])
+        role = st.selectbox(
+            "Role", ["user", "admin"], index=0 if user["role"] == "user" else 1
+        )
+        cols = st.columns([1, 6, 1])
+        submit_button = cols[0].form_submit_button(label="Uložit")
+        delete_button = cols[2].form_submit_button(label="Smazat")
+
+    if submit_button:
+        if username == "":
+            st.error("Uživatelské jméno nesmí být prázdné")
+            st.stop()
+
+        if name == "":
+            st.error("Jméno nesmí být prázdné")
+            st.stop()
+
+        if email == "":
+            st.error("E-mail nesmí být prázdný")
+            st.stop()
+
+        db.am.update_or_create_account(
+            authenticator=authenticator,
+            orig_username=user["username"],
+            username=username,
+            name=name,
+            email=email,
+            role=role,
+        )
+
+        st.success("Účastník uložen")
+        utils.clear_cache()
+        return True
+
+    if delete_button:
+        db.am.delete_account(
+            authenticator=authenticator,
+            username=user["username"],
+        )
+
+        st.success("Účastník smazán")
+        return True
+
+    st.markdown("#### Seznam uživatelů")
+    st.dataframe(user_list, use_container_width=True)
+
+    st.markdown("#### Předregistrované adresy")
+    st.caption(
+        "E-mailové adresy, které mají povolení se zaregistrovat mimo běžné účastníky akce. Využij například v případě, že chceš založit účet pro admina, který zatím nemá účet v aplikaci. Takto přidaný uživatel by se pak měl co nejdříve zaregistrovat."
+    )
+
+    with st.form("preregistered_form"):
+        email = st.text_input("E-mail", value="")
+        role = st.selectbox("Role", ["user", "admin"], index=0)
+        cols = st.columns([1, 6, 1])
+        submit_button = cols[0].form_submit_button(label="Uložit")
+        delete_button = cols[2].form_submit_button(label="Smazat")
+
+    if submit_button:
+        if email == "":
+            st.error("E-mail nesmí být prázdný")
+            st.stop()
+
+        db.am.add_preauthorized_account(authenticator, email, role)
+        st.success("E-mail přidán")
+        return True
+
+    preauthorized_accounts = db.am.get_preauthorized_accounts(authenticator)
+
+    st.markdown("#### Aktuální předregistrované e-maily")
+
+    # change dict into df
+    preauthorized_accounts = pd.DataFrame(preauthorized_accounts).T
+
+    st.dataframe(preauthorized_accounts, use_container_width=True)
 
 
 def action_manage_participants(db):
@@ -294,7 +347,7 @@ def action_manage_participants(db):
         return True
 
     st.markdown("#### Aktuální účastníci")
-    st.dataframe(participants)
+    st.dataframe(participants, use_container_width=True)
 
 
 def action_manage_teams(db):
@@ -424,7 +477,7 @@ def action_manage_teams(db):
         return True
 
     st.markdown("#### Aktuální týmy")
-    st.dataframe(teams)
+    st.dataframe(teams, use_container_width=True)
 
 
 def action_manage_challenges(db):
@@ -580,7 +633,7 @@ def action_manage_challenges(db):
         return True
 
     st.markdown("#### Aktuální výzvy")
-    st.dataframe(challenges)
+    st.dataframe(challenges, use_container_width=True)
 
 
 def action_manage_checkpoints(db):
@@ -758,7 +811,7 @@ def action_manage_checkpoints(db):
         return True
 
     st.markdown("#### Aktuální checkpointy")
-    st.dataframe(checkpoints)
+    st.dataframe(checkpoints, use_container_width=True)
 
 
 def action_set_events(db):
@@ -1025,7 +1078,7 @@ def action_set_awards(db):
         st.stop()
 
     with st.form("Ocenění"):
-        info_text = st.text_input(
+        award_category = st.text_input(
             'Nastavit týmové ocenění (např. "Sebepřekonání")',
             value=teams_select["award"],
         )
@@ -1033,7 +1086,10 @@ def action_set_awards(db):
         submit_button = st.form_submit_button(label="Nastavit")
 
     if submit_button:
-        db.set_team_award(teams_select["team_id"], info_text)
+        if award_category == "":
+            db.set_team_award(teams_select["team_id"], None)
+        else:
+            db.set_team_award(teams_select["team_id"], award_category)
         st.balloons()
         st.success("Ocenění nastaveno")
 
@@ -1041,7 +1097,7 @@ def action_set_awards(db):
     best_teams = db.get_teams_with_awards()
     # select only `team_name` and `award` columns
     best_teams = best_teams[["team_name", "award"]]
-    st.dataframe(best_teams)
+    st.dataframe(best_teams, use_container_width=True)
 
 
 def action_set_system_settings(db):
@@ -1091,6 +1147,7 @@ def show_actions(db):
             "Akce:",
             [
                 "🍍 Oznámení",
+                "👤 Uživatelské účty",
                 "📅 Akce",
                 "💪 Výzvy",
                 "📌 Checkpointy",
@@ -1103,8 +1160,11 @@ def show_actions(db):
             label_visibility="hidden",
         )
 
-        if action == "📅 Akce":
-            ret = action_set_events(db)
+        if action == "🍍 Oznámení":
+            ret = action_manage_notifications(db)
+
+        elif action == "👤 Uživatelské účty":
+            ret = action_manage_users(db)
 
         elif action == "💪 Výzvy":
             ret = action_manage_challenges(db)
@@ -1112,8 +1172,8 @@ def show_actions(db):
         elif action == "📌 Checkpointy":
             ret = action_manage_checkpoints(db)
 
-        elif action == "🍍 Oznámení":
-            ret = action_manage_notifications(db)
+        elif action == "📅 Akce":
+            ret = action_set_events(db)
 
         elif action == "🧑 Účastníci":
             ret = action_manage_participants(db)
@@ -1135,93 +1195,3 @@ def show_actions(db):
         st.balloons()
         time.sleep(2)
         st.rerun()
-
-
-# def show_db(db):
-#     # selectbox
-#     table = st.selectbox(
-#         "Tabulka",
-#         [
-#             "🧒 Účastníci",
-#             "🧑‍🤝‍🧑 Týmy",
-#             "🏆 Výzvy",
-#             "📍 Checkpointy",
-#             "📝 Příspěvky",
-#             "🗺️ Lokace",
-#             "🍍 Oznámení",
-#         ],
-#     )
-
-#     if table == "🧒 Účastníci":
-#         show_db_data_editor(
-#             db=db,
-#             table="participants",
-#             column_config={
-#                 "id": st.column_config.Column(width="small"),
-#                 "email": st.column_config.Column(width="large"),
-#             },
-#         )
-#     elif table == "🧑‍🤝‍🧑 Týmy":
-#         show_db_data_editor(db=db, table="teams")
-
-#     elif table == "🏆 Výzvy":
-#         pass
-#         # 🌞 denní výzva
-#         # 🤗 lidská interakce
-#         # 💙 zlepšení světa
-#         # 👣 dobrodružství
-#         # 🏋️ fyzické překonání
-#         # 📝 reportování
-#         # 🧘 nitrozpyt
-#         # show_db_data_editor(
-#         #     db=db,
-#         #     table="challenges",
-#         #     column_config={
-#         #         "points": st.column_config.NumberColumn(min_value=0),
-#         #         "category": st.column_config.SelectboxColumn(
-#         #             options=db.get_settings_value("challenge_categories"),
-#         #         ),
-#         #     },
-#         # )
-
-#     elif table == "📍 Checkpointy":
-#         show_db_data_editor(
-#             db=db,
-#             table="checkpoints",
-#             column_config={
-#                 "points": st.column_config.NumberColumn(min_value=0),
-#             },
-#         )
-
-#     elif table == "📝 Příspěvky":
-#         show_db_data_editor(
-#             db=db,
-#             table="posts",
-#             column_config={
-#                 "action_type": st.column_config.SelectboxColumn(
-#                     options=["challenge", "checkpoint", "note"]
-#                 ),
-#             },
-#         )
-
-#     elif table == "🗺️ Lokace":
-#         show_db_data_editor(db=db, table="locations")
-
-
-# def show_notification_manager(db):
-#     # TODO more user friendly
-#     st.markdown("#### Oznámení")
-
-#     st.caption(
-#         "Tato oznámení se zobrazí účastníkům na jejich stránce účastníka. Typy oznámení: info, varování, důležité, skryté."
-#     )
-
-#     show_db_data_editor(
-#         db=db,
-#         table="notifications",
-#         column_config={
-#             "type": st.column_config.SelectboxColumn(
-#                 options=["info", "varování", "důležité", "skryté"]
-#             ),
-#         },
-#     )
