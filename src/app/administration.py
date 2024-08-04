@@ -184,7 +184,7 @@ def action_manage_users(db):
         db.am.update_or_create_account(
             authenticator=authenticator,
             orig_username=user["username"],
-            username=username,
+            username=utils.normalize_username(username),
             name=name,
             email=email,
             role=role,

@@ -88,6 +88,7 @@ class AccountManager:
             accounts["credentials"]["usernames"][username] = accounts["credentials"][
                 "usernames"
             ].pop(orig_username)
+            accounts["credentials"]["usernames"][username]["username"] = username
 
         self.save_accounts(authenticator, accounts)
 

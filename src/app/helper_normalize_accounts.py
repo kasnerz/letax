@@ -33,6 +33,12 @@ def normalize_yaml(yaml_file):
                 "usernames"
             ].pop(username)
 
+    for username in list(data["credentials"]["usernames"].keys()):
+        user = data["credentials"]["usernames"][username]
+        if "username" in user:
+            # normalize_username
+            user["username"] = normalize_username(user["username"])
+
     with open(yaml_file, "w") as f:
         yaml.dump(data, f, default_flow_style=False)
 

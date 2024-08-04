@@ -20,6 +20,7 @@ import gc
 from streamlit_javascript import st_javascript
 from ftplib import FTP
 from pathlib import Path
+from unidecode import unidecode
 
 TTL = 600
 
@@ -447,6 +448,11 @@ def get_event_id(params):
         return get_active_event_id()
 
     return None
+
+
+def normalize_username(self, username: str) -> str:
+    username = unidecode(username.lower().strip().replace(" ", "_").replace("?", "_"))
+    return username
 
 
 def clear_cache():
