@@ -33,9 +33,9 @@ def main():
 
     available_actions = [x["id"] for x in db.get_available_actions(user, "checkpoint")]
 
-    # sort by name
+    # sort by name,
     checkpoints = checkpoints.sort_values(
-        by="name", key=lambda x: [unidecode(a).lower() for a in x]
+        by="name", key=lambda x: [a.lower() for a in x]
     )
 
     # generate urls
