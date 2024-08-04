@@ -554,7 +554,7 @@ def show_team_info(db, user, team):
         member2 = available_paxes.iloc[member2]["id"]
 
         # we want to keep member3 if set by administrators but we do not want to give participants a way to set it themselves
-        member3 = team["member3"]
+        member3 = team.get("member3") if team else None
 
         db.update_or_create_team(
             team_name=team_name,

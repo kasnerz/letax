@@ -2,7 +2,6 @@ import yaml
 import re
 from unidecode import unidecode
 
-
 def normalize_username(username):
     # Lowercase
     username = username.lower()
