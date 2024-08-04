@@ -105,7 +105,7 @@ class AccountManager:
         if not user:
             raise ValueError(f"User {username} not found")
 
-        password_hash = stauth.Hasher([new_password]).generate()[0]
+        password_hash = stauth.utilities.hasher([new_password]).generate()[0]
 
         accounts["credentials"]["usernames"][username]["password"] = password_hash
 
