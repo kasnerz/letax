@@ -450,7 +450,7 @@ def get_event_id(params):
     return None
 
 
-def normalize_username(self, username: str) -> str:
+def normalize_username(username):
     username = unidecode(username.lower().strip().replace(" ", "_").replace("?", "_"))
     return username
 
