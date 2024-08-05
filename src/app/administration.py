@@ -850,7 +850,6 @@ def action_manage_posts(db):
 
     st.markdown("#### Aktuální posty")
 
-    # keep only the columns `post_id`, `team_id`, `pax_id`, `action_type`, `action_name`, `team_name`, `created`, `comment`, `files`
     posts = [
         {
             "post_id": post["post_id"],

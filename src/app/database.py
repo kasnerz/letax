@@ -719,14 +719,16 @@ class Database:
         created = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         pax_id = user["pax_id"]
         team_id = str(team["team_id"])
+        action_id = action.get("id") if action_type != "story" else None
 
         self.conn.execute(
-            f"INSERT INTO posts (post_id, pax_id, team_id, action_type, action_name, comment, files, created, flags) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            f"INSERT INTO posts (post_id, pax_id, team_id, action_type, action_id, action_name, comment, files, created, flags) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 post_id,
                 pax_id,
                 team_id,
                 action_type,
+                action_id,
                 title,
                 comment,
                 files_json,
@@ -1026,14 +1028,17 @@ class Database:
 
     def get_team_members(self, team_id):
         team = self.get_team_by_id(team_id)
-        member1 = self.get_participant_by_id(team["member1"])
-        member2 = self.get_participant_by_id(team["member2"])
-        member3 = self.get_participant_by_id(team["member3"])
 
-        members = [member1, member2, member3]
-        members = [x for x in members if x is not None]
+        # we need count only
+        return [team["member1"], team["member2"], team["member3"]]
+        # member1 = self.get_participant_by_id(team["member1"])
+        # member2 = self.get_participant_by_id(team["member2"])
+        # member3 = self.get_participant_by_id(team["member3"])
 
-        return members
+        # members = [member1, member2, member3]
+        # members = [x for x in members if x is not None]
+
+        # return members
 
     def get_teams_with_awards(self):
         # any team that has a non-empty award column (non-empty = NULL or "")
@@ -1140,7 +1145,7 @@ class Database:
                 row["points"],
             )
 
-    def get_action(self, action_type, action_name):
+    def get_action(self, action_id, action_type, action_name):
         # retrieve action from the database, return a single Python object or None
         table_name = {
             "challenge": "challenges",
@@ -1150,21 +1155,29 @@ class Database:
         if not table_name:
             return None
 
-        # get action that starts with `action_name`
-        # solves "Denní výzva #1" vs. "Denní výzva #1 - blabla"
-        query = f"SELECT * FROM {table_name} WHERE name LIKE ?"
-        ret = self.conn.execute(query, (action_name + "%",))
-        action = ret.fetchone()
-        return dict(action) if action else None
+        if action_id:
+            query = f"SELECT * FROM {table_name} WHERE id = ?"
+            ret = self.conn.execute(query, (action_id,))
+            action = ret.fetchone()
+            return dict(action) if action else None
+        else:
+            # name matching: we need to keep this for backward compatibility
 
-    def get_points_for_action(self, action_type, action_name, flags):
+            # get action that starts with `action_name`
+            # solves "Denní výzva #1" vs. "Denní výzva #1 - blabla"
+            query = f"SELECT * FROM {table_name} WHERE name LIKE ?"
+            ret = self.conn.execute(query, (action_name + "%",))
+            action = ret.fetchone()
+            return dict(action) if action else None
+
+    def get_points_for_action(self, action_id, action_type, action_name, flags):
         if action_type == "story":
             return 0
 
         if flags:
             flags = ast.literal_eval(flags)
 
-        action = self.get_action(action_type, action_name)
+        action = self.get_action(action_id, action_type, action_name)
 
         if not action:
             utils.log(f"Action {action_name} not found", level="warning")
@@ -1193,7 +1206,10 @@ class Database:
             posts_team = posts_team.assign(
                 points=posts_team.apply(
                     lambda row: self.get_points_for_action(
-                        row["action_type"], row["action_name"], row["flags"]
+                        action_id=row.get("action_id"),
+                        action_type=row["action_type"],
+                        action_name=row["action_name"],
+                        flags=row["flags"],
                     ),
                     axis=1,
                 )
@@ -1448,7 +1464,7 @@ class Database:
                     photo_path,
                     first_member,
                     second_member,
-                    third_member if third_member else current_team["member3"],
+                    third_member,
                     is_top_x if is_top_x else current_team["is_top_x"],
                     team_id,
                 ),
@@ -1492,11 +1508,13 @@ class Database:
                 post_id text not null unique,
                 pax_id text not null,
                 team_id text,
+                action_id text,
                 action_type text not null,
                 action_name text not null,
                 comment text,
                 created text not null,
                 files text,
+                flags text,
                 primary key(post_id),
                 CONSTRAINT unique_post_entry UNIQUE (action_name, action_type, team_id)
             );"""

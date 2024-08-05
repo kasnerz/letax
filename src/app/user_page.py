@@ -163,7 +163,9 @@ def record_checkpoint(db, user):
     checkpoints = db.get_available_actions(user=user, action_type="checkpoint")
 
     # sort checkpoints alphabetically, keep square brackets at the end
-    checkpoints = sorted(checkpoints, key=lambda x: unidecode(x["name"].lower().replace("[", "zz")))
+    checkpoints = sorted(
+        checkpoints, key=lambda x: unidecode(x["name"].lower().replace("[", "zz"))
+    )
 
     with st.form("checkpoint", clear_on_submit=True):
         checkpoint_idx = st.selectbox(
@@ -439,7 +441,8 @@ def show_budget_management(db, user, team):
         return
 
     spending_for_team = db.get_spendings_by_team(team)
-    team_members_cnt = len(db.get_team_members(team["team_id"]))
+
+    team_members_cnt = len([x for x in db.get_team_members(team["team_id"]) if x])
 
     if spending_for_team.empty:
         spent = 0
