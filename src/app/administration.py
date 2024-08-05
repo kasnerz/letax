@@ -824,6 +824,9 @@ def action_manage_posts(db):
         format_func=lambda x: f"{x['action_name']} ({x['team_name']}) – {x['created']}",
     )
 
+    if not posts:
+        st.stop()
+
     with st.form("post_form"):
         # action_type: challenge, checkpoint, story
         action_type = st.selectbox(
