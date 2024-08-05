@@ -11,8 +11,11 @@ def show_positions(db):
     # container = st.empty()
 
     # slider for selecting the date and time in range of the challenge
-    start_datetime = "2023-08-09 12:00:00"
-    end_datetime = "2023-08-19 18:00:00"
+    event = db.get_active_event()
+    event_start_date = event["start_date"]
+    event_end_date = event["end_date"]
+    start_datetime = f"{event_start_date} 00:00:00"
+    end_datetime = f"{event_end_date} 23:59:00"
 
     start_datetime = datetime.datetime.strptime(start_datetime, "%Y-%m-%d %H:%M:%S")
     end_datetime = datetime.datetime.strptime(end_datetime, "%Y-%m-%d %H:%M:%S")

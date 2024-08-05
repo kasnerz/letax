@@ -282,7 +282,7 @@ def record_location(db, user, team):
             with cols[1]:
                 time_manual = st.time_input("Čas (UTC+2):", value=datetime_now.time())
 
-            position_manual = st.text_input("GPS pozice / adresa:")
+            position_manual = st.text_input("GPS pozice / přibližná adresa:")
             comment_manual = st.text_input(
                 "Komentář:",
             )

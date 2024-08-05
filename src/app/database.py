@@ -162,12 +162,14 @@ class Database:
         self.set_settings_value("events", events)
 
     def set_event_info(
-        self, event_id, status, gmaps_url, product_id, budget_per_person
+        self, event_id, start_date, end_date, status, gmaps_url, product_id, budget_per_person
     ):
         events = self.get_events()
         for event in events:
             if event["year"] == event_id:
                 event["status"] = status
+                event["start_date"] = start_date
+                event["end_date"] = end_date
                 event["gmaps_url"] = gmaps_url
                 event["product_id"] = product_id
                 event["budget_per_person"] = budget_per_person

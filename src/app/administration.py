@@ -907,21 +907,33 @@ def action_set_events(db):
             key="event_status",
             help="Ovlivňuje zobrazení na webu.",
         )
+        event_start_date = st.date_input(
+            "Datum začátku",
+            value=selected_event.get("start_date", None),
+            key="event_start_date",
+            help="Datum začátku akce.",
+        )
+        event_end_date = st.date_input(
+            "Datum konce",
+            value=selected_event.get("end_date", None),
+            key="event_end_date",
+            help="Datum konce akce.",
+        )
         budget_per_person = st.number_input(
             "Rozpočet na osobu (CZK)",
-            value=selected_event["budget_per_person"],
+            value=selected_event.get("budget_per_person"),
             key="event_budget",
             help="Rozpočet na osobu na akci v CZK.",
         )
         event_gmaps_url = st.text_input(
             "URL na Google Maps s checkpointy",
-            value=selected_event["gmaps_url"],
+            value=selected_event.get("gmaps_url"),
             key="event_map",
             help="Odkaz na Google mapu s checkpointy ([URL pro vložení na stránky](https://www.google.com/earth/outreach/learn/visualize-your-data-on-a-custom-map-using-google-my-maps/#embed-your-map-5-5)), např. https://www.google.com/maps/d/u/0/embed?mid=1L6EC8E-uNAu4yS_Oxvymjp9FLUoTK94. Tato mapa se zobrazuje na stránce s checkpointy. Je potřeba použít odkaz na vložení mapy na jiné stránky (s klíčovým slovem `embed`). Vlož jen samotnou URL (https://www.google.com/maps/d/u/0/embed?mid=<nějaký kód>) a smaž všechno kolem (včetně dalších parametrů v URL za &).",
         )
         event_product_id = st.text_input(
             "Wordpress product ID",
-            value=selected_event["product_id"],
+            value=selected_event.get("product_id"),
             key="event_product_id",
             help="Číslo produktu Letní X-Challenge na webu, slouží k načtení seznamu účastníků. K nalezení ve Wordpressu na stránce s produkty.",
         )
@@ -933,6 +945,8 @@ def action_set_events(db):
     if btn_save:
         db.set_event_info(
             event_id=selected_event_id,
+            start_date=event_start_date,
+            end_date=event_end_date,
             status=event_status,
             gmaps_url=event_gmaps_url,
             product_id=event_product_id,
