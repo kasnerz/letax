@@ -814,6 +814,60 @@ def action_manage_checkpoints(db):
     st.dataframe(checkpoints, use_container_width=True)
 
 
+def action_manage_posts(db):
+    posts = db.get_posts()
+    posts = sorted(posts, key=lambda x: x["created"], reverse=True)
+
+    post = st.selectbox(
+        "Vyber post",
+        posts,
+        format_func=lambda x: f"{x['action_name']} ({x['team_name']}) – {x['created']}",
+    )
+
+    with st.form("post_form"):
+        # action_type: challenge, checkpoint, story
+        action_type = st.selectbox(
+            "Typ akce",
+            ["challenge", "checkpoint", "story"],
+            index=["challenge", "checkpoint", "story"].index(post["action_type"]),
+            disabled=True,
+        )
+        comment = st.text_area("Komentář", value=post["comment"])
+
+        cols = st.columns([1, 6, 1])
+        submit_button = cols[0].form_submit_button(label="Uložit")
+        delete_button = cols[2].form_submit_button(label="Smazat")
+
+    if submit_button:
+        db.update_post_comment(post["post_id"], comment)
+        st.success("Post uložen")
+        return True
+
+    if delete_button:
+        db.delete_post(post["post_id"])
+        st.success("Post smazán")
+        return True
+
+    st.markdown("#### Aktuální posty")
+
+    # keep only the columns `post_id`, `team_id`, `pax_id`, `action_type`, `action_name`, `team_name`, `created`, `comment`, `files`
+    posts = [
+        {
+            "post_id": post["post_id"],
+            "team_id": post["team_id"],
+            "pax_id": post["pax_id"],
+            "action_type": post["action_type"],
+            "action_name": post["action_name"],
+            "team_name": post["team_name"],
+            "created": post["created"],
+            "comment": post["comment"],
+            "files": post["files"],
+        }
+        for post in posts
+    ]
+    st.dataframe(posts, use_container_width=True)
+
+
 def action_set_events(db):
     events = db.get_events()
     active_event = db.get_active_event()
@@ -1153,6 +1207,7 @@ def show_actions(db):
                 "📌 Checkpointy",
                 "🧑 Účastníci",
                 "🧑‍🤝‍🧑 Týmy",
+                "📝 Příspěvky",
                 "ℹ️ Infotext",
                 "🏆️ Výherci",
                 "💻️ Pokročilá nastavení",
@@ -1166,20 +1221,23 @@ def show_actions(db):
         elif action == "👤 Uživatelské účty":
             ret = action_manage_users(db)
 
+        elif action == "📅 Akce":
+            ret = action_set_events(db)
+
         elif action == "💪 Výzvy":
             ret = action_manage_challenges(db)
 
         elif action == "📌 Checkpointy":
             ret = action_manage_checkpoints(db)
 
-        elif action == "📅 Akce":
-            ret = action_set_events(db)
-
         elif action == "🧑 Účastníci":
             ret = action_manage_participants(db)
 
         elif action == "🧑‍🤝‍🧑 Týmy":
             ret = action_manage_teams(db)
+
+        elif action == "📝 Příspěvky":
+            ret = action_manage_posts(db)
 
         elif action == "🏆️ Výherci":
             ret = action_set_awards(db)
