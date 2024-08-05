@@ -162,8 +162,8 @@ def record_checkpoint(db, user):
 
     checkpoints = db.get_available_actions(user=user, action_type="checkpoint")
 
-    # sort checkpoints alphabetically
-    checkpoints = sorted(checkpoints, key=lambda x: unidecode(x["name"].lower()))
+    # sort checkpoints alphabetically, keep square brackets at the end
+    checkpoints = sorted(checkpoints, key=lambda x: unidecode(x["name"].lower().replace("[", "zz")))
 
     with st.form("checkpoint", clear_on_submit=True):
         checkpoint_idx = st.selectbox(

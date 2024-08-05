@@ -6,7 +6,7 @@ import utils
 
 CACHE_TTL = 60 * 60 * 24
 st.set_page_config(
-    layout="centered",
+    layout="wide",
     page_title=f"Letní X-Challenge",
     page_icon="static/favicon.png",
     # initial_sidebar_state="expanded",
