@@ -10,7 +10,7 @@ st.set_page_config(
     layout="wide",
     page_title=f"Letní X-Challenge",
     page_icon="static/favicon.png",
-    # initial_sidebar_state="expanded",
+    initial_sidebar_state="expanded",
 )
 params = st.query_params
 event_id = utils.get_event_id(params)
@@ -59,6 +59,10 @@ def show_overview():
 
     st.title(f"Letní X-Challenge {year}")
 
+    if event["status"] == "draft":
+        st.write("### Akce bude brzy spuštěna!  🚀")
+        st.stop()
+
     posts = load_posts(db)
 
     post_gallery_cnt = min(3, len(posts))
@@ -68,9 +72,6 @@ def show_overview():
     elif event["status"] == "ongoing":
         # select 3 last posts (posts is a dataframe)
         posts = posts[:post_gallery_cnt]
-    else:
-        st.info("Akce ještě nezačala.")
-        st.stop()
 
     st.markdown(
         """
