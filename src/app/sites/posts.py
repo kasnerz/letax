@@ -208,12 +208,13 @@ def show_overview(db, page):
     for post in posts:
         action_name = post["action_name"]
         action_type = post["action_type"]
+        action_id = post.get("action_id")
 
         team = db.get_team_by_id(post["team_id"])
         description = post["comment"]
 
         if action_type == "challenge":
-            action = db.get_action(action_type, action_name)
+            action = db.get_action(action_id, action_type, action_name)
             category = action.get("category")
             action_type_icon = action["category"][0] if category else "💪"
 
