@@ -72,6 +72,11 @@ def main():
         # checkpoints_table.style.set_table_attributes('class="full-width"')
 
         # set max width
+        checkpoints_table["Název"] = checkpoints_table["Název"].apply(
+            lambda x: f"<div style='max-width: 150px; overflow: hidden; text-overflow: word-wrap;'>{x}</div>"
+        )
+
+        # display table
         st.write(
             checkpoints_table.to_html(
                 escape=False, classes="table-display", index=False
