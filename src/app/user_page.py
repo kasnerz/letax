@@ -561,7 +561,7 @@ def show_team_info(db, user, team):
         member2 = available_paxes.iloc[member2]["id"]
 
         # we want to keep member3 if set by administrators but we do not want to give participants a way to set it themselves
-        member3 = team.get("member3") if team else None
+        member3 = team["member3"] if team else None
 
         db.update_or_create_team(
             team_name=team_name,
@@ -609,7 +609,7 @@ def show_user_info(db, user):
 
     # When the submit button is clicked
     if submit_button:
-        db.update_participant(
+        db.update_participant_info(
             username=user["username"],
             email=user["email"],
             bio=bio,
