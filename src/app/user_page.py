@@ -533,7 +533,10 @@ def show_team_info(db, user, team):
             "Motto týmu (nepovinné):", value=motto, disabled=fields_disabled
         )
         team_web = st.text_input(
-            "Instagram, web, apod. (nepovinné):", value=web, disabled=fields_disabled
+            "Instagram, web, apod. (nepovinné):",
+            value=web,
+            disabled=fields_disabled,
+            help="Zadej celou URL adresu, případně Instagram handle se zavináčem na začátku.",
         )
 
         cols = st.columns([4, 1])
