@@ -162,7 +162,14 @@ class Database:
         self.set_settings_value("events", events)
 
     def set_event_info(
-        self, event_id, start_date, end_date, status, gmaps_url, product_id, budget_per_person
+        self,
+        event_id,
+        start_date,
+        end_date,
+        status,
+        gmaps_url,
+        product_id,
+        budget_per_person,
     ):
         events = self.get_events()
         for event in events:
@@ -440,7 +447,6 @@ class Database:
             json.dump(new_participants, f)
 
         self.add_wc_participants(new_participants)
-        self.load_preauthorized_emails()
 
         utils.clear_cache()
 
