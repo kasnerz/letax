@@ -307,6 +307,7 @@ def record_location(db, user, team):
                 "Barva markeru na mapě",
                 options=color_options,
                 index=color_options.index(location_color),
+                help="Seznam barev pochází odsud: github.com/lvoogdt/Leaflet.awesome-markers",
             )
             location_icon_color = st.color_picker(
                 "Barva ikony markeru na mapě", value=location_icon_color
