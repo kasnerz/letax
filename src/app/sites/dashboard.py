@@ -60,7 +60,7 @@ def show_overview():
     st.title(f"Letní X-Challenge {year}")
 
     if event["status"] == "draft":
-        st.write("### Akce bude brzy spuštěna!  🚀")
+        st.write("### Akce se blíží! 🚀")
         st.stop()
 
     posts = load_posts(db)
