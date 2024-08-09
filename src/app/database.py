@@ -39,9 +39,6 @@ import ast
 import urllib.request
 import dateutil.parser
 
-# logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
-
 current_dir = os.path.dirname(os.path.realpath(__file__))
 
 
@@ -411,7 +408,7 @@ class Database:
     def wc_fetch_participants(self, log_area=None, limit=None):
         product_id = self.event["product_id"]
         new_participants = []
-        logger.info("Fetching participants from WooCommerce...")
+        utils.log("Fetching participants from WooCommerce...", level="info")
 
         # print all existing participants
         for row in self.conn.execute("SELECT * FROM participants"):
@@ -428,7 +425,7 @@ class Database:
         user_ids = [user["customer_id"] for user in orders][:limit]
 
         for i, user_id in enumerate(user_ids):
-            logger.info(f"Fetching user {user_id}")
+            utils.log(f"Fetching user {user_id}", level="info")
             response = self.wcapi.get("customers/" + str(user_id))
             response = response.json()
             new_participants.append(response)
