@@ -906,6 +906,14 @@ def action_set_events(db):
         "past": "Ukončená",
     }
 
+    start_date = selected_event.get("start_date", None)
+    end_date = selected_event.get("end_date", None)
+
+    if start_date:
+        start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d").date()
+    if end_date:
+        end_date = datetime.datetime.strptime(end_date, "%Y-%m-%d").date()
+
     with st.form("event_form"):
         event_status = st.selectbox(
             "Stav",
@@ -915,15 +923,16 @@ def action_set_events(db):
             key="event_status",
             help="Ovlivňuje zobrazení na webu.",
         )
+
         event_start_date = st.date_input(
             "Datum začátku",
-            value=selected_event.get("start_date", None),
+            value=start_date,
             key="event_start_date",
             help="Datum začátku akce.",
         )
         event_end_date = st.date_input(
             "Datum konce",
-            value=selected_event.get("end_date", None),
+            value=end_date,
             key="event_end_date",
             help="Datum konce akce.",
         )
