@@ -592,6 +592,9 @@ class Database:
         if self.conn.execute(query, (email, participant_id)).fetchone():
             return "exists"
 
+        # normalize name
+        name = name.strip()
+
         if photo is None:
             query = "INSERT OR REPLACE INTO participants (id, email, name_web, bio, emergency_contact) VALUES (?, ?, ?, ?, ?)"
             self.conn.execute(

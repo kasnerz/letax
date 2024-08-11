@@ -57,7 +57,7 @@ class AccountManager:
     def update_user_name(self, authenticator, username, name):
         accounts = self.get_accounts(authenticator)
 
-        accounts["credentials"]["usernames"][username]["name"] = name
+        accounts["credentials"]["usernames"][username]["name"] = name.strip()
 
         self.save_accounts(authenticator, accounts)
 
@@ -81,7 +81,7 @@ class AccountManager:
         accounts = self.get_accounts(authenticator)
         if orig_username == username:
             # update
-            accounts["credentials"]["usernames"][username]["name"] = name
+            accounts["credentials"]["usernames"][username]["name"] = name.strip()
             accounts["credentials"]["usernames"][username]["email"] = email
             accounts["credentials"]["usernames"][username]["role"] = role
         else:
