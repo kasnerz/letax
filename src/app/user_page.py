@@ -261,7 +261,7 @@ def record_location(db, user, team):
 
     with st.form("location", clear_on_submit=True):
         st.caption(
-            "Aktuální poloha pomocí GPS pozice. Funguje nejlépe když jsi venku a nedávno jsi GPS používal(a). Poloha jde případně zadat i ručně."
+            "Aktuální poloha automaticky určená pomocí GPS. Funguje nejlépe když jsi venku a nedávno jsi GPS používal(a)."
         )
         comment = st.text_input(
             "Komentář:",
