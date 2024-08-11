@@ -909,9 +909,9 @@ def action_set_events(db):
     start_date = selected_event.get("start_date", None)
     end_date = selected_event.get("end_date", None)
 
-    if start_date:
+    if start_date and type(start_date) is str:
         start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d").date()
-    if end_date:
+    if end_date and type(end_date) is str:
         end_date = datetime.datetime.strptime(end_date, "%Y-%m-%d").date()
 
     with st.form("event_form"):
