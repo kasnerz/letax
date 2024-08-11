@@ -488,6 +488,10 @@ def show_budget_management(db, user, team):
         btn_submit = st.form_submit_button("Přidat útratu")
 
     if btn_submit:
+        if amount <= 0:
+            st.error("Částka musí být kladná.")
+            st.stop()
+
         db.save_spending(
             team=team,
             amount=amount,
