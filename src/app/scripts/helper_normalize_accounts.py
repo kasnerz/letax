@@ -2,6 +2,7 @@ import yaml
 import re
 from unidecode import unidecode
 
+
 def normalize_username(username):
     # Lowercase
     username = username.lower()
@@ -43,5 +44,5 @@ def normalize_yaml(yaml_file):
 
 
 # Example usage
-yaml_file = "accounts.yaml"
+yaml_file = "../accounts.yaml"
 normalize_yaml(yaml_file)
