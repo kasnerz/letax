@@ -374,6 +374,7 @@ def action_manage_teams(db):
         "member2": "",
         "member3": "",
         "team_motto": "",
+        "team_description": "",
         "team_web": "",
         "team_photo": "",
         "is_top_x": 0,
@@ -428,6 +429,9 @@ def action_manage_teams(db):
             index=pax3_idx,
         )
         motto = st.text_input("Motto týmu (nepovinné)", value=team["team_motto"])
+        description = st.text_area(
+            "Popis týmu (nepovinné)", value=team["team_description"]
+        )
         web = st.text_input("Webová stránka týmu (nepovinné)", value=team["team_web"])
         is_top_x = st.checkbox("Tým je v top X", value=team["is_top_x"])
 
@@ -456,6 +460,7 @@ def action_manage_teams(db):
         ret = db.update_or_create_team(
             team_name=name,
             team_motto=motto,
+            team_description=description,
             team_web=web,
             team_photo=photo,
             first_member=member1["id"],

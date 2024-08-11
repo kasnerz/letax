@@ -512,6 +512,7 @@ def show_team_info(db, user, team):
 
     team_name = team["team_name"] if team else ""
     motto = team["team_motto"] if team else ""
+    description = team["team_description"] if team else ""
     web = team["team_web"] if team else ""
 
     # all users not part of any team and not the current user
@@ -533,11 +534,19 @@ def show_team_info(db, user, team):
         team_motto = st.text_input(
             "Motto týmu (nepovinné):", value=motto, disabled=fields_disabled
         )
+
+        team_description = st.text_area(
+            "O týmu (nepovinné):",
+            disabled=fields_disabled,
+            help="Popis, který se bude zobrazovat na stránce týmu. Můžeš využít markdown (např **tučné písmo**).",
+            value=description,
+        )
+
         team_web = st.text_input(
             "Instagram, web, apod. (nepovinné):",
             value=web,
             disabled=fields_disabled,
-            help="Zadej celou URL adresu, případně Instagram handle se zavináčem na začátku.",
+            help="Zadej celou URL adresu, případně Instagram handle se zavináčem na začátku. Můžeš zadat i víc handlů, stačí je oddělit čárkou.",
         )
 
         cols = st.columns([4, 1])
@@ -566,6 +575,7 @@ def show_team_info(db, user, team):
         db.update_or_create_team(
             team_name=team_name,
             team_motto=team_motto,
+            team_description=team_description,
             team_web=team_web,
             team_photo=team_photo,
             first_member=user["pax_id"],

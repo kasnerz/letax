@@ -41,7 +41,7 @@ def parse_links(web):
     # some people post just instagram handles - find all handles and add https://instagram.com/ in front of them
 
     # find all handles
-    handles = re.findall(r"@(\w+)", web)
+    handles = re.findall(r"@([\w\._]+)", web)
 
     if not handles:
         return web
@@ -88,11 +88,14 @@ def show_profile(team_id):
         st.markdown(f"<h5>{member_string}</h5>", unsafe_allow_html=True)
 
         if team["team_motto"]:
-            st.write(f"{team['team_motto']}")
+            st.caption(f"{team['team_motto']}")
 
         if team["team_web"]:
             links = parse_links(team["team_web"])
             st.markdown(f"🔗 {links}")
+
+        if team["team_description"]:
+            st.write(f"{team['team_description']}")
 
         posts = db.get_posts_by_team(team_id)
         st.divider()

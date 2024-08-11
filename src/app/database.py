@@ -1259,6 +1259,7 @@ class Database:
             "is_top_x": team["is_top_x"],
             "team_photo": team["team_photo"],
             "team_motto": team["team_motto"],
+            "team_description": team["team_description"],
             "team_web": team["team_web"],
         }
 
@@ -1410,6 +1411,7 @@ class Database:
         self,
         team_name,
         team_motto,
+        team_description,
         team_web,
         team_photo,
         first_member,
@@ -1446,11 +1448,12 @@ class Database:
 
         if not current_team:
             self.conn.execute(
-                f"INSERT INTO teams (team_id, team_name, team_motto, team_web, team_photo, member1, member2, member3, is_top_x) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                f"INSERT INTO teams (team_id, team_name, team_motto, team_description, team_web, team_photo, member1, member2, member3, is_top_x) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     team_id,
                     team_name,
                     team_motto,
+                    team_description,
                     team_web,
                     photo_path,
                     first_member,
@@ -1464,10 +1467,11 @@ class Database:
         else:
             # only update new values, keep the existing
             self.conn.execute(
-                f"UPDATE teams SET team_name = ?, team_motto = ?, team_web = ?, team_photo = ?, member1 = ?, member2 = ?, member3 = ?, is_top_x = ? WHERE team_id = ?",
+                f"UPDATE teams SET team_name = ?, team_motto = ?, team_description = ?, team_web = ?, team_photo = ?, member1 = ?, member2 = ?, member3 = ?, is_top_x = ? WHERE team_id = ?",
                 (
                     team_name,
                     team_motto,
+                    team_description,
                     team_web,
                     photo_path,
                     first_member,
@@ -1500,6 +1504,7 @@ class Database:
                 member2 text,
                 member3 text,
                 team_motto text,
+                team_description text,
                 team_web text,
                 team_photo text,
                 is_top_x integer default 0,
