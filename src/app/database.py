@@ -1448,7 +1448,7 @@ class Database:
 
         if not current_team:
             self.conn.execute(
-                f"INSERT INTO teams (team_id, team_name, team_motto, team_description, team_web, team_photo, member1, member2, member3, is_top_x) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                f"INSERT INTO teams (team_id, team_name, team_motto, team_description, team_web, team_photo, member1, member2, member3, is_top_x) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     team_id,
                     team_name,
