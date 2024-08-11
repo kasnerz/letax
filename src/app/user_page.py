@@ -494,11 +494,13 @@ def show_budget_management(db, user, team):
             date=date,
             comment=comment,
         )
-        st.success("Útrata přidána.")
         utils.log(
             f"{team['team_name']} saved spending: {amount} {currency}",
             "success",
         )
+        st.success("Útrata přidána.")
+        time.sleep(2)
+        st.rerun()
 
 
 def show_team_info(db, user, team):
@@ -853,8 +855,8 @@ def show_post_management(db, user, team):
         st.info("Tvůj tým zatím nepřidal žádné příspěvky.")
 
     else:
-        with st.expander(f"Celkem {len(posts)} příspěvků"):
-            show_posts(db, user, team, posts)
+        # with st.expander(f"Celkem {len(posts)} příspěvků"):
+        show_posts(db, user, team, posts)
     st.markdown("### Moje lokace")
 
     locations = db.get_table_as_df("locations")
@@ -864,15 +866,15 @@ def show_post_management(db, user, team):
         st.info("Tvůj tým zatím nenasdílel žádnou polohu.")
 
     else:
-        with st.expander(f"Celkem {len(locations)} lokací"):
-            show_locations(db, locations)
+        # with st.expander(f"Celkem {len(locations)} lokací"):
+        show_locations(db, locations)
 
     st.markdown("### Moje útraty")
 
     spendings = db.get_spendings_by_team(team)
     if (spendings is not None) and (not spendings.empty):
-        with st.expander(f"Celkem {len(spendings)} útrat"):
-            show_spendings(db, spendings)
+        # with st.expander(f"Celkem {len(spendings)} útrat"):
+        show_spendings(db, spendings)
     else:
         st.info("Útraty tvého týmu nejsou k dispozici")
 
