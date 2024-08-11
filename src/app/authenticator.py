@@ -229,5 +229,5 @@ Pokud dostaneš hlášku \"Email already taken\", už máš pravděpodobně zalo
 
         with tabs[2]:
             reset_password_form(authenticator)
-            
+
         return None, None
