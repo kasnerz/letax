@@ -630,6 +630,12 @@ class Database:
         self.conn.execute(query, (participant_id,))
         self.conn.commit()
 
+        # if a participant is a member of team, set it to None
+        for member in ["member1", "member2", "member3"]:
+            query = f"UPDATE teams SET {member} = NULL WHERE {member} = ?"
+            self.conn.execute(query, (participant_id,))
+            self.conn.commit()
+
     def update_participant_info(
         self, username, email, bio, emergency_contact, photo=None
     ):
