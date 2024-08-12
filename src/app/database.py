@@ -428,6 +428,8 @@ class Database:
             utils.log(f"Fetching user {user_id}", level="info")
             response = self.wcapi.get("customers/" + str(user_id))
             response = response.json()
+
+            response["email"] = response["email"].lower()
             new_participants.append(response)
 
             if log_area:
