@@ -334,9 +334,9 @@ def record_location(db, user, team):
     )
 
     if btn_share:
-        location = get_geolocation()
+        st.toast("Probíhá určování polohy...")
+        location = get_geolocation(component_key="location")
 
-        time.sleep(3)
         if location:
             coords = location["coords"]
             longitude = coords["longitude"]
@@ -369,7 +369,7 @@ def record_location(db, user, team):
             )
         else:
             container.warning(
-                "Nepodařilo se nasdílet polohu. Zkontroluj, jestli má tvůj prohlížeč přístup k tvé aktuální poloze, a zkus to prosím znovu."
+                "Nepodařilo se nasdílet polohu. Zkontroluj, jestli má tvůj prohlížeč přístup k tvé aktuální poloze, a zkus to prosím znovu (občas pomůže to zkusit víckrát po sobě)."
             )
             time.sleep(5)
 
