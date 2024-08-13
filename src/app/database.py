@@ -555,7 +555,7 @@ class Database:
         return participants
 
     def is_participant(self, email):
-        query = "SELECT * FROM participants WHERE email = ?"
+        query = "SELECT * FROM participants WHERE LOWER(email) = LOWER(?)"
         return self.conn.execute(query, (email,)).fetchone() is not None
 
     def get_participant_by_id(self, id):

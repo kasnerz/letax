@@ -65,7 +65,7 @@ class AccountManager:
         accounts = self.get_accounts(authenticator)
 
         for username, user in accounts["credentials"]["usernames"].items():
-            if user["email"].lower() == email.lower():
+            if user["email"].strip().lower() == email.strip().lower():
                 user["username"] = username
                 return user
 

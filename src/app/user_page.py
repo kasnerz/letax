@@ -19,7 +19,7 @@ def show_user_page(db, user, team):
     st.markdown(f"# {name} | {team_name}")
     # user, team = get_logged_info()
 
-    if not db.is_participant(user["email"].lower()):
+    if not db.is_participant(user["email"]):
         st.warning("Tento rok se X-Challenge neúčastníš.")
         st.stop()
 
