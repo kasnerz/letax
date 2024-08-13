@@ -685,7 +685,7 @@ def show_info_info(db):
 
 
 def show_notifications(db, notifications):
-    for _, notification in notifications.iterrows():
+    for _, notification in notifications.iloc[::-1].iterrows():
         if notification.get("name"):
             txt = f"##### {notification['name']}\n{notification['text']}"
         else:
