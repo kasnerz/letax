@@ -47,7 +47,8 @@ def show_profile(pax_id):
         st.write(f"## {pax['name']}")
 
         if team:
-            st.markdown(db.get_team_link(team), unsafe_allow_html=True)
+            link = db.get_team_link(team)
+            st.markdown(f"##### {link}", unsafe_allow_html=True)
 
         if pax["bio"]:
             st.write(f"{pax['bio']}")
