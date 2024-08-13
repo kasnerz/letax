@@ -122,7 +122,22 @@ def action_manage_notifications(db):
         return True
 
     st.markdown("#### Aktuální oznámení")
-    st.dataframe(notifications, use_container_width=True)
+
+    # TODO: unify with the show_notifications function
+    for _, notification in notifications.iloc[::-1].iterrows():
+        if notification.get("name"):
+            txt = f"##### {notification['name']}\n{notification['text']}"
+        else:
+            txt = notification["text"]
+
+        if notification.type == "varování":
+            st.warning(txt)
+        elif notification.type == "důležité":
+            st.error(txt)
+        elif notification.type == "info" or not notification.type:
+            st.info(txt)
+
+    # st.dataframe(notifications, use_container_width=True)
 
 
 def action_manage_users(db):
