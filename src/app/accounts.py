@@ -65,7 +65,7 @@ class AccountManager:
         accounts = self.get_accounts(authenticator)
 
         for username, user in accounts["credentials"]["usernames"].items():
-            if user["email"] == email:
+            if user["email"].lower() == email.lower():
                 user["username"] = username
                 return user
 
@@ -118,6 +118,7 @@ class AccountManager:
         return accounts["preauthorized_emails"]
 
     def get_preauthorized_account(self, authenticator, email):
+        email = email.lower()
         accounts = self.get_accounts(authenticator)
 
         return accounts["preauthorized_emails"].get(email)

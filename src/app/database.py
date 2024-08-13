@@ -583,7 +583,7 @@ class Database:
         return pax_info
 
     def get_participant_by_email(self, email):
-        query = "SELECT * FROM participants WHERE email = ?"
+        query = "SELECT * FROM participants WHERE lower(email) = lower(?)"
         return self.conn.execute(query, (email,)).fetchone()
 
     def update_or_create_participant(

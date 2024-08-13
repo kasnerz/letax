@@ -35,6 +35,7 @@ def get_logged_info():
 
 def register_new_user(authenticator, email, username):
     # if the user is allowed to register through extra accounts, find their role
+    email = email.strip().lower()
     extra_account = db.am.get_preauthorized_account(authenticator, email)
     role = extra_account["role"] if extra_account else "user"
 
@@ -115,6 +116,7 @@ def register_form(authenticator):
             pre_authorization=True,
         )
         if email:
+            email = email.lower().strip()
             register_new_user(authenticator, email, username)
 
             st.success("Uživatel úspěšně zaregistrován. Nyní se můžeš přihlásit.")
