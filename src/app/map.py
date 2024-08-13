@@ -20,16 +20,18 @@ def show_positions(db):
     start_datetime = datetime.datetime.strptime(start_datetime, "%Y-%m-%d %H:%M:%S")
     end_datetime = datetime.datetime.strptime(end_datetime, "%Y-%m-%d %H:%M:%S")
 
-    slider = st.slider(
-        "Poslední nasdílená poloha k datu a času",
-        min_value=start_datetime,
-        max_value=end_datetime,
-        value=end_datetime,
-        step=datetime.timedelta(hours=3),
-        format="YYYY-MM-DD HH:mm",
-    )
+    st.caption("Poslední nasdílená poloha")
+    # slider = st.slider(
+    #     "Poslední nasdílená poloha k datu a času",
+    #     min_value=start_datetime,
+    #     max_value=end_datetime,
+    #     value=end_datetime,
+    #     step=datetime.timedelta(hours=3),
+    #     format="YYYY-MM-DD HH:mm",
+    # )
 
-    for_datetime = slider.strftime("%Y-%m-%d %H:%M:%S")
+    # for_datetime = slider.strftime("%Y-%m-%d %H:%M:%S")
+    for_datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     last_locations = db.get_last_locations(for_datetime=for_datetime)
 
     if last_locations is None:
