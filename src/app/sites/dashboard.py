@@ -155,7 +155,7 @@ def show_overview():
 
     st.divider()
     st.markdown(
-        f"<h2><a href='/teams?event_id={event_id}' target='_self' class='app-link'>Nejlepší týmy</a></h2>",
+        f"<h2><a href='/leaderboard?event_id={event_id}' target='_self' class='app-link'>Nejlepší týmy</a></h2>",
         unsafe_allow_html=True,
     )
     best_teams = db.get_teams_with_awards()
