@@ -1829,7 +1829,15 @@ class Database:
 
     def save_spending(self, team, amount, currency, date, category, comment):
         team_id = team["team_id"]
+
+        if amount < 0:
+            amount = -amount
+
         amount_czk = self.convert_to_czk(amount, currency)
+
+        if amount < 0:
+            amount_czk = -amount_czk
+            
         spending_id = utils.generate_uuid()
 
         self.conn.execute(
