@@ -815,7 +815,7 @@ class Database:
             else:
                 # locally we can preload the whole video, on AWS we only preload metadata
                 preload = "metadata" if aws_prefix else "auto"
-                photos_html += f'<div class="col-3"><a href="{href}" data-toggle="lightbox" data-gallery="{post["post_id"]}"><video src="{href}" preload="{preload}" controls class="video"></video></a></div>'
+                photos_html += f'<div class="col-3"><a href="{href}" data-toggle="lightbox"  data-gallery="{post["post_id"]}"><video src="{href}" preload="{preload}" controls class="video"></video></a></div>'
 
         photos_html += "</div></div>"
 
@@ -864,6 +864,12 @@ class Database:
             <title>{title}</title>
             <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css">
             <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&display=swap">
+            <script type="text/javascript" >
+        $(document).delegate('*[data-toggle="lightbox"]', 'click', function(event) {{
+            event.preventDefault();
+            $(this).ekkoLightbox();
+        }}); 
+            </script>
         </head>
         <body>
             <style>{css}</style>
