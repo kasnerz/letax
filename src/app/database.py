@@ -813,7 +813,9 @@ class Database:
             if file_type == "image":
                 photos_html += f'<div class="col-3"><a href="{href}" data-toggle="lightbox" data-gallery="{post["post_id"]}"><img data-src="{href}" class="image img-thumbnail lazyload"></a></div>'
             else:
-                photos_html += f'<div class="col-3"><a href="{href}" data-toggle="lightbox" data-gallery="{post["post_id"]}"><video src="{href}" preload="none" controls class="video"></video></a></div>'
+                # locally we can preload the whole video, on AWS we only preload metadata
+                preload = "metadata" if aws_prefix else "auto"
+                photos_html += f'<div class="col-3"><a href="{href}" data-toggle="lightbox" data-gallery="{post["post_id"]}"><video src="{href}" preload="{preload}" controls class="video"></video></a></div>'
 
         photos_html += "</div></div>"
 
