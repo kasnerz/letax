@@ -8,6 +8,7 @@ import time
 import traceback
 import utils
 import tempfile
+import pandas as pd
 from unidecode import unidecode
 from currency_converter import CurrencyConverter
 
@@ -33,59 +34,59 @@ def show_user_page(db, user, team):
         st.stop()
 
     tab_list = [
+        "🍍 Oznámení",
         "💪 Výzva",
         "📍 Checkpoint",
         "✍️  Příspěvek",
         "🗺️ Poloha",
         "🪙 Rozpočet",
         "🪂 Moje aktivita",
+        "🔽 Export dat",
         "🧑‍🤝‍🧑 Tým",
         "👤 O mně",
         "🔑 Účet",
         "ℹ️ Info",
     ]
-    tab_idx = 0
 
-    notifications = db.get_table_as_df("notifications")
+    action = st.selectbox(
+        "Akce",
+        tab_list,
+    )
 
-    if not notifications.empty:
-        tab_list = ["🍍 Oznámení"] + tab_list
-        tab_idx = 1
+    if action == tab_list[0]:
+        show_notifications(db)
 
-    tabs = st.tabs(tab_list)
-
-    if not notifications.empty:
-        with tabs[0]:
-            show_notifications(db, notifications)
-
-    with tabs[0 + tab_idx]:
+    if action == tab_list[1]:
         record_challenge(db, user)
 
-    with tabs[1 + tab_idx]:
+    if action == tab_list[2]:
         record_checkpoint(db, user)
 
-    with tabs[2 + tab_idx]:
+    if action == tab_list[3]:
         record_story(db, user)
 
-    with tabs[3 + tab_idx]:
+    if action == tab_list[4]:
         record_location(db, user, team)
 
-    with tabs[4 + tab_idx]:
+    if action == tab_list[5]:
         show_budget_management(db, user, team)
 
-    with tabs[5 + tab_idx]:
+    if action == tab_list[6]:
         show_post_management(db, user, team)
 
-    with tabs[6 + tab_idx]:
+    if action == tab_list[7]:
+        show_export_options(db, user, team)
+
+    if action == tab_list[8]:
         show_team_info(db, user, team)
 
-    with tabs[7 + tab_idx]:
+    if action == tab_list[9]:
         show_user_info(db, user)
 
-    with tabs[8 + tab_idx]:
+    if action == tab_list[10]:
         show_account_info(db, user)
 
-    with tabs[9 + tab_idx]:
+    if action == tab_list[11]:
         show_info_info(db)
 
 
@@ -695,7 +696,9 @@ def show_info_info(db):
     st.markdown(info_text)
 
 
-def show_notifications(db, notifications):
+def show_notifications(db):
+    notifications = db.get_table_as_df("notifications")
+
     for _, notification in notifications.iloc[::-1].iterrows():
         if notification.get("name"):
             txt = f"##### {notification['name']}\n{notification['text']}"
@@ -711,195 +714,157 @@ def show_notifications(db, notifications):
 
 
 def show_posts(db, user, team, posts):
-    # keep only the columns we want to display: action_type, action_name, comment, created, files
-    event = db.get_event()
+    posts = posts.to_dict("records")
 
-    for i, post in posts.iterrows():
-        col_type, col_name, col_desc, col_edit, col_delete = st.columns([1, 3, 5, 2, 2])
-        with col_type:
-            mapping = {
-                "challenge": "💪",
-                "checkpoint": "📍",
-                "story": "✍️",
-            }
-            st.write(mapping[post["action_type"]])
+    if not posts:
+        st.info("Tvůj tým zatím nepřidal žádné příspěvky.")
+        st.stop()
 
-        with col_name:
-            st.markdown("**" + post["action_name"] + "**")
+    post = st.selectbox(
+        "Vyber post",
+        posts,
+        format_func=lambda x: f"{x['action_name']} – {x['created']}",
+    )
 
-        edit_btn = False
+    with st.form("post_form"):
+        comment = st.text_area("Komentář", value=post["comment"])
 
-        # hack: https://discuss.streamlit.io/t/button-inside-button/12046/7
-        # we need to display save button after the edit button
-        if st.session_state.get(f"{post['post_id']}-edit-state") != True:
-            st.session_state[f"{post['post_id']}-edit-state"] = edit_btn
+        cols = st.columns([1, 4, 1])
+        submit_button = cols[0].form_submit_button(label="💾 Uložit")
+        delete_button = cols[2].form_submit_button(label="❌ Smazat")
 
-        elif edit_btn:
-            # If the edit button is clicked when the edit state is already True,
-            # then it means the user wants to cancel the edit (by clicking on the edit button again)
-            st.session_state[f"{post['post_id']}-edit-state"] = False
-            st.rerun()
+    if submit_button:
+        db.update_post_comment(post["post_id"], comment)
+        st.success("Post uložen")
+        time.sleep(2)
+        st.rerun()
 
-        with col_desc:
-            comment = post["comment"]
-
-            if st.session_state[f"{post['post_id']}-edit-state"] == True:
-                edit_txt_area = st.text_area(
-                    "Komentář:", value=comment, key=f"edit-area-{post['post_id']}"
-                )
-            else:
-                # crop comment if too long
-                if len(comment) > 100:
-                    comment = comment[:100] + "..."
-
-                st.write(comment)
-
-        with col_edit:
-            if st.session_state[f"{post['post_id']}-edit-state"] == True:
-                if st.button("💾 Uložit", key=f"save-{post['post_id']}"):
-                    db.update_post_comment(post["post_id"], edit_txt_area)
-                    st.toast("Komentář upraven.")
-                    st.session_state[f"{post['post_id']}-edit-state"] = False
-                    time.sleep(2)
-                    st.rerun()
-            else:
-                if st.button("📝 Upravit", key=f"edit-{post['post_id']}"):
-                    if event["status"] != "ongoing":
-                        st.toast(
-                            f"Pro Letní X-Challenge {event['year']} momentálně nelze upravovat příspěvky."
-                        )
-                    else:
-                        st.session_state[f"{post['post_id']}-edit-state"] = True
-                        st.rerun()
-
-        with col_delete:
-            if st.session_state.get(f"delete-{post['post_id']}-confirm") == True:
-                submit_button = st.button(
-                    "🔨 Ano, opravdu smazat", key=f"delete-{post['post_id']}-confirm-btn"
-                )
-
-                if submit_button:
-                    st.session_state[f"delete-{post['post_id']}-confirm"] = False
-                    db.delete_post(post.post_id)
-                    st.toast("Příspěvek smazán.")
-                    utils.log(
-                        f"Team {team['team_name']} deleted post {post['post_id']}: {post['action_name']}",
-                        level="info",
-                    )
-                    time.sleep(2)
-                    st.rerun()
-            else:
-                if st.button("❌ Smazat", key=f"delete-{post['post_id']}"):
-                    if event["status"] != "ongoing":
-                        st.toast(
-                            f"Pro Letní X-Challenge {event['year']} momentálně nelze upravovat příspěvky."
-                        )
-                    else:
-                        st.session_state[f"delete-{post['post_id']}-confirm"] = True
-                        st.rerun()
-
-        st.divider()
+    if delete_button:
+        db.delete_post(post["post_id"])
+        st.success("Post smazán")
+        time.sleep(2)
+        st.rerun()
 
 
 def show_locations(db, locations):
-    # sort
     locations = locations.sort_values(by="date", ascending=False)
-    for i, location in locations.iterrows():
-        col_date, col_gps, col_delete = st.columns([3, 5, 3])
-        with col_date:
-            date = utils.get_readable_datetime(location["date"])
-            st.markdown("**" + date + "**")
+    locations = locations.to_dict("records")
 
-            comment = location["comment"]
-            # crop comment if too long
-            if len(comment) > 100:
-                comment = comment[:100] + "..."
+    if not locations:
+        st.info("Tvůj tým zatím nenasdílel žádnou polohu.")
+        st.stop()
 
-            st.write(comment)
+    location = st.selectbox(
+        "Vyber polohu",
+        locations,
+        format_func=lambda x: f"{utils.shorten_address(x['address'])} – {x['date'].split('.')[0]}",
+    )
 
-        with col_gps:
-            gps = f'{location["address"]} ({location["latitude"]}, {location["longitude"]})'
-            st.write(gps)
+    with st.form("location_form"):
+        with st.expander("Poloha na mapě"):
+            location_df = pd.DataFrame([location])
+            st.map(location_df, zoom=12)
 
-        with col_delete:
-            if st.button("❌ Smazat", key=f"delete-loc-{i}"):
-                db.delete_location(location)
-                st.success("Poloha smazána.")
-                time.sleep(2)
-                st.rerun()
+        comment = st.text_area("Komentář", value=location["comment"])
 
-        st.divider()
+        cols = st.columns([1, 4, 1])
+
+        submit_button = cols[0].form_submit_button(label="💾 Uložit")
+        delete_button = cols[2].form_submit_button(label="❌ Smazat")
+
+    if submit_button:
+        db.update_location_comment(location, comment)
+        st.success("Poloha uložena")
+        time.sleep(2)
+        st.rerun()
+
+    if delete_button:
+        db.delete_location(location)
+        st.success("Poloha smazána")
+        time.sleep(2)
+        st.rerun()
 
 
 def show_spendings(db, spendings):
     # sort
     spending_categories = db.get_spending_categories()
     spendings = spendings.sort_values(by="date", ascending=False)
-    for i, spending in spendings.iterrows():
-        col_date, col_comment, col_delete = st.columns([3, 5, 3])
-        with col_date:
-            # date = utils.get_readable_datetime()
-            st.markdown("**" + spending["date"] + "**")
 
-            st.write(spending_categories[spending["category"]])
+    spendings = spendings.to_dict("records")
 
-        with col_comment:
-            st.markdown(
-                f"**{int(spending['amount'])} {spending['currency']} ({int(spending['amount_czk'])} Kč)**"
-            )
-            comment = spending["description"]
-            # crop comment if too long
-            if len(comment) > 100:
-                comment = comment[:100] + "..."
-            st.write(comment)
+    if not spendings:
+        st.info("Transakce tvého týmu nejsou k dispozici.")
+        st.stop()
 
-        with col_delete:
-            if st.button("❌ Smazat", key=f"delete-spending-{i}"):
-                db.delete_spending(spending["id"])
-                st.success("Útrata smazána.")
-                time.sleep(2)
-                st.rerun()
+    spending = st.selectbox(
+        "Vyber transakci",
+        spendings,
+        format_func=lambda x: f"{x['date']} – {abs(x['amount'])} {x['currency']} {'(' + x['description'] + ')' if x['description'] else ''}",
+    )
 
-        st.divider()
+    with st.form("spending_form"):
+        spending_type = st.radio(
+            "Typ",
+            options=["Útrata", "Výdělek"],
+            horizontal=True,
+            index=0 if spending["amount"] >= 0 else 1,
+        )
+        comment = st.text_area("Komentář", value=spending["description"])
+
+        cols = st.columns([1, 4, 1])
+
+        submit_button = cols[0].form_submit_button(label="💾 Uložit")
+        delete_button = cols[2].form_submit_button(label="❌ Smazat")
+
+    if submit_button:
+        db.update_spending(spending, spending_type, comment)
+        st.success("Transakce uložena")
+        time.sleep(2)
+        st.rerun()
+
+    if delete_button:
+        db.delete_spending(spending["id"])
+        st.success("Transakce smazána")
+        time.sleep(2)
+        st.rerun()
 
 
 def show_post_management(db, user, team):
-    st.markdown("### Moje příspěvky")
-    # display the list of all the posts the team posted and a "delete" button for each of them
-    posts = db.get_posts_by_team(team["team_id"])
+    tab_list = ["📝 Příspěvky", "📌 Lokace", "🪙 Rozpočet"]
+    tabs = st.tabs(tab_list)
 
-    if posts.empty:
-        st.info("Tvůj tým zatím nepřidal žádné příspěvky.")
+    with tabs[0]:
+        # display the list of all the posts the team posted and a "delete" button for each of them
+        posts = db.get_posts_by_team(team["team_id"])
 
-    else:
-        # with st.expander(f"Celkem {len(posts)} příspěvků"):
-        show_posts(db, user, team, posts)
-    st.markdown("### Moje lokace")
+        if posts.empty:
+            st.info("Tvůj tým zatím nepřidal žádné příspěvky.")
 
-    locations = db.get_table_as_df("locations")
-    locations = locations[locations["team_id"] == team["team_id"]]
+        else:
+            show_posts(db, user, team, posts)
 
-    if locations.empty:
-        st.info("Tvůj tým zatím nenasdílel žádnou polohu.")
+    with tabs[1]:
+        locations = db.get_table_as_df("locations")
+        locations = locations[locations["team_id"] == team["team_id"]]
 
-    else:
-        # with st.expander(f"Celkem {len(locations)} lokací"):
-        show_locations(db, locations)
+        if locations.empty:
+            st.info("Tvůj tým zatím nenasdílel žádnou polohu.")
 
-    st.markdown("### Moje útraty")
+        else:
+            show_locations(db, locations)
 
-    spendings = db.get_spendings_by_team(team)
-    if (spendings is not None) and (not spendings.empty):
-        # with st.expander(f"Celkem {len(spendings)} útrat"):
-        show_spendings(db, spendings)
-    else:
-        st.info("Útraty tvého týmu nejsou k dispozici")
+    with tabs[2]:
+        spendings = db.get_spendings_by_team(team)
+        if (spendings is not None) and (not spendings.empty):
+            show_spendings(db, spendings)
+        else:
+            st.info("Útraty tvého týmu nejsou k dispozici")
 
-    st.markdown("### Export dat")
 
+def show_export_options(db, user, team):
     st.markdown("#### Příspěvky")
     st.markdown(
-        "Zde si můžeš vyexportovat všechny svoje příspěvky z akce (včetně fotek a videí). Pro zobrazení příspěvků ZIP archiv rozbal a otevři soubor `index.html` v prohlížeči."
+        "Zde si můžeš vyexportovat všechny svoje příspěvky z akce (včetně fotek a videí). Pro zobrazení příspěvků ZIP archiv rozbal a otevři soubor `index.html` v prohlížeči. (Pokud máš příspěvků hodně, může to chvíli trvat.)"
     )
     export_posts_btn = st.button("📔 Exportovat příspěvky")
 

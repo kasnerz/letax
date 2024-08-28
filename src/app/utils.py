@@ -455,6 +455,15 @@ def normalize_username(username):
     return username
 
 
+def shorten_address(address):
+    address_parts = address.split(",")
+
+    if len(address_parts) > 3:
+        address = ", ".join([address_parts[-3], address_parts[-1]])
+
+    return address
+
+
 def clear_cache():
     log("Clearing cache", "debug")
     st.cache_resource.clear()

@@ -110,10 +110,7 @@ def show_last_shared_locations(db, last_locations):
         address = location.get("address", "")
 
         if address:
-            address_parts = address.split(",")
-
-            if len(address_parts) > 3:
-                address = ", ".join([address_parts[-3], address_parts[-1]])
+            address = utils.shorten_address(address)
 
             address_link = (
                 "https://www.google.com/maps/search/?api=1&query="

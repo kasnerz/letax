@@ -1755,6 +1755,17 @@ class Database:
 
         return last_locations
 
+    def update_location_comment(self, location, comment):
+        username = location["username"]
+        date = location["date"]
+
+        self.conn.execute(
+            f"UPDATE locations SET comment='{comment}' WHERE username='{username}' AND date='{date}'"
+        )
+        self.conn.commit()
+
+        utils.log(f"Updated location {username} {date}", level="info")
+
     def delete_location(self, location):
         username = location["username"]
         date = location["date"]
@@ -1872,6 +1883,21 @@ class Database:
         self.conn.execute(f"DELETE FROM budget WHERE id='{spending_id}'")
         self.conn.commit()
         utils.log(f"Deleted spending {spending_id}", level="info")
+
+    def update_spending(self, spending, spending_type, comment):
+        if spending_type == "Výdělek":
+            spending["amount"] = -abs(spending["amount"])
+            spending["amount_czk"] = -abs(spending["amount_czk"])
+        else:
+            spending["amount"] = abs(spending["amount"])
+            spending["amount_czk"] = abs(spending["amount_czk"])
+
+        spending_id = spending["id"]
+        self.conn.execute(
+            f"UPDATE budget SET amount={spending['amount']}, amount_czk={spending['amount_czk']}, description='{comment}' WHERE id='{spending_id}'"
+        )
+        self.conn.commit()
+        utils.log(f"Updated spending {spending_id}", level="info")
 
     def get_team_link(self, team):
         team_id = team["team_id"]
