@@ -459,17 +459,22 @@ def show_budget_management(db, user, team):
     else:
         st.error(f"#### 🪙 Zbývá {remaining} Kč z {budget * team_members_cnt} Kč")
 
-    st.markdown("#### Přidat útratu nebo výdělek")
+    st.markdown("#### Přidat změnu v rozpočtu")
 
     categories = db.get_spending_categories()
     currency_list = db.get_currency_list()
 
     with st.form("spending", clear_on_submit=True):
+        spending_type = st.radio(
+            "Typ",
+            options=["Útrata", "Výdělek"],
+            horizontal=True,
+        )
         amount = st.number_input(
-            "Částka (Útratu zadávej jako kladné číslo. Pokud chceš přidat výdělek, přidej ho jako záporné číslo.)",
-            # min_value=0.0,
+            "Částka",
+            min_value=0.0,
             step=0.01,
-            help="Zadej částku v původní měně. Částku můžeš zadat s přesností až na dvě desetinná místa. Pokud chceš zadat výdělek, zadej ho jako zápornou útratu.",
+            help="Zadej částku v původní měně. Částku můžeš zadat s přesností až na dvě desetinná místa.",
         )
         currency = st.selectbox(
             "Měna",
@@ -488,9 +493,12 @@ def show_budget_management(db, user, team):
         btn_submit = st.form_submit_button("Přidat útratu")
 
     if btn_submit:
-        # if amount <= 0:
-        #     st.error("Částka musí být kladná.")
-        #     st.stop()
+        if amount <= 0:
+            st.error("Částka musí být kladná.")
+            st.stop()
+
+        if spending_type == "Výdělek":
+            amount = -amount
 
         db.save_spending(
             team=team,
