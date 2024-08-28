@@ -834,6 +834,13 @@ def show_spendings(db, spendings):
 
 
 def show_post_management(db, user, team):
+    event = db.get_event()
+    if event["status"] != "ongoing":
+        st.info(
+            f"Pro Letní X-Challenge {event['year']} momentálně nelze spravovat aktivitu."
+        )
+        return
+
     tab_list = ["📝 Příspěvky", "📌 Lokace", "🪙 Rozpočet"]
     tabs = st.tabs(tab_list)
 
